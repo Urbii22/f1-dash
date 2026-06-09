@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 
 import { useSettingsStore } from "@/stores/useSettingsStore";
 
@@ -16,35 +16,31 @@ export default function DelayInput({ className, saveDelay }: Props) {
 	const setDelay = useSettingsStore((s) => s.setDelay);
 	const isPaused = useSettingsStore((s) => s.delayIsPaused);
 
-	const [delayState, setDelayState] = useState<string>(currentDelay.toString());
-
+	const inputRef = useRef<HTMLInputElement | null>(null);
 	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const updateDelay = (updateInput: boolean = false) => {
+		const delayState = inputRef.current?.value ?? currentDelay.toString();
 		const delay = delayState ? Math.max(parseInt(delayState), 0) : 0;
 		setDelay(delay);
-		if (updateInput) setDelayState(delay.toString());
+		if (updateInput && inputRef.current) inputRef.current.value = delay.toString();
 	};
 
 	useEffect(() => {
+		if (!inputRef.current) return;
+		if (!isPaused) inputRef.current.value = currentDelay.toString();
+	}, [currentDelay, isPaused]);
+
+	useEffect(() => {
+		return () => {
+			if (timeoutRef.current) clearTimeout(timeoutRef.current);
+		};
+	}, []);
+
+	const handleChange = () => {
 		if (isPaused) return;
 		if (timeoutRef.current) clearTimeout(timeoutRef.current);
 		timeoutRef.current = setTimeout(updateDelay, saveDelay || 0);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [delayState]);
-
-	useEffect(() => {
-		if (!isPaused) setDelayState(currentDelay.toString());
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [isPaused]);
-
-	useEffect(() => {
-		if (isPaused) setDelayState(currentDelay.toString());
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [currentDelay]);
-
-	const handleChange = (v: string) => {
-		setDelayState(v);
 	};
 
 	return (
@@ -57,8 +53,9 @@ export default function DelayInput({ className, saveDelay }: Props) {
 			inputMode="numeric"
 			min={0}
 			placeholder="0s"
-			value={delayState}
-			onChange={(e) => handleChange(e.target.value)}
+			defaultValue={currentDelay.toString()}
+			ref={inputRef}
+			onChange={handleChange}
 			onKeyDown={(e) => e.code == "Enter" && updateDelay(true)}
 			onBlur={() => updateDelay(true)}
 			disabled={isPaused}

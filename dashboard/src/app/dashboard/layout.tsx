@@ -1,25 +1,25 @@
-'use client';
+"use client";
 
-import { type ReactNode } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { type ReactNode } from "react";
+import { AnimatePresence, motion } from "motion/react";
 
-import { useDataEngine } from '@/hooks/useDataEngine';
-import { useWakeLock } from '@/hooks/useWakeLock';
-import { useStores } from '@/hooks/useStores';
-import { useSocket } from '@/hooks/useSocket';
+import { useDataEngine } from "@/hooks/useDataEngine";
+import { useWakeLock } from "@/hooks/useWakeLock";
+import { useStores } from "@/hooks/useStores";
+import { useSocket } from "@/hooks/useSocket";
 
-import { useSettingsStore } from '@/stores/useSettingsStore';
-import { useSidebarStore } from '@/stores/useSidebarStore';
-import { useDataStore } from '@/stores/useDataStore';
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { useSidebarStore } from "@/stores/useSidebarStore";
+import { useDataStore } from "@/stores/useDataStore";
 
-import Sidebar from '@/components/Sidebar';
-import SidenavButton from '@/components/SidenavButton';
-import SessionInfo from '@/components/SessionInfo';
-import WeatherInfo from '@/components/WeatherInfo';
-import TrackInfo from '@/components/TrackInfo';
-import DelayInput from '@/components/DelayInput';
-import DelayTimer from '@/components/DelayTimer';
-import ConnectionStatus from '@/components/ConnectionStatus';
+import Sidebar from "@/components/Sidebar";
+import SidenavButton from "@/components/SidenavButton";
+import SessionInfo from "@/components/SessionInfo";
+import WeatherInfo from "@/components/WeatherInfo";
+import TrackInfo from "@/components/TrackInfo";
+import DelayInput from "@/components/DelayInput";
+import DelayTimer from "@/components/DelayTimer";
+import ConnectionStatus from "@/components/ConnectionStatus";
 
 type Props = {
 	children: ReactNode;
@@ -35,19 +35,23 @@ export default function DashboardLayout({ children }: Props) {
 
 	useWakeLock();
 
-	const ended = useDataStore(({ state }) => state?.SessionStatus?.Status === 'Ends');
+	const ended = useDataStore(({ state }) => state?.SessionStatus?.Status === "Ends");
 
 	return (
-		<div className="flex h-screen w-full md:pt-2 md:pr-2 md:pb-2">
+		<div className="relative flex h-screen w-full overflow-hidden p-2 md:gap-2">
+			<div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_16%,transparent_84%,rgba(0,229,255,0.06))]" />
+			<div className="pointer-events-none absolute top-0 left-0 h-px w-full bg-gradient-to-r from-cyan-300/0 via-cyan-300/70 to-rose-400/0" />
 			<Sidebar key="sidebar" connected={connected} />
 
-			<motion.div layout="size" className="flex h-full w-full flex-1 flex-col md:gap-2">
+			<motion.div layout="size" className="relative flex h-full min-w-0 flex-1 flex-col gap-2">
 				<DesktopStaticBar show={!syncing || ended} />
 				<MobileStaticBar show={!syncing || ended} connected={connected} />
 
 				<div
 					className={
-						!syncing || ended ? 'no-scrollbar w-full flex-1 overflow-auto md:rounded-lg' : 'hidden'
+						!syncing || ended
+							? "telemetry-panel tech-scrollbar w-full flex-1 overflow-auto rounded-lg border-cyan-300/10"
+							: "hidden"
 					}
 				>
 					<MobileDynamicBar />
@@ -57,13 +61,14 @@ export default function DashboardLayout({ children }: Props) {
 				<div
 					className={
 						syncing && !ended
-							? 'flex h-full flex-1 flex-col items-center justify-center gap-2 border-zinc-800 md:rounded-lg md:border'
-							: 'hidden'
+							? "telemetry-panel flex h-full flex-1 flex-col items-center justify-center gap-2 rounded-lg p-8 text-center"
+							: "hidden"
 					}
 				>
-					<h1 className="my-20 text-center text-5xl font-bold">Syncing...</h1>
-					<p>Please wait for {delay - maxDelay} seconds.</p>
-					<p>Or make your delay smaller.</p>
+					<p className="panel-title">Replay buffer</p>
+					<h1 className="text-5xl font-black tracking-tight text-cyan-100">Syncing telemetry</h1>
+					<p className="text-zinc-400">Please wait for {delay - maxDelay} seconds.</p>
+					<p className="text-zinc-500">Or make your delay smaller.</p>
 				</div>
 			</motion.div>
 		</div>
@@ -72,7 +77,7 @@ export default function DashboardLayout({ children }: Props) {
 
 function MobileDynamicBar() {
 	return (
-		<div className="flex flex-col divide-y divide-zinc-800 border-b border-zinc-800 md:hidden">
+		<div className="flex flex-col divide-y divide-cyan-300/10 border-b border-cyan-300/10 bg-black/30 md:hidden">
 			<div className="p-2">
 				<SessionInfo />
 			</div>
@@ -87,7 +92,7 @@ function MobileStaticBar({ show, connected }: { show: boolean; connected: boolea
 	const open = useSidebarStore((state) => state.open);
 
 	return (
-		<div className="flex w-full items-center justify-between overflow-hidden border-b border-zinc-800 p-2 md:hidden">
+		<div className="telemetry-panel flex w-full items-center justify-between overflow-hidden rounded-lg p-2 md:hidden">
 			<div className="flex items-center gap-2">
 				<SidenavButton key="mobile" onClick={() => open()} />
 
@@ -107,7 +112,7 @@ function DesktopStaticBar({ show }: { show: boolean }) {
 	const pin = useSidebarStore((state) => state.pin);
 
 	return (
-		<div className="hidden w-full flex-row justify-between overflow-hidden rounded-lg border border-zinc-800 p-2 md:flex">
+		<div className="telemetry-panel hidden w-full flex-row justify-between overflow-hidden rounded-lg p-2 md:flex">
 			<div className="flex items-center gap-2">
 				<AnimatePresence>
 					{!pinned && <SidenavButton key="desktop" className="shrink-0" onClick={() => pin()} />}

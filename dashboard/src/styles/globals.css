@@ -8,8 +8,40 @@
 @theme {
 	--breakpoint-3xl: 1800px;
 
-	--color-popover: rgba(37, 37, 37, 0.9);
-	--color-pane: oklch(18% 0.005 285.82);
+	--color-popover: rgba(7, 16, 24, 0.94);
+	--color-pane: oklch(17% 0.035 220);
+}
+
+@layer base {
+	:root {
+		color-scheme: dark;
+		background: #03070d;
+	}
+
+	html {
+		background: #03070d;
+	}
+
+	body {
+		min-height: 100vh;
+		background:
+			radial-gradient(circle at 14% 18%, rgba(0, 229, 255, 0.16), transparent 28rem),
+			radial-gradient(circle at 86% 10%, rgba(255, 43, 85, 0.14), transparent 26rem),
+			linear-gradient(135deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+			linear-gradient(45deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px), #03070d;
+		background-size:
+			auto,
+			auto,
+			32px 32px,
+			32px 32px,
+			auto;
+		color: #edf7ff;
+	}
+
+	::selection {
+		background: rgba(0, 229, 255, 0.28);
+		color: #ffffff;
+	}
 }
 
 @layer utilities {
@@ -21,10 +53,88 @@
 		-ms-overflow-style: none;
 		scrollbar-width: none;
 	}
+
+	.telemetry-panel {
+		position: relative;
+		border: 1px solid rgba(125, 211, 252, 0.18);
+		background:
+			linear-gradient(135deg, rgba(8, 20, 31, 0.94), rgba(5, 10, 18, 0.9)),
+			linear-gradient(90deg, rgba(0, 229, 255, 0.12), rgba(255, 43, 85, 0.06));
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.08),
+			0 20px 70px rgba(0, 0, 0, 0.45),
+			0 0 0 1px rgba(255, 255, 255, 0.03);
+	}
+
+	.telemetry-panel::before {
+		pointer-events: none;
+		position: absolute;
+		inset: 0;
+		content: "";
+		background:
+			linear-gradient(90deg, rgba(0, 229, 255, 0.16), transparent 28%, transparent 72%, rgba(255, 43, 85, 0.14)),
+			repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 72px);
+		opacity: 0.45;
+	}
+
+	.telemetry-panel > * {
+		position: relative;
+		z-index: 1;
+	}
+
+	.panel-title {
+		font-family: var(--font-geist-mono);
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: rgb(125, 211, 252);
+	}
+
+	.data-chip {
+		border: 1px solid rgba(125, 211, 252, 0.18);
+		background: rgba(4, 12, 20, 0.72);
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+	}
+
+	.tech-scrollbar {
+		scrollbar-color: rgba(125, 211, 252, 0.55) rgba(4, 12, 20, 0.8);
+		scrollbar-width: thin;
+	}
+
+	.tech-scrollbar::-webkit-scrollbar {
+		width: 0.7rem;
+		height: 0.7rem;
+	}
+
+	.tech-scrollbar::-webkit-scrollbar-track {
+		background: rgba(4, 12, 20, 0.8);
+		border-radius: 999px;
+	}
+
+	.tech-scrollbar::-webkit-scrollbar-thumb {
+		background: linear-gradient(180deg, rgba(125, 211, 252, 0.8), rgba(34, 211, 238, 0.35));
+		border: 2px solid rgba(4, 12, 20, 0.8);
+		border-radius: 999px;
+	}
 }
 
 .pulse-loading-spinner {
 	animation: pulse-loading 1.2s cubic-bezier(0.52, 0.6, 0.25, 0.99) infinite;
+}
+
+@keyframes scanline {
+	0% {
+		transform: translateY(-100%);
+		opacity: 0;
+	}
+	18% {
+		opacity: 0.22;
+	}
+	100% {
+		transform: translateY(120%);
+		opacity: 0;
+	}
 }
 
 @keyframes pulse-loading {

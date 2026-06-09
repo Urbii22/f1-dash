@@ -13,24 +13,27 @@ export default function TrackInfo() {
 	const currentTrackStatus = getTrackStatusMessage(track?.Status ? parseInt(track?.Status) : undefined);
 
 	return (
-		<div className="flex flex-row items-center gap-4 md:justify-self-end">
+		<div className="flex flex-row items-center gap-3 md:justify-self-end">
 			{!!lapCount && (
-				<p className="text-3xl font-extrabold whitespace-nowrap">
+				<p className="data-chip rounded-md px-3 py-1 font-mono text-3xl font-black whitespace-nowrap text-white">
 					{lapCount?.CurrentLap} / {lapCount?.TotalLaps}
 				</p>
 			)}
 
 			{!!currentTrackStatus ? (
 				<div
-					className={clsx("flex h-8 items-center truncate rounded-md px-2", currentTrackStatus.color)}
+					className={clsx(
+						"flex h-9 items-center truncate rounded-md px-3 font-mono uppercase",
+						currentTrackStatus.color,
+					)}
 					style={{
 						boxShadow: `0 0 60px 10px ${currentTrackStatus.hex}`,
 					}}
 				>
-					<p className="text-lg font-medium">{currentTrackStatus.message}</p>
+					<p className="text-lg font-black">{currentTrackStatus.message}</p>
 				</div>
 			) : (
-				<div className="relative h-8 w-28 animate-pulse overflow-hidden rounded-lg bg-zinc-800" />
+				<div className="relative h-8 w-28 animate-pulse overflow-hidden rounded-lg bg-cyan-950/60" />
 			)}
 		</div>
 	);

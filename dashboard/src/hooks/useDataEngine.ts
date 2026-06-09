@@ -46,14 +46,13 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 	const [maxDelay, setMaxDelay] = useState<number>(0);
 
 	const delayRef = useRef<number>(0);
-
-	useSettingsStore.subscribe(
-		(state) => state.delay,
-		(delay) => (delayRef.current = delay),
-		{ fireImmediately: true },
-	);
+	const delay = useSettingsStore((state) => state.delay);
 
 	const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+	useEffect(() => {
+		delayRef.current = delay;
+	}, [delay]);
 
 	const handleInitial = ({ CarDataZ: carZ, PositionZ: posZ, ...initial }: MessageInitial) => {
 		updateState(initial);

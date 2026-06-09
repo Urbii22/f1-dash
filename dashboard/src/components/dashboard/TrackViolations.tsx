@@ -46,10 +46,10 @@ export default function TrackViolations() {
 		: undefined;
 
 	return (
-		<div className="flex flex-col gap-0.5">
+		<div className="mt-3 flex flex-col gap-1">
 			{violationDrivers && violationDrivers.length < 1 && (
-				<div className="flex h-96 w-full flex-col items-center justify-center">
-					<p className="text-gray-500">No violations yet</p>
+				<div className="data-chip flex h-96 w-full flex-col items-center justify-center rounded-md">
+					<p className="font-mono text-sm text-cyan-300/60 uppercase">No violations yet</p>
 				</div>
 			)}
 

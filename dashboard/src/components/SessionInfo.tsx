@@ -37,23 +37,23 @@ export default function SessionInfo() {
 			: undefined;
 
 	return (
-		<div className="flex items-center gap-2">
+		<div className="data-chip flex items-center gap-3 rounded-md px-3 py-2">
 			<Flag countryCode={session?.Meeting.Country.Code} />
 
 			<div className="flex flex-col justify-center">
 				{session ? (
-					<h1 className="truncate text-sm leading-none font-medium text-white">
+					<h1 className="max-w-[22rem] truncate font-mono text-xs leading-none font-bold tracking-[0.08em] text-cyan-300/80 uppercase">
 						{session.Meeting.Name}: {session.Name ?? "Unknown"}
 						{timingData?.SessionPart ? ` ${sessionPartPrefix(session.Name)}${timingData.SessionPart}` : ""}
 					</h1>
 				) : (
-					<div className="h-4 w-[250px] animate-pulse rounded-md bg-zinc-800" />
+					<div className="h-4 w-[250px] animate-pulse rounded-md bg-cyan-950/60" />
 				)}
 
 				{timeRemaining !== undefined ? (
-					<p className="text-2xl leading-none font-extrabold">{timeRemaining}</p>
+					<p className="font-mono text-2xl leading-none font-black text-white">{timeRemaining}</p>
 				) : (
-					<div className="mt-1 h-6 w-[150px] animate-pulse rounded-md bg-zinc-800 font-semibold" />
+					<div className="mt-1 h-6 w-[150px] animate-pulse rounded-md bg-cyan-950/60 font-semibold" />
 				)}
 			</div>
 		</div>

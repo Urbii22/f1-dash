@@ -54,12 +54,15 @@ export default function Driver({ driver, timingDriver, position }: Props) {
 	return (
 		<motion.div
 			layout="position"
-			className={clsx("flex flex-col gap-1 rounded-lg p-1.5 select-none", {
-				"opacity-50": timingDriver.KnockedOut || timingDriver.Retired || timingDriver.Stopped,
-				"bg-sky-800/30": favoriteDriver,
-				"bg-violet-800/30": hasFastest,
-				"bg-red-800/30": sessionPart != undefined && inDangerZone(position, sessionPart),
-			})}
+			className={clsx(
+				"data-chip flex flex-col gap-1 rounded-md p-1.5 transition select-none hover:border-cyan-300/45 hover:bg-cyan-300/10",
+				{
+					"opacity-50": timingDriver.KnockedOut || timingDriver.Retired || timingDriver.Stopped,
+					"border-cyan-300/60! bg-cyan-300/15! shadow-[0_0_30px_rgba(0,229,255,0.16)]": favoriteDriver,
+					"border-fuchsia-300/50! bg-fuchsia-500/15!": hasFastest,
+					"border-rose-400/50! bg-rose-500/15!": sessionPart != undefined && inDangerZone(position, sessionPart),
+				},
+			)}
 		>
 			<div
 				className="grid items-center gap-2"

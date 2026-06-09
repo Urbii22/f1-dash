@@ -30,24 +30,26 @@ export function RaceControlMessage({ msg, gmtOffset }: Props) {
 			layout="position"
 			animate={{ opacity: 1, scale: 1 }}
 			initial={{ opacity: 0, scale: 0.8 }}
-			className={clsx("flex items-center justify-between gap-1 rounded-lg p-2", { "bg-sky-800/30": favoriteDriver })}
+			className={clsx("data-chip flex items-center justify-between gap-3 rounded-md p-2", {
+				"border-cyan-300/60! bg-cyan-300/15!": favoriteDriver,
+			})}
 		>
 			<div>
-				<div className="flex items-center gap-1 text-sm leading-none text-zinc-500">
+				<div className="flex items-center gap-1 font-mono text-xs leading-none text-cyan-300/60">
 					{msg.Lap && (
 						<>
 							<p>Lap {msg.Lap}</p>
-							{"·"}
+							{"//"}
 						</>
 					)}
 					<time dateTime={localTime}>{localTime}</time>
-					{"·"}
-					<time className="text-zinc-700" dateTime={trackTime}>
+					{"//"}
+					<time className="text-zinc-500" dateTime={trackTime}>
 						{trackTime}
 					</time>
 				</div>
 
-				<p className="text-sm">{msg.Message}</p>
+				<p className="mt-1 text-sm text-zinc-100">{msg.Message}</p>
 			</div>
 
 			{msg.Flag && msg.Flag !== "CLEAR" && (

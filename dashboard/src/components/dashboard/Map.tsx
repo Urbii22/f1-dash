@@ -112,7 +112,7 @@ export default function Map({ filter }: Props) {
 	const showCornerNumbers = useSettingsStore((state) => state.showCornerNumbers);
 	const favoriteDrivers = useSettingsStore((state) => state.favoriteDrivers);
 
-	// const positions = useDataStore((state) => state.positions);
+	const positions = useDataStore((state) => state.positions);
 	const drivers = useDataStore((state) => state?.state?.DriverList);
 	const trackStatus = useDataStore((state) => state?.state?.TrackStatus);
 	const timingDrivers = useDataStore((state) => state?.state?.TimingData);
@@ -212,7 +212,7 @@ export default function Map({ filter }: Props) {
 	if (!points || !minX || !minY || !widthX || !widthY) {
 		return (
 			<div className="h-full w-full p-2" style={{ minHeight: "35rem" }}>
-				<div className="h-full w-full animate-pulse rounded-lg bg-zinc-800" />
+				<div className="h-full w-full animate-pulse rounded-lg border border-cyan-300/10 bg-cyan-950/40" />
 			</div>
 		);
 	}
@@ -223,11 +223,34 @@ export default function Map({ filter }: Props) {
 			className="h-full w-full xl:max-h-screen"
 			xmlns="http://www.w3.org/2000/svg"
 		>
+			<defs>
+				<filter id="trackGlow">
+					<feGaussianBlur stdDeviation="36" result="coloredBlur" />
+					<feMerge>
+						<feMergeNode in="coloredBlur" />
+						<feMergeNode in="SourceGraphic" />
+					</feMerge>
+				</filter>
+				<radialGradient id="radarGlow" cx="50%" cy="50%" r="58%">
+					<stop offset="0%" stopColor="rgba(0,229,255,0.18)" />
+					<stop offset="58%" stopColor="rgba(0,229,255,0.05)" />
+					<stop offset="100%" stopColor="rgba(0,0,0,0)" />
+				</radialGradient>
+			</defs>
+			<rect x={minX} y={minY} width={widthX} height={widthY} fill="url(#radarGlow)" />
 			<path
-				className="stroke-gray-800"
+				className="stroke-cyan-950"
 				strokeWidth={300}
 				strokeLinejoin="round"
 				fill="transparent"
+				d={`M${points[0].x},${points[0].y} ${points.map((point) => `L${point.x},${point.y}`).join(" ")}`}
+			/>
+			<path
+				className="stroke-cyan-300/25"
+				strokeWidth={430}
+				strokeLinejoin="round"
+				fill="transparent"
+				filter="url(#trackGlow)"
 				d={`M${points[0].x},${points[0].y} ${points.map((point) => `L${point.x},${point.y}`).join(" ")}`}
 			/>
 
@@ -245,6 +268,7 @@ export default function Map({ filter }: Props) {
 						strokeLinecap="round"
 						strokeLinejoin="round"
 						fill="transparent"
+						filter="url(#trackGlow)"
 						d={sector.d}
 						style={style}
 					/>
@@ -286,7 +310,8 @@ export default function Map({ filter }: Props) {
 								: false;
 							const pit = timingDriver ? timingDriver.InPit : false;
 
-							const driverPosition = getDriverPosition(timingDriver, originalTrackPoints);
+							const driverPosition =
+								positions?.[driver.RacingNumber] ?? getDriverPosition(timingDriver, originalTrackPoints);
 
 							// Skip rendering if we can't determine position
 							if (!driverPosition) return null;
@@ -320,7 +345,7 @@ type CornerNumberProps = {
 
 const CornerNumber: React.FC<CornerNumberProps> = ({ number, x, y }) => {
 	return (
-		<text x={x} y={y} className="fill-zinc-700" fontSize={300} fontWeight="semibold">
+		<text x={x} y={y} className="fill-cyan-300/30" fontSize={300} fontWeight="semibold">
 			{number}
 		</text>
 	);
@@ -347,7 +372,11 @@ const CarDot = ({ pos, name, color, favoriteDriver, pit, hidden, rotation, cente
 
 	return (
 		<g
-			className={clsx("fill-zinc-700", { "opacity-30": pit }, { "opacity-0!": hidden })}
+			className={clsx(
+				"fill-cyan-300 drop-shadow-[0_0_12px_rgba(0,229,255,0.85)]",
+				{ "opacity-30": pit },
+				{ "opacity-0!": hidden },
+			)}
 			style={{
 				transition: "all 1s linear",
 				transform,

@@ -12,16 +12,18 @@ type Props = {
 
 export default function DriverViolations({ driver, driverViolations, driversTiming }: Props) {
 	return (
-		<div className="flex gap-2 p-1.5" key={`violation.${driver.RacingNumber}`}>
+		<div className="data-chip flex gap-2 rounded-md p-2" key={`violation.${driver.RacingNumber}`}>
 			<DriverTag className="h-fit" teamColor={driver.TeamColour} short={driver.Tla} />
 
-			<div className="flex flex-col justify-around text-sm leading-none text-zinc-600">
+			<div className="flex flex-col justify-around text-sm leading-none text-zinc-300">
 				<p>
 					{driverViolations} Violation{driverViolations > 1 ? "s" : ""}
-					{driverViolations > 4 && <span> - {Math.round(driverViolations / 5) * 5}s Penalty</span>}
+					{driverViolations > 4 && (
+						<span className="text-rose-300"> - {Math.round(driverViolations / 5) * 5}s Penalty</span>
+					)}
 				</p>
 				{driverViolations > 4 && driversTiming && (
-					<p>
+					<p className="font-mono text-xs text-cyan-300/70">
 						{calculatePosition(Math.round(driverViolations / 5) * 5, driver.RacingNumber, driversTiming)}
 						th after penalty
 					</p>

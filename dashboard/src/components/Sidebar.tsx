@@ -72,13 +72,13 @@ export default function Sidebar({ connected }: Props) {
 
 	return (
 		<div>
-			<motion.div className="hidden md:block" style={{ width: 216 }} animate={{ width: pinned ? 216 : 8 }} />
+			<motion.div className="hidden md:block" style={{ width: 236 }} animate={{ width: pinned ? 236 : 8 }} />
 
 			<AnimatePresence>
 				{opened && (
 					<motion.div
 						onTouchEnd={() => close()}
-						className="fixed top-0 right-0 bottom-0 left-0 z-30 bg-black/20 backdrop-blur-sm md:hidden"
+						className="fixed top-0 right-0 bottom-0 left-0 z-30 bg-black/50 backdrop-blur-md md:hidden"
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
@@ -92,17 +92,16 @@ export default function Sidebar({ connected }: Props) {
 				onHoverEnd={!pinned ? () => close() : undefined}
 				onHoverStart={!pinned ? () => open() : undefined}
 				//
-				animate={{ left: pinned || opened ? 0 : -216 }}
+				animate={{ left: pinned || opened ? 0 : -236 }}
 				transition={{ type: "spring", bounce: 0.1 }}
 			>
 				<nav
-					className={clsx("m-2 flex w-52 flex-col p-2", {
-						"rounded-lg border border-zinc-800": !pinned,
+					className={clsx("telemetry-panel m-2 flex w-56 flex-col gap-3 rounded-lg p-3", {
 						"bg-black": oledMode,
-						"bg-zinc-950": !oledMode,
+						"bg-zinc-950/90": !oledMode,
 					})}
 				>
-					<div className="flex items-center justify-between gap-2">
+					<div className="flex items-center justify-between gap-2 border-b border-cyan-300/10 pb-3">
 						<div className="flex items-center gap-2">
 							<DelayInput saveDelay={500} />
 							<DelayTimer />
@@ -114,7 +113,10 @@ export default function Sidebar({ connected }: Props) {
 						<SidenavButton className="md:hidden" onClick={() => close()} />
 					</div>
 
-					<p className="p-2 text-sm text-zinc-500">Live Timing</p>
+					<div>
+						<p className="text-[0.65rem] font-bold tracking-[0.22em] text-cyan-300 uppercase">F1 Command</p>
+						<p className="font-mono text-xs text-zinc-500">Live telemetry suite</p>
+					</div>
 
 					<div className="flex flex-col gap-1">
 						{liveTimingItems.map((item) => (
@@ -135,7 +137,7 @@ export default function Sidebar({ connected }: Props) {
 						{driverItems?.map((item) => <Item key={item.href} item={item} />)}
 					</div> */}
 
-					<p className="mt-4 p-2 text-sm text-zinc-500">General</p>
+					<p className="mt-2 border-t border-cyan-300/10 pt-3 font-mono text-xs text-zinc-500 uppercase">General</p>
 
 					<div className="flex flex-col gap-1">
 						<Item item={{ href: "/dashboard/settings", name: "Settings" }} />
@@ -145,13 +147,11 @@ export default function Sidebar({ connected }: Props) {
 						<Item target="_blank" item={{ href: "/", name: "Home" }} />
 					</div>
 
-					<p className="mt-4 p-2 text-sm text-zinc-500">Links</p>
+					<p className="mt-2 border-t border-cyan-300/10 pt-3 font-mono text-xs text-zinc-500 uppercase">Project</p>
 
 					<div className="flex flex-col gap-1">
-						<Item target="_blank" item={{ href: "https://github.com/slowlydev/f1-dash", name: "Github" }} />
-						<Item target="_blank" item={{ href: "https://discord.gg/unJwu66NuB", name: "Discord" }} />
-						<Item target="_blank" item={{ href: "https://buymeacoffee.com/slowlydev", name: "Buy me a coffee" }} />
-						<Item target="_blank" item={{ href: "https://github.com/sponsors/slowlydev", name: "Sponsor me" }} />
+						<Item target="_blank" item={{ href: "https://github.com/slowlydev/f1-dash", name: "Source" }} />
+						<Item target="_blank" item={{ href: "https://discord.gg/unJwu66NuB", name: "Community" }} />
 					</div>
 				</nav>
 			</motion.div>
@@ -170,11 +170,14 @@ const Item = ({ target, item }: ItemProps) => {
 	return (
 		<Link href={item.href} target={target}>
 			<div
-				className={clsx("rounded-lg p-1 px-2 hover:bg-zinc-900", {
-					"bg-zinc-800!": active,
-				})}
+				className={clsx(
+					"data-chip rounded-md px-3 py-2 text-sm text-zinc-300 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white",
+					{
+						"border-cyan-300/60! bg-cyan-300/15! text-cyan-100 shadow-[0_0_24px_rgba(0,229,255,0.12)]": active,
+					},
+				)}
 			>
-				{item.name}
+				<span className="font-mono text-[0.68rem] text-cyan-300/70">/</span> {item.name}
 			</div>
 		</Link>
 	);
