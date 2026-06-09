@@ -91,6 +91,32 @@ const positionFrame = (timestamp, tick = 0) => ({
 	],
 });
 
+const carFrame = (timestamp, tick = 0) => ({
+	Entries: [
+		{
+			Utc: timestamp,
+			Cars: Object.fromEntries(
+				drivers.map((driver, index) => {
+					const speed = 245 + ((tick * 13 + index * 7) % 85);
+					return [
+						driver[0],
+						{
+							Channels: {
+								"0": 9000 + ((tick * 173 + index * 91) % 2800),
+								"2": speed,
+								"3": 2 + ((tick + index) % 6),
+								"4": 25 + ((tick + index) % 75),
+								"5": tick % 5 === 0 ? 80 : 0,
+								"45": tick % 5 === 0 ? 1 : 0,
+							},
+						},
+					];
+				}),
+			),
+		},
+	],
+});
+
 const buildSectors = (position, completeThird = position < 12) =>
 	[0, 1, 2].map((sectorIndex) => {
 		const overall = position === 1 && sectorIndex !== 1;
@@ -243,6 +269,7 @@ const initial = {
 };
 
 initial.PositionZ = compressed(positionFrame(time(10)));
+initial.CarDataZ = compressed(carFrame(time(10)));
 
 const feed = (topic, data, timestamp) => ({
 	type: 1,
@@ -301,6 +328,7 @@ for (let tick = 0; tick < 18; tick += 1) {
 
 	lines.push(feed("TimingData", { Lines: timingUpdates }, time(second)));
 	lines.push(feed("PositionZ", compressed(positionFrame(time(second), tick + 1)), time(second)));
+	lines.push(feed("CarDataZ", compressed(carFrame(time(second), tick + 1)), time(second)));
 	lines.push(feed("LapCount", { CurrentLap: lap, TotalLaps: 66 }, time(second + 1)));
 
 	if (tick === 2) {

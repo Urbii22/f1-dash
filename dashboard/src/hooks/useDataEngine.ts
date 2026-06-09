@@ -9,6 +9,7 @@ import { inflate } from "@/lib/inflate";
 import { utcToLocalMs } from "@/lib/utcToLocalMs";
 
 import { useSettingsStore } from "@/stores/useSettingsStore";
+import { useReplayControlStore } from "@/stores/useReplayControlStore";
 
 import { useBuffer } from "@/hooks/useBuffer";
 import { useStatefulBuffer } from "@/hooks/useStatefulBuffer";
@@ -46,13 +47,25 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 	const [maxDelay, setMaxDelay] = useState<number>(0);
 
 	const delayRef = useRef<number>(0);
+	const replayPausedRef = useRef(false);
+	const replaySpeedRef = useRef(1);
+	const replaySeekOffsetRef = useRef(0);
 	const delay = useSettingsStore((state) => state.delay);
+	const replayPaused = useReplayControlStore((state) => state.isPaused);
+	const replaySpeed = useReplayControlStore((state) => state.speed);
+	const replaySeekOffsetMs = useReplayControlStore((state) => state.seekOffsetMs);
 
 	const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
 	useEffect(() => {
 		delayRef.current = delay;
 	}, [delay]);
+
+	useEffect(() => {
+		replayPausedRef.current = replayPaused;
+		replaySpeedRef.current = replaySpeed;
+		replaySeekOffsetRef.current = replaySeekOffsetMs;
+	}, [replayPaused, replaySpeed, replaySeekOffsetMs]);
 
 	const handleInitial = ({ CarDataZ: carZ, PositionZ: posZ, ...initial }: MessageInitial) => {
 		updateState(initial);
@@ -105,6 +118,8 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 	};
 
 	const handleCurrentState = () => {
+		if (replayPausedRef.current) return;
+
 		const delay = delayRef.current;
 
 		if (delay === 0) {
@@ -124,7 +139,7 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 			const posFrame = posBuffer.latest();
 			if (posFrame) updatePosition(posFrame);
 		} else {
-			const delayedTimestamp = Date.now() - delay * 1000;
+			const delayedTimestamp = Date.now() * replaySpeedRef.current - delay * 1000 + replaySeekOffsetRef.current;
 			const newStateFrame: Record<string, State[keyof State]> = {};
 
 			Object.keys(buffers).forEach((key) => {

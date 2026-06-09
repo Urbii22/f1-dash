@@ -7,6 +7,7 @@ import type { Map, TrackPosition } from "@/types/map.type";
 import { fetchMap } from "@/lib/fetchMap";
 
 import { useDataStore } from "@/stores/useDataStore";
+import { useDriverSelectionStore } from "@/stores/useDriverSelectionStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { getTrackStatusMessage } from "@/lib/getTrackStatusMessage";
 import {
@@ -111,6 +112,9 @@ type Props = {
 export default function Map({ filter }: Props) {
 	const showCornerNumbers = useSettingsStore((state) => state.showCornerNumbers);
 	const favoriteDrivers = useSettingsStore((state) => state.favoriteDrivers);
+	const selectedDriver = useDriverSelectionStore((state) => state.selectedDriver);
+	const setSelectedDriver = useDriverSelectionStore((state) => state.setSelectedDriver);
+	const toggleComparedDriver = useDriverSelectionStore((state) => state.toggleComparedDriver);
 
 	const positions = useDataStore((state) => state.positions);
 	const drivers = useDataStore((state) => state?.state?.DriverList);
@@ -128,6 +132,7 @@ export default function Map({ filter }: Props) {
 	const [rotation, setRotation] = useState<number>(0);
 	const [finishLine, setFinishLine] = useState<null | { x: number; y: number; startAngle: number }>(null);
 	const [originalTrackPoints, setOriginalTrackPoints] = useState<null | { x: number; y: number }[]>(null);
+	const [driverTrails, setDriverTrails] = useState<Record<string, PositionCar[]>>({});
 
 	useEffect(() => {
 		(async () => {
@@ -189,6 +194,20 @@ export default function Map({ filter }: Props) {
 			setOriginalTrackPoints(originalPoints);
 		})();
 	}, [circuitKey]);
+
+	useEffect(() => {
+		if (!positions) return;
+
+		const timeout = window.setTimeout(() => {
+			setDriverTrails((prev) =>
+				Object.fromEntries(
+					Object.entries(positions).map(([driver, pos]) => [driver, [...(prev[driver] ?? []), pos].slice(-8)]),
+				),
+			);
+		}, 0);
+
+		return () => window.clearTimeout(timeout);
+	}, [positions]);
 
 	const yellowSectors = useMemo(() => findYellowSectors(raceControlMessages), [raceControlMessages]);
 
@@ -298,6 +317,24 @@ export default function Map({ filter }: Props) {
 					/>
 				))}
 
+			{centerX &&
+				centerY &&
+				Object.entries(driverTrails).map(([driver, trail]) => (
+					<polyline
+						key={`trail.${driver}`}
+						points={trail
+							.map((pos) => {
+								const rotated = rotate(pos.X, pos.Y, rotation, centerX, centerY);
+								return `${rotated.x},${rotated.y}`;
+							})
+							.join(" ")}
+						className="stroke-cyan-300/25"
+						strokeWidth={45}
+						fill="transparent"
+						strokeLinecap="round"
+					/>
+				))}
+
 			{centerX && centerY && drivers && timingDrivers && (
 				<>
 					{Object.values(drivers)
@@ -328,6 +365,9 @@ export default function Map({ filter }: Props) {
 									rotation={rotation}
 									centerX={centerX}
 									centerY={centerY}
+									selected={selectedDriver === driver.RacingNumber}
+									onSelect={() => setSelectedDriver(driver.RacingNumber)}
+									onCompare={() => toggleComparedDriver(driver.RacingNumber)}
 								/>
 							);
 						})}
@@ -364,16 +404,43 @@ type CarDotProps = {
 
 	centerX: number;
 	centerY: number;
+	selected: boolean;
+	onSelect: () => void;
+	onCompare: () => void;
 };
 
-const CarDot = ({ pos, name, color, favoriteDriver, pit, hidden, rotation, centerX, centerY }: CarDotProps) => {
+const CarDot = ({
+	pos,
+	name,
+	color,
+	favoriteDriver,
+	pit,
+	hidden,
+	rotation,
+	centerX,
+	centerY,
+	selected,
+	onSelect,
+	onCompare,
+}: CarDotProps) => {
 	const rotatedPos = rotate(pos.X, pos.Y, rotation, centerX, centerY);
 	const transform = [`translateX(${rotatedPos.x}px)`, `translateY(${rotatedPos.y}px)`].join(" ");
 
 	return (
 		<g
+			role="button"
+			tabIndex={0}
+			onClick={onSelect}
+			onDoubleClick={onCompare}
+			onKeyDown={(event) => {
+				if (event.key === "Enter") onSelect();
+				if (event.key === " ") {
+					event.preventDefault();
+					onCompare();
+				}
+			}}
 			className={clsx(
-				"fill-cyan-300 drop-shadow-[0_0_12px_rgba(0,229,255,0.85)]",
+				"cursor-pointer fill-cyan-300 drop-shadow-[0_0_12px_rgba(0,229,255,0.85)] outline-none",
 				{ "opacity-30": pit },
 				{ "opacity-0!": hidden },
 			)}
@@ -384,6 +451,7 @@ const CarDot = ({ pos, name, color, favoriteDriver, pit, hidden, rotation, cente
 			}}
 		>
 			<circle id={`map.driver.circle`} r={120} />
+			{selected && <circle className="stroke-white" r={260} fill="transparent" strokeWidth={60} />}
 			<text
 				id={`map.driver.text`}
 				fontWeight="bold"

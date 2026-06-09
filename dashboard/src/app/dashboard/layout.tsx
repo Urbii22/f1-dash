@@ -20,6 +20,7 @@ import TrackInfo from "@/components/TrackInfo";
 import DelayInput from "@/components/DelayInput";
 import DelayTimer from "@/components/DelayTimer";
 import ConnectionStatus from "@/components/ConnectionStatus";
+import ReplayControlBar from "@/components/dashboard/ReplayControlBar";
 
 type Props = {
 	children: ReactNode;
@@ -46,6 +47,7 @@ export default function DashboardLayout({ children }: Props) {
 			<motion.div layout="size" className="relative flex h-full min-w-0 flex-1 flex-col gap-2">
 				<DesktopStaticBar show={!syncing || ended} />
 				<MobileStaticBar show={!syncing || ended} connected={connected} />
+				<ReplayControlBar />
 
 				<div
 					className={
