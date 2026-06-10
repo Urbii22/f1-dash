@@ -9,28 +9,31 @@ const season = 2026;
 
 const drivers = [
 	["1", "NOR", "Lando", "Norris", "McLaren", "F47600", "GBR", "MEDIUM"],
-	["3", "VER", "Max", "Verstappen", "Red Bull Racing", "4781D7", "NED", "MEDIUM"],
-	["16", "LEC", "Charles", "Leclerc", "Ferrari", "ED1131", "MON", "HARD"],
 	["81", "PIA", "Oscar", "Piastri", "McLaren", "F47600", "AUS", "MEDIUM"],
 	["63", "RUS", "George", "Russell", "Mercedes", "00D7B6", "GBR", "HARD"],
-	["44", "HAM", "Lewis", "Hamilton", "Ferrari", "ED1131", "GBR", "MEDIUM"],
 	["12", "ANT", "Andrea Kimi", "Antonelli", "Mercedes", "00D7B6", "ITA", "SOFT"],
-	["14", "ALO", "Fernando", "Alonso", "Aston Martin", "229971", "ESP", "HARD"],
-	["18", "STR", "Lance", "Stroll", "Aston Martin", "229971", "CAN", "MEDIUM"],
+	["3", "VER", "Max", "Verstappen", "Red Bull Racing", "4781D7", "NED", "MEDIUM"],
+	["6", "HAD", "Isack", "Hadjar", "Red Bull Racing", "4781D7", "FRA", "HARD"],
+	["16", "LEC", "Charles", "Leclerc", "Ferrari", "ED1131", "MON", "HARD"],
+	["44", "HAM", "Lewis", "Hamilton", "Ferrari", "ED1131", "GBR", "MEDIUM"],
 	["23", "ALB", "Alexander", "Albon", "Williams", "64C4FF", "THA", "HARD"],
 	["55", "SAI", "Carlos", "Sainz", "Williams", "64C4FF", "ESP", "MEDIUM"],
+	["30", "LAW", "Liam", "Lawson", "Racing Bulls", "6692FF", "NZL", "MEDIUM"],
+	["41", "LIN", "Arvid", "Lindblad", "Racing Bulls", "6692FF", "GBR", "SOFT"],
+	["14", "ALO", "Fernando", "Alonso", "Aston Martin", "229971", "ESP", "HARD"],
+	["18", "STR", "Lance", "Stroll", "Aston Martin", "229971", "CAN", "MEDIUM"],
 	["31", "OCO", "Esteban", "Ocon", "Haas F1 Team", "B6BABD", "FRA", "HARD"],
 	["87", "BEA", "Oliver", "Bearman", "Haas F1 Team", "B6BABD", "GBR", "MEDIUM"],
-	["27", "HUL", "Nico", "Hulkenberg", "Kick Sauber", "52E252", "GER", "HARD"],
-	["5", "BOR", "Gabriel", "Bortoleto", "Kick Sauber", "52E252", "BRA", "MEDIUM"],
-	["22", "TSU", "Yuki", "Tsunoda", "Red Bull Racing", "4781D7", "JPN", "SOFT"],
-	["30", "LAW", "Liam", "Lawson", "Racing Bulls", "6692FF", "NZL", "MEDIUM"],
-	["6", "HAD", "Isack", "Hadjar", "Racing Bulls", "6692FF", "FRA", "HARD"],
+	["27", "HUL", "Nico", "Hulkenberg", "Audi", "F50537", "GER", "HARD"],
+	["5", "BOR", "Gabriel", "Bortoleto", "Audi", "F50537", "BRA", "MEDIUM"],
 	["10", "GAS", "Pierre", "Gasly", "Alpine", "0093CC", "FRA", "MEDIUM"],
 	["43", "COL", "Franco", "Colapinto", "Alpine", "0093CC", "ARG", "HARD"],
+	["77", "BOT", "Valtteri", "Bottas", "Cadillac", "C6A35A", "FIN", "HARD"],
+	["11", "PER", "Sergio", "Perez", "Cadillac", "C6A35A", "MEX", "MEDIUM"],
 ];
 
-const time = (seconds) => `2026-06-07T16:10:${String(seconds).padStart(2, "0")}.000Z`;
+const startTime = Date.parse("2026-06-07T16:10:00.000Z");
+const time = (seconds) => new Date(startTime + seconds * 1000).toISOString();
 const value = (v, overrides = {}) => ({ Value: v, Status: 0, OverallFastest: false, PersonalFastest: false, ...overrides });
 const best = (v, p) => ({ Value: v, Position: p });
 const segment = (status) => ({ Status: status });
@@ -107,7 +110,6 @@ const carFrame = (timestamp, tick = 0) => ({
 								"3": 2 + ((tick + index) % 6),
 								"4": 25 + ((tick + index) % 75),
 								"5": tick % 5 === 0 ? 80 : 0,
-								"45": tick % 5 === 0 ? 1 : 0,
 							},
 						},
 					];
@@ -164,8 +166,8 @@ const timingDriver = (driver, index) => {
 		ShowPosition: true,
 		RacingNumber: nr,
 		Retired: false,
-		InPit: index === 15,
-		PitOut: index === 16,
+		InPit: false,
+		PitOut: false,
 		Stopped: false,
 		Status: 0,
 		Sectors: buildSectors(position),
@@ -197,17 +199,14 @@ const initial = {
 	SessionStatus: { Status: "Started" },
 	DriverList: Object.fromEntries(drivers.map((driver, index) => [driver[0], driverListEntry(driver, index)])),
 	RaceControlMessages: {
-		Messages: [
-			{ Utc: time(11), Lap: 13, Category: "Flag", Flag: "GREEN", Scope: "Track", Message: "GREEN FLAG" },
-			{ Utc: time(12), Lap: 13, Category: "Other", Scope: "Track", Message: "DRS ENABLED" },
-		],
+		Messages: [{ Utc: time(0), Lap: 13, Category: "Flag", Flag: "GREEN", Scope: "Track", Message: "GREEN FLAG" }],
 	},
 	SessionInfo: {
 		Meeting: {
 			Key: 9999,
-			Name: "Synthetic Full Grid GP",
-			OfficialName: "SYNTHETIC FULL GRID GRAND PRIX 2026",
-			Location: "Localhost",
+			Name: "Synthetic 2026 Validation GP",
+			OfficialName: "LOCAL SYNTHETIC 2026 VALIDATION REPLAY",
+			Location: "Local Validation",
 			Country: { Key: 1, Code: "ESP", Name: "Spain" },
 			Circuit: { Key: 15, ShortName: "Catalunya" },
 		},
@@ -218,18 +217,17 @@ const initial = {
 		StartDate: "2026-06-07T16:10:00Z",
 		EndDate: "2026-06-07T18:10:00Z",
 		GmtOffset: "02:00:00",
-		Path: "2026/Synthetic_Full_Grid_GP/Race",
+		Path: "2026/Local_Synthetic_Validation/Race",
 		Number: 1,
 	},
 	SessionData: { Series: [{ Utc: time(10), Lap: 13 }], StatusSeries: [] },
 	LapCount: { CurrentLap: 13, TotalLaps: 66 },
 	TeamRadio: {
 		Captures: [
-			{ Utc: time(17), RacingNumber: "1", Path: "/teamradio/nor_001.mp3" },
-			{ Utc: time(22), RacingNumber: "3", Path: "/teamradio/ver_001.mp3" },
-			{ Utc: time(29), RacingNumber: "16", Path: "/teamradio/lec_001.mp3" },
-			{ Utc: time(37), RacingNumber: "81", Path: "/teamradio/pia_001.mp3" },
-			{ Utc: time(49), RacingNumber: "44", Path: "/teamradio/ham_001.mp3" },
+			{ Utc: time(45), RacingNumber: "1", Path: "/teamradio/nor_001.mp3" },
+			{ Utc: time(145), RacingNumber: "3", Path: "/teamradio/ver_001.mp3" },
+			{ Utc: time(285), RacingNumber: "16", Path: "/teamradio/lec_001.mp3" },
+			{ Utc: time(405), RacingNumber: "77", Path: "/teamradio/bot_001.mp3" },
 		],
 	},
 	TimingAppData: {
@@ -279,16 +277,23 @@ const feed = (topic, data, timestamp) => ({
 
 const lines = [{}, { type: 3, invocationId: "synthetic-subscribe", result: initial }];
 
-for (let tick = 0; tick < 18; tick += 1) {
-	const second = 13 + tick * 3;
-	const lap = 13 + Math.floor(tick / 4);
-	const leaderDelta = tick * 0.117;
+const eventAt = (second, topic, data) => lines.push(feed(topic, data, time(second)));
+
+for (let second = 10, tick = 0; second <= 480; second += 10, tick += 1) {
+	const lap = 13 + Math.floor(second / 40);
+	const leaderDelta = tick * 0.041;
 
 	const timingUpdates = Object.fromEntries(
 		drivers.map((driver, index) => {
 			const [, tla] = driver;
-			const positionSwing = tick === 6 && index === 2 ? 2 : tick === 6 && index === 3 ? 3 : index + 1;
+			const positionSwing = second >= 130 && second < 260 && index === 4 ? 6 : second >= 130 && second < 260 && index === 5 ? 5 : index + 1;
 			const gap = index === 0 ? `LAP ${lap}` : `+${(1.1 + index * 1.65 + leaderDelta + (tick % 3) * 0.19).toFixed(3)}`;
+			const lawsonPit = tla === "LAW" && second >= 180 && second < 210;
+			const lawsonPitOut = tla === "LAW" && second >= 210 && second < 230;
+			const bottasPit = tla === "BOT" && second >= 330 && second < 360;
+			const bottasPitOut = tla === "BOT" && second >= 360 && second < 380;
+			const hasPitSequence = tla === "LAW" || tla === "BOT";
+			const retired = tla === "SAI" && second >= 430;
 
 			return [
 				driver[0],
@@ -305,6 +310,8 @@ for (let tick = 0; tick < 18; tick += 1) {
 						OverallFastest: index === 0 && tick % 6 === 0,
 					}),
 					NumberOfLaps: lap,
+					Retired: retired,
+					Stopped: retired,
 					Sectors: {
 						[tick % 3]: {
 							Value: sectorTime([25.2, 29.5, 23.8][tick % 3], index + 1, tick % 3),
@@ -319,42 +326,54 @@ for (let tick = 0; tick < 18; tick += 1) {
 							},
 						},
 					},
-					...(tick === 10 && tla === "TSU" ? { InPit: true } : {}),
-					...(tick === 11 && tla === "TSU" ? { InPit: false, PitOut: true } : {}),
+					...(hasPitSequence
+						? {
+								InPit: lawsonPit || bottasPit,
+								PitOut: lawsonPitOut || bottasPitOut,
+							}
+						: {}),
 				},
 			];
 		}),
 	);
 
-	lines.push(feed("TimingData", { Lines: timingUpdates }, time(second)));
-	lines.push(feed("PositionZ", compressed(positionFrame(time(second), tick + 1)), time(second)));
-	lines.push(feed("CarDataZ", compressed(carFrame(time(second), tick + 1)), time(second)));
-	lines.push(feed("LapCount", { CurrentLap: lap, TotalLaps: 66 }, time(second + 1)));
+	eventAt(second, "TimingData", { Lines: timingUpdates });
+	eventAt(second, "PositionZ", compressed(positionFrame(time(second), tick + 1)));
+	eventAt(second, "CarDataZ", compressed(carFrame(time(second), tick + 1)));
+	eventAt(second, "LapCount", { CurrentLap: lap, TotalLaps: 66 });
 
-	if (tick === 2) {
-		lines.push(feed("TrackStatus", { Status: "2", Message: "Yellow" }, time(second + 2)));
-		lines.push(feed("RaceControlMessages", { Messages: { 2: { Utc: time(second + 2), Lap: lap, Category: "Flag", Flag: "YELLOW", Scope: "Sector", Sector: 7, Message: "YELLOW FLAG IN SECTOR 7" } } }, time(second + 2)));
+	if (second === 70) {
+		eventAt(second, "TrackStatus", { Status: "2", Message: "Yellow" });
+		eventAt(second, "RaceControlMessages", { Messages: { 2: { Utc: time(second), Lap: lap, Category: "Flag", Flag: "YELLOW", Scope: "Sector", Sector: 7, Message: "YELLOW FLAG IN SECTOR 7" } } });
 	}
 
-	if (tick === 4) {
-		lines.push(feed("RaceControlMessages", { Messages: { 3: { Utc: time(second + 2), Lap: lap, Category: "Other", Scope: "Driver", Message: "INCIDENT INVOLVING CARS 3 (VER) AND 16 (LEC) NOTED - TURN 1" } } }, time(second + 2)));
+	if (second === 110) {
+		eventAt(second, "TrackStatus", { Status: "1", Message: "AllClear" });
+		eventAt(second, "RaceControlMessages", { Messages: { 3: { Utc: time(second), Lap: lap, Category: "Flag", Flag: "GREEN", Scope: "Track", Message: "GREEN FLAG" } } });
 	}
 
-	if (tick === 5) {
-		lines.push(feed("TrackStatus", { Status: "1", Message: "AllClear" }, time(second + 2)));
-		lines.push(feed("RaceControlMessages", { Messages: { 4: { Utc: time(second + 2), Lap: lap, Category: "Flag", Flag: "GREEN", Scope: "Track", Message: "GREEN FLAG" } } }, time(second + 2)));
+	if (second === 130) {
+		eventAt(second, "RaceControlMessages", { Messages: { 4: { Utc: time(second), Lap: lap, Category: "Other", Scope: "Driver", Message: "CARS 3 AND 6 EXCHANGE POSITION" } } });
 	}
 
-	if (tick === 8) {
-		lines.push(feed("RaceControlMessages", { Messages: { 5: { Utc: time(second + 2), Lap: lap, Category: "Other", Scope: "Driver", Message: "CAR 22 TRACK LIMITS AT TURN 10" } } }, time(second + 2)));
+	if (second === 180) {
+		eventAt(second, "RaceControlMessages", { Messages: { 5: { Utc: time(second), Lap: lap, Category: "Other", Scope: "Driver", Message: "CAR 30 ENTERS PIT LANE" } } });
 	}
 
-	if (tick === 12) {
-		lines.push(feed("TeamRadio", { Captures: { 5: { Utc: time(second + 2), RacingNumber: "63", Path: "/teamradio/rus_002.mp3" } } }, time(second + 2)));
+	if (second === 270) {
+		eventAt(second, "RaceControlMessages", { Messages: { 6: { Utc: time(second), Lap: lap, Category: "Other", Scope: "Driver", Message: "CAR 41 TRACK LIMITS AT TURN 10" } } });
+	}
+
+	if (second === 330) {
+		eventAt(second, "RaceControlMessages", { Messages: { 7: { Utc: time(second), Lap: lap, Category: "Other", Scope: "Driver", Message: "CAR 77 ENTERS PIT LANE" } } });
+	}
+
+	if (second === 430) {
+		eventAt(second, "RaceControlMessages", { Messages: { 8: { Utc: time(second), Lap: lap, Category: "Other", Scope: "Driver", Message: "CAR 55 STOPPED - RETIRED" } } });
 	}
 }
 
-lines.push(feed("SessionStatus", { Status: "Finished" }, time(68)));
+eventAt(480, "SessionStatus", { Status: "Finished" });
 
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, lines.map((line) => JSON.stringify(line) + rs).join("\n"));
