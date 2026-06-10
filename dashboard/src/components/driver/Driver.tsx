@@ -44,7 +44,7 @@ export default function Driver({ driver, timingDriver, position }: Props) {
 	const sessionPart = useDataStore((state) => state.state?.TimingData?.SessionPart);
 	const timingStatsDriver = useDataStore((state) => state.state?.TimingStats?.Lines[driver.RacingNumber]);
 	const appTimingDriver = useDataStore((state) => state.state?.TimingAppData?.Lines[driver.RacingNumber]);
-	const carData = useDataStore((state) => (state?.carsData ? state.carsData[driver.RacingNumber].Channels : undefined));
+	const carData = useDataStore((state) => state.carsData?.[driver.RacingNumber]?.Channels);
 
 	const hasFastest = timingStatsDriver?.PersonalBestLapTime.Position == 1;
 
@@ -52,13 +52,18 @@ export default function Driver({ driver, timingDriver, position }: Props) {
 
 	const favoriteDriver = useSettingsStore((state) => state.favoriteDrivers.includes(driver.RacingNumber));
 	const selectedDriver = useDriverSelectionStore((state) => state.selectedDriver);
+	const comparedDrivers = useDriverSelectionStore((state) => state.comparedDrivers);
 	const setSelectedDriver = useDriverSelectionStore((state) => state.setSelectedDriver);
 	const toggleComparedDriver = useDriverSelectionStore((state) => state.toggleComparedDriver);
 	const selected = selectedDriver === driver.RacingNumber;
+	const compared = comparedDrivers.includes(driver.RacingNumber);
+	const teamColour = `#${driver.TeamColour || "00e5ff"}`;
 
 	return (
 		<motion.div
 			layout="position"
+			data-driver-number={driver.RacingNumber}
+			data-head-to-head={compared ? "true" : "false"}
 			role="button"
 			tabIndex={0}
 			title="Click for telemetry. Double-click to compare."
@@ -71,8 +76,19 @@ export default function Driver({ driver, timingDriver, position }: Props) {
 					toggleComparedDriver(driver.RacingNumber);
 				}
 			}}
+			style={
+				compared
+					? {
+							borderColor: teamColour,
+							background: `linear-gradient(90deg, ${teamColour}2e 0%, rgba(5, 12, 17, 0.96) 58%)`,
+							boxShadow: selected
+								? `0 0 0 1px rgba(255,255,255,0.8), inset 4px 0 ${teamColour}, 0 0 18px ${teamColour}24`
+								: `inset 4px 0 ${teamColour}, 0 0 18px ${teamColour}24`,
+						}
+					: undefined
+			}
 			className={clsx(
-				"data-chip flex cursor-pointer flex-col gap-1 rounded-md p-1.5 transition select-none hover:border-cyan-300/45 hover:bg-cyan-300/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300",
+				"data-chip relative flex cursor-pointer flex-col gap-1 rounded-md p-1.5 transition select-none hover:border-cyan-300/45 hover:bg-cyan-300/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300",
 				{
 					"opacity-50": timingDriver.KnockedOut || timingDriver.Retired || timingDriver.Stopped,
 					"border-white/70! bg-white/10!": selected,
@@ -82,6 +98,14 @@ export default function Driver({ driver, timingDriver, position }: Props) {
 				},
 			)}
 		>
+			{compared && (
+				<span
+					className="absolute top-1 right-1 z-10 font-mono text-[0.55rem] font-black tracking-normal"
+					style={{ color: teamColour }}
+				>
+					H2H
+				</span>
+			)}
 			<div
 				className="grid items-center gap-2"
 				style={{

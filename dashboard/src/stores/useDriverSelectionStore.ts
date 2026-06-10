@@ -18,7 +18,7 @@ export const useDriverSelectionStore = create<DriverSelectionStore>((set) => ({
 				return { comparedDrivers: state.comparedDrivers.filter((item) => item !== driver) };
 			}
 
-			return { comparedDrivers: [...state.comparedDrivers, driver].slice(-3) };
+			return { comparedDrivers: [...state.comparedDrivers, driver].slice(-2) };
 		}),
 	clearComparedDrivers: () => set({ comparedDrivers: [] }),
 }));
