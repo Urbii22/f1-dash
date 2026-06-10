@@ -50,6 +50,12 @@ for (const [tla, team] of Object.entries(expectedAssignments)) {
 assert.equal(assignments.has("TSU"), false, "Tsunoda must not be in the 2026 race grid fixture");
 assert.equal(drivers.some((driver) => driver.TeamName === "Kick Sauber"), false, "Kick Sauber must be replaced by Audi");
 
+for (const line of Object.values(initial.TimingData?.Lines ?? {})) {
+	for (const sector of line.Sectors ?? []) {
+		assert.ok(sector.Segments?.length >= 8, "each replay sector must expose at least eight microsectors");
+	}
+}
+
 const updates = frames.filter((frame) => frame.type === 1 && frame.target === "feed");
 const timestamps = updates.map((frame) => Date.parse(frame.arguments?.[2])).filter(Number.isFinite);
 assert.ok(timestamps.length > 1, "replay needs timestamped updates");

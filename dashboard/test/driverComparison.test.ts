@@ -85,20 +85,37 @@ test("sector normalization aligns array and keyed update shapes", () => {
 	assert.deepEqual(sectors[2]?.segments, [2051]);
 });
 
-test("comparison model combines live timing, strategy, and telemetry", () => {
+test("comparison model exposes timing and strategy without car telemetry or speed traps", () => {
 	const model = buildDriverComparison("1", {
 		driver: { RacingNumber: "1", Tla: "NOR", FullName: "Lando NORRIS", TeamColour: "F47600" } as never,
 		timing: timingLine({ RacingNumber: "1", Position: "3", NumberOfLaps: 32 }),
 		stats: { PersonalBestLapTime: { Value: "1:19.440", Position: 2 } } as never,
 		app: { Stints: [{ Compound: "MEDIUM", TotalLaps: 14, New: "false" }] } as never,
-		car: { "0": 11200, "2": 287, "3": 7, "4": 81, "5": 0, "45": 0 },
 	});
 
 	assert.equal(model?.tla, "NOR");
 	assert.equal(model?.stint.age, 14);
-	assert.equal(model?.telemetry.speed, 287);
-	assert.equal("drs" in model!.telemetry, false);
 	assert.equal(model?.bestLap, "1:19.440");
+	assert.equal("telemetry" in model!, false);
+	assert.equal("speedTraps" in model!, false);
+});
+
+test("missing tyre strategy remains unavailable instead of being synthesized", () => {
+	const model = buildDriverComparison("1", {
+		driver: { RacingNumber: "1", Tla: "NOR", FullName: "Lando NORRIS", TeamColour: "F47600" } as never,
+		timing: timingLine({ RacingNumber: "1" }),
+	});
+
+	assert.deepEqual(model?.stint, { compound: "--", age: "--", stops: 0, isNew: false });
+});
+
+test("pit and retirement states use concise explicit labels", () => {
+	const driver = { RacingNumber: "1", Tla: "NOR", FullName: "Lando NORRIS", TeamColour: "F47600" } as never;
+
+	assert.equal(buildDriverComparison("1", { driver, timing: timingLine({ InPit: true }) })?.status, "PIT");
+	assert.equal(buildDriverComparison("1", { driver, timing: timingLine({ PitOut: true }) })?.status, "PIT OUT");
+	assert.equal(buildDriverComparison("1", { driver, timing: timingLine({ Stopped: true }) })?.status, "STOPPED");
+	assert.equal(buildDriverComparison("1", { driver, timing: timingLine({ Retired: true }) })?.status, "RETIRED");
 });
 
 function timingLine(overrides: Record<string, unknown> = {}) {

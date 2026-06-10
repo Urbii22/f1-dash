@@ -1,5 +1,4 @@
 import type {
-	CarDataChannels,
 	Driver,
 	Sector,
 	Stint,
@@ -29,15 +28,7 @@ export type DriverComparisonModel = {
 	gapToLeader: string;
 	interval: string;
 	catching: boolean;
-	speedTraps: Array<{ label: string; value: string }>;
 	sectors: ComparisonSector[];
-	telemetry: {
-		speed: number | null;
-		gear: number | null;
-		throttle: number | null;
-		brake: number | null;
-		rpm: number | null;
-	};
 };
 
 type ComparisonSource = {
@@ -45,7 +36,6 @@ type ComparisonSource = {
 	timing?: TimingDataDriver;
 	stats?: TimingStatsDriver;
 	app?: TimingAppDataDriver;
-	car?: CarDataChannels;
 };
 
 export type DriverGap = {
@@ -125,13 +115,15 @@ export function getCurrentStint(stints: Stint[] | undefined) {
 	const current = stints?.at(-1);
 	return {
 		compound: current?.Compound ?? "--",
-		age: current?.TotalLaps ?? 0,
+		age: current?.TotalLaps ?? "--",
 		stops: Math.max(0, (stints?.length ?? 0) - 1),
 		isNew: current?.New?.toLowerCase() === "true",
 	};
 }
 
-export function normalizeSectors(sectors: TimingDataDriver["Sectors"] | Record<string, Sector> | undefined): ComparisonSector[] {
+export function normalizeSectors(
+	sectors: TimingDataDriver["Sectors"] | Record<string, Sector> | undefined,
+): ComparisonSector[] {
 	const source = sectors ?? [];
 	return [0, 1, 2].map((index) => {
 		const sector = Array.isArray(source) ? source[index] : source[String(index)];
@@ -155,18 +147,17 @@ export function calculateSectorDelta(first: ComparisonSector, second: Comparison
 }
 
 export function getDriverRaceStatus(timing: TimingDataDriver | undefined): string {
-	if (!timing) return "No data";
-	if (timing.Retired) return "Retired";
-	if (timing.Stopped) return "Stopped";
-	if (timing.InPit) return "In pit";
-	if (timing.PitOut) return "Pit out";
-	return "On track";
+	if (!timing) return "NO DATA";
+	if (timing.Retired) return "RETIRED";
+	if (timing.Stopped) return "STOPPED";
+	if (timing.InPit) return "PIT";
+	if (timing.PitOut) return "PIT OUT";
+	return "ON TRACK";
 }
 
 export function buildDriverComparison(number: string, source: ComparisonSource): DriverComparisonModel | null {
 	if (!source.driver || !source.timing) return null;
 
-	const speeds = source.timing.Speeds;
 	return {
 		number,
 		tla: source.driver.Tla,
@@ -181,20 +172,7 @@ export function buildDriverComparison(number: string, source: ComparisonSource):
 		gapToLeader: source.timing.GapToLeader || "--",
 		interval: source.timing.IntervalToPositionAhead?.Value || "--",
 		catching: source.timing.IntervalToPositionAhead?.Catching ?? false,
-		speedTraps: [
-			{ label: "I1", value: speeds?.I1?.Value || "--" },
-			{ label: "I2", value: speeds?.I2?.Value || "--" },
-			{ label: "FL", value: speeds?.Fl?.Value || "--" },
-			{ label: "ST", value: speeds?.St?.Value || "--" },
-		],
 		sectors: normalizeSectors(source.timing.Sectors),
-		telemetry: {
-			speed: channel(source.car, "2"),
-			gear: channel(source.car, "3"),
-			throttle: channel(source.car, "4"),
-			brake: channel(source.car, "5"),
-			rpm: channel(source.car, "0"),
-		},
 	};
 }
 
@@ -215,9 +193,4 @@ function normalizeSegments(segments: Sector["Segments"] | Record<string, { Statu
 				.sort(([a], [b]) => Number(a) - Number(b))
 				.map(([, segment]) => segment);
 	return values.map((segment) => segment.Status);
-}
-
-function channel(car: CarDataChannels | undefined, key: keyof CarDataChannels): number | null {
-	const value = car?.[key];
-	return typeof value === "number" && Number.isFinite(value) ? value : null;
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import clsx from "clsx";
+import { X } from "lucide-react";
+import Image from "next/image";
 
 import {
 	buildDriverComparison,
@@ -18,7 +20,6 @@ export default function DriverComparisonPanel() {
 	const comparedDrivers = useDriverSelectionStore((state) => state.comparedDrivers);
 	const clearComparedDrivers = useDriverSelectionStore((state) => state.clearComparedDrivers);
 	const state = useDataStore((store) => store.state);
-	const carsData = useDataStore((store) => store.carsData);
 
 	const compared = comparedDrivers
 		.map((number) =>
@@ -27,27 +28,31 @@ export default function DriverComparisonPanel() {
 				timing: state?.TimingData?.Lines?.[number],
 				stats: state?.TimingStats?.Lines?.[number],
 				app: state?.TimingAppData?.Lines?.[number],
-				car: carsData?.[number]?.Channels,
 			}),
 		)
 		.filter((driver): driver is DriverComparisonModel => driver !== null);
 
 	return (
-		<section data-testid="head-to-head-panel" className="telemetry-panel min-w-0 rounded-lg p-3">
+		<section data-testid="head-to-head-panel" className="telemetry-panel min-w-0 rounded-lg p-4 xl:min-h-[34rem]">
 			<div className="flex items-center justify-between border-b border-cyan-300/10 pb-3">
-				<div>
-					<p className="panel-title">Head to Head</p>
-					<h2 className="text-xl font-black text-white">Live Driver Compare</h2>
-				</div>
-				<button className="data-chip rounded-md px-2 py-1 text-xs text-cyan-200" onClick={clearComparedDrivers}>
-					Clear
-				</button>
+				<p className="panel-title">Head to Head</p>
+				{compared.length > 0 && (
+					<button
+						aria-label="Clear driver comparison"
+						className="data-chip rounded-md p-1.5 text-zinc-400 transition-colors hover:text-white"
+						onClick={clearComparedDrivers}
+					>
+						<X size={14} />
+					</button>
+				)}
 			</div>
 
-			{compared.length === 0 && <EmptyState text="Double-click two driver rows or map markers to compare them live." />}
+			{compared.length === 0 && (
+				<EmptyState text="Select two drivers from the leaderboard or track map to compare them." />
+			)}
 			{compared.length === 1 && <SingleDriverState driver={compared[0]} />}
 			{compared.length === 2 && (
-				<ComparisonMatrix
+				<Comparison
 					first={compared[0]}
 					second={compared[1]}
 					firstTiming={state?.TimingData?.Lines?.[compared[0].number]}
@@ -58,7 +63,7 @@ export default function DriverComparisonPanel() {
 	);
 }
 
-function ComparisonMatrix({
+function Comparison({
 	first,
 	second,
 	firstTiming,
@@ -72,141 +77,125 @@ function ComparisonMatrix({
 	if (!firstTiming || !secondTiming) return <EmptyState text="Waiting for live timing data." />;
 
 	const gap = calculateDriverGap(firstTiming, secondTiming);
-	const leading = gap.leaderNumber === first.number ? first : second;
-	const trailing = gap.trailingNumber === first.number ? first : second;
-	const lapAdvantage = compareLower(first.lastLap, second.lastLap);
-	const bestLapAdvantage = compareLower(first.bestLap, second.bestLap);
+	const leader = gap.leaderNumber === first.number ? first : second;
+	const trailer = gap.trailingNumber === first.number ? first : second;
 
 	return (
-		<div className="tech-scrollbar mt-3 overflow-x-auto">
-			<div className="min-w-[46rem] overflow-hidden rounded-md border border-cyan-300/10 bg-black/20">
-				<div className="grid grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)] border-b border-cyan-300/10">
-					<DriverHeading driver={first} />
-					<div className="border-x border-cyan-300/10 bg-black/30 px-3 py-2 text-center">
-						<p className="font-mono text-[0.6rem] font-bold text-zinc-500 uppercase">Real gap</p>
-						<p className="mt-1 font-mono text-2xl font-black text-white">{gap.value}</p>
-						<p className="mt-1 font-mono text-[0.62rem] text-cyan-300">
-							{leading.tla} ahead{gap.catching ? ` · ${trailing.tla} closing` : ""}
-						</p>
-					</div>
-					<DriverHeading driver={second} align="right" />
+		<div className="mt-3 flex min-h-0 flex-col gap-3">
+			<div className="grid grid-cols-[minmax(0,1fr)_11rem_minmax(0,1fr)] items-center rounded-md border border-cyan-300/10 bg-black/20 max-sm:grid-cols-[minmax(0,1fr)_8rem_minmax(0,1fr)]">
+				<DriverIdentity driver={first} />
+				<div className="border-x border-cyan-300/10 bg-black/30 px-3 py-3 text-center">
+					<p className="font-mono text-xs font-bold tracking-wider text-zinc-500 uppercase">Real gap</p>
+					<p className="mt-1 font-mono text-3xl font-black text-white">{gap.value}</p>
+					<p className="mt-1 truncate font-mono text-xs font-bold text-cyan-300">
+						{leader.tla} ahead{gap.catching ? ` · ${trailer.tla} closing` : ""}
+					</p>
 				</div>
+				<DriverIdentity driver={second} align="right" />
+			</div>
 
-				<CompareRow
-					label="Position / lap"
-					first={{ value: `P${first.position} · LAP ${first.laps}`, detail: first.status }}
-					second={{ value: `P${second.position} · LAP ${second.laps}`, detail: second.status }}
-				/>
-				<CompareRow
-					label="Tyre / stint"
-					first={{ value: `${first.stint.compound} · ${first.stint.age} laps`, detail: `${first.stint.stops} stops` }}
-					second={{ value: `${second.stint.compound} · ${second.stint.age} laps`, detail: `${second.stint.stops} stops` }}
-				/>
-				<CompareRow
-					label="Last lap"
-					delta={timingDelta(first.lastLap, second.lastLap, first.tla, second.tla)}
-					first={{ value: first.lastLap, detail: `Best ${first.bestLap}`, accent: lapAdvantage === "first" }}
-					second={{ value: second.lastLap, detail: `Best ${second.bestLap}`, accent: lapAdvantage === "second" }}
-				/>
-				<CompareRow
-					label="Personal best"
-					delta={timingDelta(first.bestLap, second.bestLap, first.tla, second.tla)}
-					first={{ value: first.bestLap, detail: `Last ${first.lastLap}`, accent: bestLapAdvantage === "first" }}
-					second={{ value: second.bestLap, detail: `Last ${second.lastLap}`, accent: bestLapAdvantage === "second" }}
-				/>
-				<CompareRow
-					label="Race reference"
-					first={{ value: first.gapToLeader, detail: `Interval ${first.interval}` }}
-					second={{ value: second.gapToLeader, detail: `Interval ${second.interval}` }}
-				/>
-				<CompareRow
-					label="Speed traps"
-					first={{ value: speedTrapText(first), detail: "I1 · I2 · FL · ST" }}
-					second={{ value: speedTrapText(second), detail: "I1 · I2 · FL · ST" }}
-				/>
-				<CompareRow
-					label="Speed / gear"
-					first={{ value: telemetryDriveText(first), detail: telemetryPedalText(first) }}
-					second={{ value: telemetryDriveText(second), detail: telemetryPedalText(second) }}
-				/>
-				<CompareRow
-					label="Engine"
-					first={{ value: formatChannel(first.telemetry.rpm, "rpm"), detail: `Brake ${formatBrake(first.telemetry.brake)}` }}
-					second={{ value: formatChannel(second.telemetry.rpm, "rpm"), detail: `Brake ${formatBrake(second.telemetry.brake)}` }}
-				/>
+			<div className="grid grid-cols-2 gap-2">
+				<StrategyCard driver={first} align="left" />
+				<StrategyCard driver={second} align="right" />
+			</div>
 
-				<div className="p-3">
-					<div className="mb-2 flex items-center justify-between gap-3">
-						<div>
-							<p className="font-mono text-[0.62rem] font-bold text-cyan-300 uppercase">Current lap</p>
-							<h3 className="text-sm font-black text-white">Sectors and microsectors</h3>
-						</div>
-						<p className="font-mono text-[0.58rem] text-zinc-500">LIVE STATUS · NO PROJECTION</p>
+			<LapTimes first={first} second={second} />
+
+			<div className="min-h-0 flex-1">
+				<div className="mb-2 flex items-end justify-between gap-3">
+					<div>
+						<p className="font-mono text-xs font-bold text-cyan-300 uppercase">Current lap</p>
+						<h3 className="text-lg font-black text-white">Sectors and microsectors</h3>
 					</div>
-					<div className="grid grid-cols-3 gap-2">
-						{[0, 1, 2].map((index) => (
-							<SectorComparison
-								key={index}
-								index={index}
-								first={first.sectors[index]}
-								second={second.sectors[index]}
-								firstTla={first.tla}
-								secondTla={second.tla}
-							/>
-						))}
-					</div>
+					<p className="font-mono text-[0.68rem] text-zinc-500">MEASURED TIMING ONLY</p>
+				</div>
+				<div className="grid gap-2 md:grid-cols-3">
+					{[0, 1, 2].map((index) => (
+						<SectorComparison
+							key={index}
+							index={index}
+							first={first.sectors[index]}
+							second={second.sectors[index]}
+							firstTla={first.tla}
+							secondTla={second.tla}
+						/>
+					))}
 				</div>
 			</div>
 		</div>
 	);
 }
 
-function DriverHeading({ driver, align = "left" }: { driver: DriverComparisonModel; align?: "left" | "right" }) {
+function DriverIdentity({ driver, align = "left" }: { driver: DriverComparisonModel; align?: "left" | "right" }) {
 	return (
-		<div className={clsx("px-4 py-3", align === "right" && "text-right")}>
+		<div className={clsx("min-w-0 px-4 py-3", align === "right" && "text-right")}>
 			<div className={clsx("flex items-center gap-3", align === "right" && "flex-row-reverse")}>
-				<span className="h-9 w-1 rounded-sm" style={{ backgroundColor: `#${driver.teamColour}` }} />
-				<div>
-					<p className="text-xl font-black text-white">{driver.tla}</p>
-					<p className="text-xs text-zinc-500">{driver.fullName}</p>
+				<span className="h-12 w-1.5 shrink-0 rounded-sm" style={{ backgroundColor: `#${driver.teamColour}` }} />
+				<div className="min-w-0">
+					<p className="text-2xl leading-none font-black text-white">{driver.tla}</p>
+					<p className="mt-1.5 truncate text-sm text-zinc-400">{driver.fullName}</p>
 				</div>
 			</div>
 		</div>
 	);
 }
 
-type ComparisonValue = { value: string; detail: string; accent?: boolean };
-
-function CompareRow({
-	label,
-	delta,
-	first,
-	second,
-}: {
-	label: string;
-	delta?: string;
-	first: ComparisonValue;
-	second: ComparisonValue;
-}) {
+function StrategyCard({ driver, align }: { driver: DriverComparisonModel; align: "left" | "right" }) {
+	const activeStatus = driver.status !== "ON TRACK";
+	const compound = driver.stint.compound.toLowerCase();
+	const tireAsset = ["soft", "medium", "hard", "intermediate", "wet"].includes(compound) ? compound : null;
 	return (
-		<div className="grid grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)] border-b border-cyan-300/10 last:border-b-0">
-			<ComparisonCell {...first} align="right" />
-			<div className="flex min-h-14 flex-col items-center justify-center border-x border-cyan-300/10 bg-black/25 px-2 text-center">
-				<p className="font-mono text-[0.58rem] font-bold text-zinc-500 uppercase">{label}</p>
-				{delta && <p className="mt-1 font-mono text-[0.62rem] font-bold text-emerald-400">{delta}</p>}
+		<div className={clsx("rounded-md border border-cyan-300/10 bg-cyan-950/10 p-3", align === "right" && "text-right")}>
+			<div className={clsx("flex flex-wrap items-center gap-2", align === "right" && "flex-row-reverse")}>
+				<span className="font-mono text-lg font-black text-white">P{driver.position}</span>
+				<span className="font-mono text-sm text-zinc-400">LAP {driver.laps}</span>
+				<span
+					className={clsx(
+						"rounded px-2 py-1 font-mono text-xs font-black",
+						activeStatus ? "bg-amber-400/15 text-amber-300" : "bg-emerald-400/10 text-emerald-400",
+					)}
+				>
+					{driver.status}
+				</span>
 			</div>
-			<ComparisonCell {...second} />
+			<div className={clsx("mt-3 flex flex-wrap items-center gap-3", align === "right" && "flex-row-reverse")}>
+				{tireAsset ? (
+					<Image src={`/tires/${tireAsset}.svg`} width={40} height={40} alt={driver.stint.compound} />
+				) : (
+					<span className="flex h-10 w-10 items-center justify-center font-mono text-xl font-black text-white">--</span>
+				)}
+				<span className="font-mono text-sm text-zinc-300">
+					{driver.stint.age === "--" ? "--" : `${driver.stint.age} laps`}
+				</span>
+				<span className="font-mono text-sm text-zinc-400">
+					{driver.stint.stops} {driver.stint.stops === 1 ? "stop" : "stops"}
+				</span>
+			</div>
 		</div>
 	);
 }
 
-function ComparisonCell({ value, detail, accent, align = "left" }: ComparisonValue & { align?: "left" | "right" }) {
+function LapTimes({ first, second }: { first: DriverComparisonModel; second: DriverComparisonModel }) {
+	const lastWinner = compareLower(first.lastLap, second.lastLap);
+	const bestWinner = compareLower(first.bestLap, second.bestLap);
+
 	return (
-		<div className={clsx("flex min-h-14 items-center px-4 py-2", align === "right" && "justify-end text-right")}>
-			<div>
-				<p className={clsx("font-mono text-sm font-black", accent ? "text-emerald-400" : "text-white")}>{value}</p>
-				<p className="mt-1 font-mono text-[0.62rem] text-zinc-500">{detail}</p>
-			</div>
+		<div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-cyan-300/10 bg-cyan-300/10 sm:grid-cols-4">
+			<LapValue label={`${first.tla} last`} value={first.lastLap} accent={lastWinner === "first"} />
+			<LapValue label={`${second.tla} last`} value={second.lastLap} accent={lastWinner === "second"} />
+			<LapValue label={`${first.tla} best`} value={first.bestLap} accent={bestWinner === "first"} />
+			<LapValue label={`${second.tla} best`} value={second.bestLap} accent={bestWinner === "second"} />
+		</div>
+	);
+}
+
+function LapValue({ label, value, accent }: { label: string; value: string; accent: boolean }) {
+	return (
+		<div className="bg-black/35 px-3 py-2.5 text-center">
+			<p className="font-mono text-xs font-bold text-zinc-500 uppercase">{label}</p>
+			<p className={clsx("mt-1 font-mono text-base font-bold", accent ? "text-emerald-400" : "text-zinc-200")}>
+				{value}
+			</p>
 		</div>
 	);
 }
@@ -228,28 +217,46 @@ function SectorComparison({
 	const segmentCount = Math.max(first.segments.length, second.segments.length, 1);
 
 	return (
-		<div className="min-w-0 rounded-md border border-cyan-300/10 bg-cyan-950/10 p-2">
-			<div className="flex items-center justify-between gap-2 font-mono text-[0.62rem] font-bold">
-				<span className="text-white">S{index + 1}</span>
-				<span className={delta === "--" ? "text-zinc-600" : "text-emerald-400"}>{delta}</span>
+		<div className="min-w-0 rounded-md border border-cyan-300/10 bg-black/20 p-3">
+			<div className="flex items-center justify-between gap-2">
+				<span className="font-mono text-lg font-black text-white">S{index + 1}</span>
+				<span className={clsx("font-mono text-sm font-bold", delta === "--" ? "text-zinc-600" : "text-emerald-400")}>
+					{delta}
+				</span>
 			</div>
-			<div className="tech-scrollbar mt-2 overflow-x-auto pb-1">
-				<div className="grid min-w-32 gap-1" style={{ gridTemplateColumns: `repeat(${segmentCount}, minmax(0, 1fr))` }}>
-					{Array.from({ length: segmentCount }, (_, segmentIndex) => (
-						<div key={segmentIndex} className="flex flex-col gap-1">
-							<MicroSector status={first.segments[segmentIndex] ?? 0} />
-							<MicroSector status={second.segments[segmentIndex] ?? 0} />
-						</div>
-					))}
-				</div>
+			<div className="mt-3 grid grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3">
+				<SectorTime tla={firstTla} sector={first} />
+				<MicroSectorRow statuses={first.segments} segmentCount={segmentCount} />
+				<span className="font-mono text-sm font-bold text-white">{first.value}</span>
+				<SectorTime tla={secondTla} sector={second} />
+				<MicroSectorRow statuses={second.segments} segmentCount={segmentCount} />
+				<span className="font-mono text-sm font-bold text-white">{second.value}</span>
 			</div>
-			<div className="mt-2 flex items-center justify-between font-mono text-[0.62rem]">
-				<span className="text-white">{first.value}</span>
-				<span className="text-zinc-500">{second.value}</span>
-			</div>
-			<div className="mt-1 flex justify-between font-mono text-[0.52rem] text-zinc-600">
-				<span>{firstTla}</span>
-				<span>{secondTla}</span>
+		</div>
+	);
+}
+
+function SectorTime({ tla, sector }: { tla: string; sector: ComparisonSector }) {
+	return (
+		<span
+			className={clsx("font-mono text-xs font-bold", {
+				"text-violet-400": sector.overallFastest,
+				"text-emerald-400": !sector.overallFastest && sector.personalFastest,
+				"text-zinc-500": !sector.overallFastest && !sector.personalFastest,
+			})}
+		>
+			{tla}
+		</span>
+	);
+}
+
+function MicroSectorRow({ statuses, segmentCount }: { statuses: number[]; segmentCount: number }) {
+	return (
+		<div className="tech-scrollbar overflow-x-auto pb-0.5">
+			<div className="grid min-w-max gap-1.5" style={{ gridTemplateColumns: `repeat(${segmentCount}, 1rem)` }}>
+				{Array.from({ length: segmentCount }, (_, index) => (
+					<MicroSector key={index} status={statuses[index] ?? 0} />
+				))}
 			</div>
 		</div>
 	);
@@ -258,7 +265,7 @@ function SectorComparison({
 function MicroSector({ status }: { status: number }) {
 	return (
 		<span
-			className={clsx("h-1.5 min-w-2 rounded-[2px]", {
+			className={clsx("h-3 w-4 rounded-[3px]", {
 				"bg-zinc-800": status === 0,
 				"bg-amber-400": status === 2048 || status === 2052,
 				"bg-emerald-500": status === 2049,
@@ -272,9 +279,14 @@ function MicroSector({ status }: { status: number }) {
 function SingleDriverState({ driver }: { driver: DriverComparisonModel }) {
 	return (
 		<div className="mt-3 rounded-md border border-cyan-300/10 bg-black/20 p-4">
-			<p className="text-xl font-black text-white">{driver.tla}</p>
-			<p className="text-sm text-zinc-400">{driver.fullName}</p>
-			<p className="mt-3 text-sm text-cyan-200">Double-click another driver to start the live comparison.</p>
+			<div className="flex items-center gap-3">
+				<span className="h-10 w-1 rounded-sm" style={{ backgroundColor: `#${driver.teamColour}` }} />
+				<div>
+					<p className="text-xl font-black text-white">{driver.tla}</p>
+					<p className="text-sm text-zinc-400">{driver.fullName}</p>
+				</div>
+			</div>
+			<p className="mt-3 text-sm text-cyan-200">Select a rival from the leaderboard or track map.</p>
 		</div>
 	);
 }
@@ -283,39 +295,9 @@ function EmptyState({ text }: { text: string }) {
 	return <p className="mt-3 rounded-md border border-cyan-300/10 bg-black/20 p-4 text-sm text-zinc-400">{text}</p>;
 }
 
-function timingDelta(first: string, second: string, firstTla: string, secondTla: string): string | undefined {
-	const firstSeconds = parseTimingSeconds(first);
-	const secondSeconds = parseTimingSeconds(second);
-	if (firstSeconds === null || secondSeconds === null) return undefined;
-	const difference = Math.abs(firstSeconds - secondSeconds);
-	return `${firstSeconds <= secondSeconds ? firstTla : secondTla} -${difference.toFixed(3)}`;
-}
-
 function compareLower(first: string, second: string): "first" | "second" | null {
 	const firstValue = parseTimingSeconds(first);
 	const secondValue = parseTimingSeconds(second);
 	if (firstValue === null || secondValue === null || firstValue === secondValue) return null;
 	return firstValue < secondValue ? "first" : "second";
-}
-
-function speedTrapText(driver: DriverComparisonModel): string {
-	return driver.speedTraps.map((trap) => trap.value).join(" · ");
-}
-
-function telemetryDriveText(driver: DriverComparisonModel): string {
-	return `${formatChannel(driver.telemetry.speed, "km/h")} · G${driver.telemetry.gear ?? "--"}`;
-}
-
-function telemetryPedalText(driver: DriverComparisonModel): string {
-	return `Throttle ${formatChannel(driver.telemetry.throttle, "%")} · Brake ${formatBrake(driver.telemetry.brake)}`;
-}
-
-function formatChannel(value: number | null, unit: string): string {
-	return value === null ? "--" : `${Math.round(value)} ${unit}`;
-}
-
-function formatBrake(value: number | null): string {
-	if (value === null) return "--";
-	if (value <= 1) return value > 0 ? "ON" : "OFF";
-	return `${Math.round(value)}%`;
 }

@@ -37,6 +37,7 @@ const time = (seconds) => new Date(startTime + seconds * 1000).toISOString();
 const value = (v, overrides = {}) => ({ Value: v, Status: 0, OverallFastest: false, PersonalFastest: false, ...overrides });
 const best = (v, p) => ({ Value: v, Position: p });
 const segment = (status) => ({ Status: status });
+const MICROSECTOR_COUNT = 8;
 const lapTime = (seconds) => {
 	const minutes = Math.floor(seconds / 60);
 	const rest = (seconds - minutes * 60).toFixed(3).padStart(6, "0");
@@ -132,7 +133,7 @@ const buildSectors = (position, completeThird = position < 12) =>
 			Status: 0,
 			OverallFastest: overall,
 			PersonalFastest: personal && !incomplete,
-			Segments: (incomplete ? [2049, 2049, 0, 0, 0] : [2049, 2049, 2049, 2049, 2049]).map(segment),
+			Segments: Array.from({ length: MICROSECTOR_COUNT }, (_, index) => segment(incomplete && index >= 3 ? 0 : 2049)),
 		};
 	});
 
@@ -323,6 +324,9 @@ for (let second = 10, tick = 0; second <= 480; second += 10, tick += 1) {
 								2: { Status: 2049 },
 								3: { Status: 2049 },
 								4: { Status: 2049 },
+								5: { Status: 2049 },
+								6: { Status: 2049 },
+								7: { Status: 2049 },
 							},
 						},
 					},

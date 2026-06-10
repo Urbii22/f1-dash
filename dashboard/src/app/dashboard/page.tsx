@@ -2,12 +2,10 @@
 
 import LeaderBoard from "@/components/dashboard/LeaderBoard";
 import DriverComparisonPanel from "@/components/dashboard/DriverComparisonPanel";
-import DriverDetailPanel from "@/components/dashboard/DriverDetailPanel";
 import RaceControl from "@/components/dashboard/RaceControl";
 import PresentationMode from "@/components/dashboard/PresentationMode";
 import SmartAlerts from "@/components/dashboard/SmartAlerts";
 import TeamRadios from "@/components/dashboard/TeamRadios";
-import TelemetryPanel from "@/components/dashboard/TelemetryPanel";
 import TrackViolations from "@/components/dashboard/TrackViolations";
 import Map from "@/components/dashboard/Map";
 import Footer from "@/components/Footer";
@@ -53,29 +51,22 @@ function RegularDashboard() {
 				</div>
 			</section>
 
-			<section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(18rem,0.8fr)_minmax(26rem,1.2fr)]">
-				<div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1">
-					<DriverDetailPanel />
-					<TelemetryPanel />
-				</div>
+			<section className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(20rem,3fr)]">
 				<DriverComparisonPanel />
+
+				<div className="telemetry-panel tech-scrollbar max-h-[34rem] overflow-y-auto rounded-lg p-4 xl:h-[34rem]">
+					<PanelHeader eyebrow="FIA feed" title="Race Control" meta="Messages" />
+					<RaceControl />
+				</div>
 			</section>
 
 			<section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
 				<SmartAlerts />
 
 				<div className="telemetry-panel tech-scrollbar h-[30rem] overflow-y-auto rounded-lg p-3">
-					<PanelHeader eyebrow="FIA feed" title="Race Control" meta="Messages" />
-					<RaceControl />
-				</div>
-
-				<div className="telemetry-panel tech-scrollbar h-[30rem] overflow-y-auto rounded-lg p-3">
 					<PanelHeader eyebrow="Comms" title="Team Radios" meta="Audio" />
 					<TeamRadios />
 				</div>
-			</section>
-
-			<section className="grid grid-cols-1 gap-3">
 				<div className="telemetry-panel tech-scrollbar h-[30rem] overflow-y-auto rounded-lg p-3">
 					<PanelHeader eyebrow="Limits" title="Track Alerts" meta="Drivers" />
 					<TrackViolations />
