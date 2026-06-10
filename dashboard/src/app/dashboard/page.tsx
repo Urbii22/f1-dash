@@ -9,24 +9,49 @@ import TeamRadios from "@/components/dashboard/TeamRadios";
 import TrackViolations from "@/components/dashboard/TrackViolations";
 import Map from "@/components/dashboard/Map";
 import Footer from "@/components/Footer";
+import NoLiveSession from "@/components/dashboard/NoLiveSession";
 import { usePresentationModeStore } from "@/stores/usePresentationModeStore";
+import { useConnectionStore } from "@/stores/useConnectionStore";
+import { useDataStore } from "@/stores/useDataStore";
 
 export default function Page() {
 	const presentationMode = usePresentationModeStore((state) => state.enabled);
 	const setPresentationMode = usePresentationModeStore((state) => state.setEnabled);
+	const hasSession = useDataStore((s) => !!s.state?.SessionInfo);
+	const connected = useConnectionStore((s) => s.connected);
 
 	return (
 		<div className="flex w-full flex-col gap-3 p-3">
-			<div className="flex justify-end">
-				<button
-					className="data-chip rounded-md px-3 py-2 text-sm text-cyan-200"
-					onClick={() => setPresentationMode(!presentationMode)}
-				>
-					{presentationMode ? "Dashboard" : "Presentation"}
-				</button>
-			</div>
-			{presentationMode ? <PresentationMode /> : <RegularDashboard />}
+			{hasSession && (
+				<div className="flex justify-end">
+					<button
+						className="data-chip rounded-md px-3 py-2 text-sm text-cyan-200"
+						onClick={() => setPresentationMode(!presentationMode)}
+					>
+						{presentationMode ? "Dashboard" : "Presentation"}
+					</button>
+				</div>
+			)}
+			{hasSession ? (
+				presentationMode ? <PresentationMode /> : <RegularDashboard />
+			) : connected ? (
+				<NoLiveSession />
+			) : (
+				<ConnectingState />
+			)}
 			<Footer />
+		</div>
+	);
+}
+
+function ConnectingState() {
+	return (
+		<div className="flex min-h-[40vh] items-center justify-center">
+			<div className="flex flex-col items-center gap-3 text-center">
+				<div className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+				<p className="panel-title">Connecting</p>
+				<p className="text-sm text-zinc-500">Establishing live feed…</p>
+			</div>
 		</div>
 	);
 }

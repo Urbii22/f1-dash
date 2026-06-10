@@ -1,12 +1,13 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { useDataEngine } from "@/hooks/useDataEngine";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { useStores } from "@/hooks/useStores";
 import { useSocket } from "@/hooks/useSocket";
+import { useConnectionStore } from "@/stores/useConnectionStore";
 
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useSidebarStore } from "@/stores/useSidebarStore";
@@ -30,6 +31,8 @@ export default function DashboardLayout({ children }: Props) {
 	const stores = useStores();
 	const { handleInitial, handleUpdate, maxDelay } = useDataEngine(stores);
 	const { connected } = useSocket({ handleInitial, handleUpdate });
+	const setConnected = useConnectionStore((s) => s.setConnected);
+	useEffect(() => { setConnected(connected); }, [connected, setConnected]);
 
 	const delay = useSettingsStore((state) => state.delay);
 	const syncing = delay > maxDelay;
