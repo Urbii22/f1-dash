@@ -7,6 +7,7 @@ import type { Driver, TimingDataDriver } from "@/types/state.type";
 
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { useDriverSelectionStore } from "@/stores/useDriverSelectionStore";
 
 import DriverTag from "./DriverTag";
 import DriverDRS from "./DriverDRS";
@@ -50,14 +51,31 @@ export default function Driver({ driver, timingDriver, position }: Props) {
 	const carMetrics = useSettingsStore((state) => state.carMetrics);
 
 	const favoriteDriver = useSettingsStore((state) => state.favoriteDrivers.includes(driver.RacingNumber));
+	const selectedDriver = useDriverSelectionStore((state) => state.selectedDriver);
+	const setSelectedDriver = useDriverSelectionStore((state) => state.setSelectedDriver);
+	const toggleComparedDriver = useDriverSelectionStore((state) => state.toggleComparedDriver);
+	const selected = selectedDriver === driver.RacingNumber;
 
 	return (
 		<motion.div
 			layout="position"
+			role="button"
+			tabIndex={0}
+			title="Click for telemetry. Double-click to compare."
+			onClick={() => setSelectedDriver(driver.RacingNumber)}
+			onDoubleClick={() => toggleComparedDriver(driver.RacingNumber)}
+			onKeyDown={(event) => {
+				if (event.key === "Enter") setSelectedDriver(driver.RacingNumber);
+				if (event.key === " ") {
+					event.preventDefault();
+					toggleComparedDriver(driver.RacingNumber);
+				}
+			}}
 			className={clsx(
-				"data-chip flex flex-col gap-1 rounded-md p-1.5 transition select-none hover:border-cyan-300/45 hover:bg-cyan-300/10",
+				"data-chip flex cursor-pointer flex-col gap-1 rounded-md p-1.5 transition select-none hover:border-cyan-300/45 hover:bg-cyan-300/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300",
 				{
 					"opacity-50": timingDriver.KnockedOut || timingDriver.Retired || timingDriver.Stopped,
+					"border-white/70! bg-white/10!": selected,
 					"border-cyan-300/60! bg-cyan-300/15! shadow-[0_0_30px_rgba(0,229,255,0.16)]": favoriteDriver,
 					"border-fuchsia-300/50! bg-fuchsia-500/15!": hasFastest,
 					"border-rose-400/50! bg-rose-500/15!": sessionPart != undefined && inDangerZone(position, sessionPart),

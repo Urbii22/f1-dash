@@ -21,7 +21,9 @@ export default function DriverComparisonPanel() {
 				</button>
 			</div>
 			<div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
-				{comparedDrivers.length === 0 && <p className="text-sm text-zinc-400">Double-click drivers on the map to compare.</p>}
+				{comparedDrivers.length === 0 && (
+					<p className="text-sm text-zinc-400">Double-click a driver row or map marker to compare.</p>
+				)}
 				{comparedDrivers.map((driverNumber) => {
 					const driver = drivers?.[driverNumber];
 					const line = timing?.[driverNumber];
