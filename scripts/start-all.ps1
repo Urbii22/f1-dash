@@ -1,0 +1,125 @@
+<#
+.SYNOPSIS
+    Launches all f1-dash local services (api, realtime, dashboard) for development.
+
+.DESCRIPTION
+    Frees the ports it owns, builds the Rust services once, then starts each
+    service in its own PowerShell window so logs stay visible and any service
+    can be stopped independently with Ctrl+C. Finally opens the dashboard.
+
+    Topology (real-data / live mode):
+      - api        Rust  http://localhost:4001   (schedule feed)
+      - realtime   Rust  http://localhost:4000   (live timing SSE, connects to F1)
+      - dashboard  Next  http://localhost:3000   (web UI)
+
+    Note: this fork's `realtime` connects directly to the live F1 feed over a
+    hardcoded wss endpoint and cannot ingest from the local simulator, so the
+    simulator is intentionally not started here.
+
+.PARAMETER NoBrowser
+    Do not auto-open the dashboard in the default browser.
+
+.PARAMETER SkipBuild
+    Skip `cargo build` and launch the already-compiled binaries directly.
+#>
+param(
+    [switch]$NoBrowser,
+    [switch]$SkipBuild
+)
+
+$ErrorActionPreference = "Stop"
+$Root = Split-Path -Parent $PSScriptRoot
+
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host " f1-dash launcher" -ForegroundColor Cyan
+Write-Host " root: $Root" -ForegroundColor DarkGray
+Write-Host "==================================================" -ForegroundColor Cyan
+
+# --- 1. Free the ports we own (idempotent restart, clears stale instances) ---
+$ports = 3000, 4000, 4001
+Write-Host "`n[1/4] Freeing ports $($ports -join ', ') ..." -ForegroundColor Yellow
+foreach ($port in $ports) {
+    try {
+        $owners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction Stop |
+            Select-Object -ExpandProperty OwningProcess -Unique
+        foreach ($processId in $owners) {
+            Write-Host "  - stopping PID $processId on port $port" -ForegroundColor DarkGray
+            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+        }
+    } catch {
+        # No listener on this port; nothing to do.
+    }
+}
+
+# --- 2. Build the Rust services once (avoids per-window build-lock contention) ---
+if (-not $SkipBuild) {
+    Write-Host "`n[2/4] Building Rust services (cargo build -p api -p realtime) ..." -ForegroundColor Yellow
+    Push-Location $Root
+    try {
+        cargo build -p api -p realtime
+        if ($LASTEXITCODE -ne 0) { throw "cargo build failed (exit $LASTEXITCODE)" }
+    } finally {
+        Pop-Location
+    }
+} else {
+    Write-Host "`n[2/4] Skipping build (-SkipBuild) ..." -ForegroundColor Yellow
+}
+
+$apiExe      = Join-Path $Root "target\debug\api.exe"
+$realtimeExe = Join-Path $Root "target\debug\realtime.exe"
+foreach ($exe in @($apiExe, $realtimeExe)) {
+    if (-not (Test-Path $exe)) { throw "Missing binary: $exe (run without -SkipBuild)" }
+}
+
+# Helper: open a new PowerShell window running a command, with a window title.
+function Start-ServiceWindow([string]$Title, [string]$Command) {
+    $full = "`$host.UI.RawUI.WindowTitle = '$Title'; $Command"
+    Start-Process powershell -ArgumentList '-NoExit', '-Command', $full | Out-Null
+}
+
+# --- 3. Launch the services, each in its own window ---
+Write-Host "`n[3/4] Starting services ..." -ForegroundColor Yellow
+
+# api :4001 (schedule)
+Start-ServiceWindow "f1-dash api :4001" `
+    "`$env:ADDRESS='0.0.0.0:4001'; `$env:RUST_LOG='api=info'; `$env:ORIGIN='http://localhost:3000'; & '$apiExe'"
+Write-Host "  - api        -> http://localhost:4001" -ForegroundColor Green
+
+# realtime :4000 (live timing SSE)
+Start-ServiceWindow "f1-dash realtime :4000" `
+    "`$env:ADDRESS='0.0.0.0:4000'; `$env:RUST_LOG='realtime=info'; `$env:ORIGIN='http://localhost:3000'; & '$realtimeExe'"
+Write-Host "  - realtime   -> http://localhost:4000" -ForegroundColor Green
+
+# dashboard :3000 (Next.js dev)
+if (-not (Test-Path (Join-Path $Root "dashboard\node_modules"))) {
+    Write-Host "  - dashboard deps missing; running 'corepack yarn install' first ..." -ForegroundColor DarkGray
+}
+$dashCmd = "Set-Location '$Root\dashboard'; " +
+    "`$env:NEXT_PUBLIC_LIVE_URL='http://localhost:4000'; `$env:API_URL='http://localhost:4001'; " +
+    "if (-not (Test-Path node_modules)) { corepack yarn install }; corepack yarn dev"
+Start-ServiceWindow "f1-dash dashboard :3000" $dashCmd
+Write-Host "  - dashboard  -> http://localhost:3000" -ForegroundColor Green
+
+# --- 4. Open the dashboard once it is likely up ---
+Write-Host "`n[4/4] Waiting for the dashboard to come up ..." -ForegroundColor Yellow
+if (-not $NoBrowser) {
+    $up = $false
+    for ($i = 0; $i -lt 30; $i++) {
+        Start-Sleep -Seconds 1
+        try {
+            $null = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -TimeoutSec 2
+            $up = $true
+            break
+        } catch {
+            # not ready yet
+        }
+    }
+    if ($up) {
+        Write-Host "  - dashboard is up, opening browser" -ForegroundColor Green
+    } else {
+        Write-Host "  - dashboard not confirmed yet, opening browser anyway" -ForegroundColor DarkYellow
+    }
+    Start-Process "http://localhost:3000"
+}
+
+Write-Host "`nAll services launched. Close their windows (or run stop-f1-dash.bat) to stop." -ForegroundColor Cyan
