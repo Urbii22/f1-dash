@@ -19,7 +19,7 @@ export default function LeaderBoard() {
 			{showTableHeader && <TableHeaders />}
 
 			{(!drivers || !driversTiming) &&
-				new Array(20).fill("").map((_, index) => <SkeletonDriver key={`driver.loading.${index}`} />)}
+				new Array(22).fill("").map((_, index) => <SkeletonDriver key={`driver.loading.${index}`} />)}
 
 			<LayoutGroup key="drivers">
 				{drivers && driversTiming && (
@@ -54,7 +54,7 @@ const TableHeaders = () => {
 			}}
 		>
 			<p>Position</p>
-			<p>DRS</p>
+			<p>Status</p>
 			<p>Tire</p>
 			<p>Info</p>
 			<p>Gap</p>

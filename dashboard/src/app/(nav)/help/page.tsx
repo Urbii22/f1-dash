@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 import Note from "@/components/Note";
-import DriverDRS from "@/components/driver/DriverDRS";
+import DriverStatus from "@/components/driver/DriverStatus";
 import DriverTire from "@/components/driver/DriverTire";
 import DriverPedals from "@/components/driver/DriverPedals";
 import TemperatureComplication from "@/components/complications/Temperature";
@@ -97,50 +97,33 @@ export default function HelpPage() {
 				</div>
 			</div>
 
-			<h2 className="my-4 text-2xl">DRS & PIT Status</h2>
+			<h2 className="my-4 text-2xl">Pit Status</h2>
 
 			<p className="mb-4">
-				Each driver in the leaderboard has a DRS and PIT status indicator. It shows whether a driver has no DRS, is less
-				than 1 second behind the driver ahead (and has DRS from the detection zone), has DRS active, or is in the pit
-				lane or leaving it.
+				The status column uses the real timing feed to show when a driver is in the pit lane or has just left it. The cell
+				remains empty while the driver is on track.
 			</p>
 
 			<p className="mb-4">
-				Overall it gives you a quick overview if the driver is going into the pits and might drop a few places behind or
-				if the driver has DRS and a chance to overtake the driver ahead.
+				The 2026 Overtake Mode, Boost, and Active Aero systems are not displayed because the public timing feed does not
+				currently expose verified fields for those states. The dashboard does not estimate or simulate them.
 			</p>
 
 			<div className="mb-4 flex flex-col gap-4">
 				<div className="flex items-center gap-2">
 					<div className="w-[4rem]">
-						<DriverDRS on={false} possible={false} inPit={false} pitOut={false} />
+						<DriverStatus status={{ kind: "pit", label: "PIT" }} />
 					</div>
 
-					<p>Off: No DRS (default)</p>
+					<p>PIT: The driver is in the pit lane</p>
 				</div>
 
 				<div className="flex items-center gap-2">
 					<div className="w-[4rem]">
-						<DriverDRS on={false} possible={true} inPit={false} pitOut={false} />
+						<DriverStatus status={{ kind: "pit-out", label: "PIT OUT" }} />
 					</div>
 
-					<p>Possible: Eligible for DRS in the next zone</p>
-				</div>
-
-				<div className="flex items-center gap-2">
-					<div className="w-[4rem]">
-						<DriverDRS on={true} possible={false} inPit={false} pitOut={false} />
-					</div>
-
-					<p>Active: DRS is active</p>
-				</div>
-
-				<div className="flex items-center gap-2">
-					<div className="w-[4rem]">
-						<DriverDRS on={false} possible={false} inPit={true} pitOut={false} />
-					</div>
-
-					<p>PIT: In the pit lane or leaving</p>
+					<p>PIT OUT: The driver has left the pit lane</p>
 				</div>
 			</div>
 

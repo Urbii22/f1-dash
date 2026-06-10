@@ -37,7 +37,6 @@ export type DriverComparisonModel = {
 		throttle: number | null;
 		brake: number | null;
 		rpm: number | null;
-		drs: number | null;
 	};
 };
 
@@ -195,7 +194,6 @@ export function buildDriverComparison(number: string, source: ComparisonSource):
 			throttle: channel(source.car, "4"),
 			brake: channel(source.car, "5"),
 			rpm: channel(source.car, "0"),
-			drs: channel(source.car, "45"),
 		},
 	};
 }

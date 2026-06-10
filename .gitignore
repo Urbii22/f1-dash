@@ -10,3 +10,10 @@ compose.env
 
 # data
 *.data.*
+
+# local development artifacts
+*.log
+.playwright-cli/
+.superpowers/
+output/
+sample-replay/*.png

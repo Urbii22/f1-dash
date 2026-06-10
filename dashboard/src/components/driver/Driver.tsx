@@ -10,23 +10,20 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useDriverSelectionStore } from "@/stores/useDriverSelectionStore";
 
 import DriverTag from "./DriverTag";
-import DriverDRS from "./DriverDRS";
+import DriverStatus from "./DriverStatus";
 import DriverGap from "./DriverGap";
 import DriverTire from "./DriverTire";
 import DriverMiniSectors from "./DriverMiniSectors";
 import DriverLapTime from "./DriverLapTime";
 import DriverInfo from "./DriverInfo";
 import DriverCarMetrics from "./DriverCarMetrics";
+import { getDriverStatus, getSessionYear } from "@/lib/driverStatus";
 
 type Props = {
 	position: number;
 	driver: Driver;
 	timingDriver: TimingDataDriver;
 };
-
-const hasDRS = (drs: number) => drs > 9;
-
-const possibleDRS = (drs: number) => drs === 8;
 
 const inDangerZone = (position: number, sessionPart: number) => {
 	switch (sessionPart) {
@@ -42,6 +39,7 @@ const inDangerZone = (position: number, sessionPart: number) => {
 
 export default function Driver({ driver, timingDriver, position }: Props) {
 	const sessionPart = useDataStore((state) => state.state?.TimingData?.SessionPart);
+	const sessionInfo = useDataStore((state) => state.state?.SessionInfo);
 	const timingStatsDriver = useDataStore((state) => state.state?.TimingStats?.Lines[driver.RacingNumber]);
 	const appTimingDriver = useDataStore((state) => state.state?.TimingAppData?.Lines[driver.RacingNumber]);
 	const carData = useDataStore((state) => state.carsData?.[driver.RacingNumber]?.Channels);
@@ -58,6 +56,12 @@ export default function Driver({ driver, timingDriver, position }: Props) {
 	const selected = selectedDriver === driver.RacingNumber;
 	const compared = comparedDrivers.includes(driver.RacingNumber);
 	const teamColour = `#${driver.TeamColour || "00e5ff"}`;
+	const driverStatus = getDriverStatus({
+		year: getSessionYear(sessionInfo),
+		inPit: timingDriver.InPit,
+		pitOut: timingDriver.PitOut,
+		legacyChannel: carData?.[45],
+	});
 
 	return (
 		<motion.div
@@ -115,12 +119,7 @@ export default function Driver({ driver, timingDriver, position }: Props) {
 				}}
 			>
 				<DriverTag className="min-w-full!" short={driver.Tla} teamColor={driver.TeamColour} position={position} />
-				<DriverDRS
-					on={carData ? hasDRS(carData[45]) : false}
-					possible={carData ? possibleDRS(carData[45]) : false}
-					inPit={timingDriver.InPit}
-					pitOut={timingDriver.PitOut}
-				/>
+				<DriverStatus status={driverStatus} />
 				<DriverTire stints={appTimingDriver?.Stints} />
 				<DriverInfo timingDriver={timingDriver} gridPos={appTimingDriver ? parseInt(appTimingDriver.GridPos) : 0} />
 				<DriverGap timingDriver={timingDriver} sessionPart={sessionPart} />

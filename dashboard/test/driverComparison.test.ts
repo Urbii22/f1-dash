@@ -97,6 +97,7 @@ test("comparison model combines live timing, strategy, and telemetry", () => {
 	assert.equal(model?.tla, "NOR");
 	assert.equal(model?.stint.age, 14);
 	assert.equal(model?.telemetry.speed, 287);
+	assert.equal("drs" in model!.telemetry, false);
 	assert.equal(model?.bestLap, "1:19.440");
 });
 

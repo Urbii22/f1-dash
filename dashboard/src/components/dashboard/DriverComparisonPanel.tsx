@@ -125,7 +125,7 @@ function ComparisonMatrix({
 					second={{ value: speedTrapText(second), detail: "I1 · I2 · FL · ST" }}
 				/>
 				<CompareRow
-					label="Speed / gear / DRS"
+					label="Speed / gear"
 					first={{ value: telemetryDriveText(first), detail: telemetryPedalText(first) }}
 					second={{ value: telemetryDriveText(second), detail: telemetryPedalText(second) }}
 				/>
@@ -303,7 +303,7 @@ function speedTrapText(driver: DriverComparisonModel): string {
 }
 
 function telemetryDriveText(driver: DriverComparisonModel): string {
-	return `${formatChannel(driver.telemetry.speed, "km/h")} · G${driver.telemetry.gear ?? "--"} · ${formatDrs(driver.telemetry.drs)}`;
+	return `${formatChannel(driver.telemetry.speed, "km/h")} · G${driver.telemetry.gear ?? "--"}`;
 }
 
 function telemetryPedalText(driver: DriverComparisonModel): string {
@@ -318,10 +318,4 @@ function formatBrake(value: number | null): string {
 	if (value === null) return "--";
 	if (value <= 1) return value > 0 ? "ON" : "OFF";
 	return `${Math.round(value)}%`;
-}
-
-function formatDrs(value: number | null): string {
-	if (value === null) return "DRS --";
-	if (value === 8) return "DRS READY";
-	return value > 0 ? "DRS ON" : "DRS OFF";
 }

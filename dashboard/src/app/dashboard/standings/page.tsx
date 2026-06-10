@@ -29,7 +29,7 @@ export default function Standings() {
 
 				<div className="divide flex flex-col divide-y divide-zinc-800">
 					{!driverStandings &&
-						new Array(20).fill("").map((_, index) => <SkeletonItem key={`driver.loading.${index}`} />)}
+						new Array(22).fill("").map((_, index) => <SkeletonItem key={`driver.loading.${index}`} />)}
 
 					{driverStandings &&
 						drivers &&

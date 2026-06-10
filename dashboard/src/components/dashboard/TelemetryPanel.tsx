@@ -17,7 +17,7 @@ export default function TelemetryPanel() {
 				<TelemetryBar label="Throttle" value={Number(channels?.["4"] ?? 0)} max={100} />
 				<TelemetryBar label="Brake" value={Number(channels?.["5"] ?? 0)} max={100} />
 				<TelemetryBar label="Speed" value={Number(channels?.["2"] ?? 0)} max={360} />
-				<TelemetryBar label="DRS" value={Number(channels?.["45"] ?? 0) * 100} max={100} />
+				<TelemetryBar label="RPM" value={Number(channels?.["0"] ?? 0)} max={15000} />
 			</div>
 		</section>
 	);

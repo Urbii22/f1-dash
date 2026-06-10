@@ -354,6 +354,6 @@ export type CarDataChannels = {
 	"4": number;
 	/** 5 - Brake number boolean */
 	"5": number;
-	/** 45 - DRS */
+	/** 45 - Legacy DRS channel (pre-2026; unspecified in 2026) */
 	"45": number;
 };
