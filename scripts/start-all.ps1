@@ -24,7 +24,8 @@
 #>
 param(
     [switch]$NoBrowser,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$WithArchive
 )
 
 $ErrorActionPreference = "Stop"
@@ -56,7 +57,9 @@ if (-not $SkipBuild) {
     Write-Host "`n[2/4] Building Rust services (cargo build -p api -p realtime) ..." -ForegroundColor Yellow
     Push-Location $Root
     try {
-        cargo build -p api -p realtime
+    $packages = @('-p', 'api', '-p', 'realtime')
+    if ($WithArchive) { $packages += @('-p', 'archive') }
+    cargo build @packages
         if ($LASTEXITCODE -ne 0) { throw "cargo build failed (exit $LASTEXITCODE)" }
     } finally {
         Pop-Location
@@ -67,7 +70,10 @@ if (-not $SkipBuild) {
 
 $apiExe      = Join-Path $Root "target\debug\api.exe"
 $realtimeExe = Join-Path $Root "target\debug\realtime.exe"
-foreach ($exe in @($apiExe, $realtimeExe)) {
+$archiveExe  = Join-Path $Root "target\debug\archive.exe"
+$required = @($apiExe, $realtimeExe)
+if ($WithArchive) { $required += $archiveExe }
+foreach ($exe in $required) {
     if (-not (Test-Path $exe)) { throw "Missing binary: $exe (run without -SkipBuild)" }
 }
 
@@ -82,13 +88,19 @@ Write-Host "`n[3/4] Starting services ..." -ForegroundColor Yellow
 
 # api :4001 (schedule)
 Start-ServiceWindow "f1-dash api :4001" `
-    "`$env:ADDRESS='0.0.0.0:4001'; `$env:RUST_LOG='api=info'; `$env:ORIGIN='http://localhost:3000'; & '$apiExe'"
+    "`$env:ADDRESS='0.0.0.0:4001'; `$env:RUST_LOG='api=info'; `$env:ORIGIN='http://localhost:3000'; `$env:ARCHIVE_DB='$Root\archive.sqlite'; & '$apiExe'"
 Write-Host "  - api        -> http://localhost:4001" -ForegroundColor Green
 
 # realtime :4000 (live timing SSE)
 Start-ServiceWindow "f1-dash realtime :4000" `
-    "`$env:ADDRESS='0.0.0.0:4000'; `$env:RUST_LOG='realtime=info'; `$env:ORIGIN='http://localhost:3000'; & '$realtimeExe'"
+    "`$env:ADDRESS='0.0.0.0:4000'; `$env:RUST_LOG='realtime=info'; `$env:ORIGIN='http://localhost:3000'; `$env:RECORDINGS_DIR='$Root\recordings'; `$env:RECORDING_ENABLED='true'; `$env:RECORDING_GZIP='true'; & '$realtimeExe'"
 Write-Host "  - realtime   -> http://localhost:4000" -ForegroundColor Green
+
+if ($WithArchive) {
+    Start-ServiceWindow "f1-dash archive watcher" `
+        "`$env:ARCHIVE_DB='$Root\archive.sqlite'; `$env:RECORDINGS_DIR='$Root\recordings'; `$env:RUST_LOG='archive=info'; & '$archiveExe' watch"
+    Write-Host "  - archive watcher -> $Root\archive.sqlite" -ForegroundColor Green
+}
 
 # dashboard :3000 (Next.js dev)
 if (-not (Test-Path (Join-Path $Root "dashboard\node_modules"))) {

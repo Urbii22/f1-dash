@@ -125,7 +125,7 @@ pub async fn create_client(base_url: &str, _hub: &str) -> Result<SignalrClient, 
 
     match &handshake_response {
         Message::Text(txt) => {
-            let msg = deserialize::<Value>(&txt);
+            let msg = deserialize::<Value>(txt);
 
             match msg {
                 Ok(parsed) => {
@@ -174,6 +174,57 @@ struct FeedMessage {
     r#type: i32,
     target: String,
     arguments: (String, Value, String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum FrameKind {
+    Feed {
+        topic: String,
+        data: Value,
+        timestamp: String,
+    },
+    Completion {
+        result: Option<Value>,
+    },
+    Other,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParsedFrame {
+    pub kind: FrameKind,
+}
+
+pub fn parse_frames(raw_line: &str) -> Vec<ParsedFrame> {
+    split_messages(raw_line)
+        .into_iter()
+        .map(|message| {
+            if let Ok(feed) = deserialize::<FeedMessage>(message)
+                && feed.r#type == INVOCATION
+                && feed.target == "feed"
+            {
+                let (topic, data, timestamp) = feed.arguments;
+                return ParsedFrame {
+                    kind: FrameKind::Feed {
+                        topic,
+                        data,
+                        timestamp,
+                    },
+                };
+            }
+            if let Ok(completion) = deserialize::<Completion>(message)
+                && completion.r#type == COMPLETION
+            {
+                return ParsedFrame {
+                    kind: FrameKind::Completion {
+                        result: completion.result,
+                    },
+                };
+            }
+            ParsedFrame {
+                kind: FrameKind::Other,
+            }
+        })
+        .collect()
 }
 
 pub async fn subscribe(
@@ -264,34 +315,20 @@ pub struct UpdateArgs {
 pub fn listen(client: SignalrClient) -> impl Stream<Item = Vec<UpdateArgs>> {
     client.stream.filter_map(|message| match message {
         Ok(Message::Text(txt)) => {
-            let messages = split_messages(&txt);
-
-            if messages.is_empty() {
-                return None;
-            }
-
             let mut results = Vec::new();
-
-            for msg in messages {
-                let invocation = match deserialize::<FeedMessage>(msg) {
-                    Ok(invocation) => invocation,
-                    Err(err) => {
-                        debug!(?err, frame = msg, "skipping non-feed signalr frame");
-                        continue;
-                    }
-                };
-
-                if invocation.r#type != INVOCATION || invocation.target != "feed" {
-                    continue;
-                }
-
-                let (topic, data, timestamp) = invocation.arguments;
-
-                results.push(UpdateArgs {
+            for frame in parse_frames(&txt) {
+                if let FrameKind::Feed {
                     topic,
                     data,
                     timestamp,
-                });
+                } = frame.kind
+                {
+                    results.push(UpdateArgs {
+                        topic,
+                        data,
+                        timestamp,
+                    });
+                }
             }
 
             if results.is_empty() {
@@ -317,4 +354,29 @@ pub fn listen_raw(client: SignalrClient) -> impl Stream<Item = String> {
             None
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{FrameKind, parse_frames};
+    use serde_json::json;
+
+    #[test]
+    fn parses_multiple_signalr_frames() {
+        let raw = concat!(
+            "{\"type\":1,\"target\":\"feed\",\"arguments\":[\"TimingData\",{\"Lines\":{}},\"2026-06-11T12:00:00Z\"]}\u{001e}",
+            "{\"type\":3,\"invocationId\":\"1\",\"result\":{\"SessionInfo\":{\"Path\":\"2026/test\"}}}\u{001e}"
+        );
+        let frames = parse_frames(raw);
+        assert_eq!(frames.len(), 2);
+        assert!(
+            matches!(&frames[0].kind, FrameKind::Feed { topic, timestamp, .. } if topic == "TimingData" && timestamp == "2026-06-11T12:00:00Z")
+        );
+        assert_eq!(
+            frames[1].kind,
+            FrameKind::Completion {
+                result: Some(json!({"SessionInfo":{"Path":"2026/test"}}))
+            }
+        );
+    }
 }

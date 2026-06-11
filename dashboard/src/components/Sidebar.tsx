@@ -144,6 +144,7 @@ export default function Sidebar({ connected }: Props) {
 					<p className="mt-2 border-t border-cyan-300/10 pt-3 font-mono text-xs text-zinc-500 uppercase">General</p>
 
 					<div className="flex flex-col gap-1">
+						<Item target="_blank" item={{ href: "/archive", name: "Archive" }} />
 						<Item item={{ href: "/dashboard/settings", name: "Settings" }} />
 
 						<Item target="_blank" item={{ href: "/schedule", name: "Schedule" }} />

@@ -46,6 +46,11 @@ ADDRESS=0.0.0.0:4000
 # CORS Origin, set to dashboard address
 ORIGIN="https://f1-dash.com"
 
+# session recording
+RECORDING_ENABLED=true
+RECORDINGS_DIR=./recordings
+RECORDING_GZIP=true
+
 # (optional) endpoint for simulator
 F1_DEV_URL=ws://localhost:8000/ws
 ```
@@ -66,7 +71,37 @@ ADDRESS=0.0.0.0:4001
 
 # CORS Origin, set to dashboard address
 ORIGIN="https://f1-dash.com"
+ARCHIVE_DB=./archive.sqlite
 ```
+
+## Session archive
+
+Realtime records every subscribed session by default in replay-compatible files under `recordings/<year>/`. Set `RECORDING_ENABLED=false` to disable capture, `RECORDINGS_DIR` to move the files, or `RECORDING_GZIP=false` to keep rotated sessions uncompressed.
+
+Start all local services with the archive watcher:
+
+```powershell
+.\scripts\start-all.ps1 -WithArchive
+```
+
+Manual archive commands:
+
+```powershell
+$env:ARCHIVE_DB = ".\archive.sqlite"
+cargo run -p archive -- ingest .\recordings
+cargo run -p archive -- list
+cargo run -p archive -- rebuild "2026/Spanish_Grand_Prix/Race"
+cargo run -p archive -- watch
+```
+
+Both raw and gzip recordings can be replayed through the live pipeline:
+
+```powershell
+$env:ADDRESS = "0.0.0.0:8000"
+cargo run -p simulator -- replay .\recordings\2026\Spanish_Grand_Prix_Race.data.txt.gz
+```
+
+Set `RECORDING_RETENTION_DAYS` on the archive watcher to delete compressed source recordings older than that number of days, but only after a complete session has been ingested successfully. SQLite history is retained. Running two realtime recorder instances against the same directory is unsupported.
 
 ## Platforms
 

@@ -4,32 +4,24 @@ import { useMemo } from "react";
 
 import { useDataStore } from "@/stores/useDataStore";
 import { useLapHistoryStore } from "@/stores/useLapHistoryStore";
+import { lapsToPositionSeries, type AnalysisDrivers, type LapsByDriver } from "@/lib/analysisSeries";
 
 import LineChart, { type ChartSeries } from "@/components/analysis/LineChart";
 
 type Props = {
 	selected: string[];
+	laps?: LapsByDriver;
+	drivers?: AnalysisDrivers;
 };
 
-export default function PositionChart({ selected }: Props) {
-	const laps = useLapHistoryStore((state) => state.laps);
-	const drivers = useDataStore((state) => state.state?.DriverList);
+export default function PositionChart({ selected, laps: lapsProp, drivers: driversProp }: Props) {
+	const storeLaps = useLapHistoryStore((state) => state.laps);
+	const storeDrivers = useDataStore((state) => state.state?.DriverList);
+	const laps = lapsProp ?? storeLaps;
+	const drivers = driversProp ?? storeDrivers;
 
 	const series = useMemo<ChartSeries[]>(
-		() =>
-			selected
-				.map((nr) => {
-					const driver = drivers?.[nr];
-					return {
-						id: nr,
-						label: driver?.Tla ?? `#${nr}`,
-						color: driver?.TeamColour ? `#${driver.TeamColour}` : "#22d3ee",
-						points: (laps[nr] ?? [])
-							.filter((lap) => lap.position !== null)
-							.map((lap) => ({ x: lap.lap, y: lap.position as number })),
-					};
-				})
-				.filter((s) => s.points.length > 0),
+		() => lapsToPositionSeries(laps, selected, drivers),
 		[laps, selected, drivers],
 	);
 

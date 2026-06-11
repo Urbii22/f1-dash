@@ -5,6 +5,8 @@ import { useMemo } from "react";
 import { formatLapTimeMs } from "@/lib/lapHistory";
 import { useDataStore } from "@/stores/useDataStore";
 import { useLapHistoryStore } from "@/stores/useLapHistoryStore";
+import type { StintRecord, LapRecord } from "@/lib/lapHistory";
+import type { AnalysisDrivers } from "@/lib/analysisSeries";
 
 export const COMPOUND_COLORS: Record<string, string> = {
 	SOFT: "#ef4444",
@@ -18,10 +20,15 @@ export function compoundColor(compound: string | null | undefined): string {
 	return COMPOUND_COLORS[compound?.toUpperCase() ?? ""] ?? "#71717a";
 }
 
-export default function StintTimeline() {
-	const stints = useLapHistoryStore((state) => state.stints);
-	const laps = useLapHistoryStore((state) => state.laps);
-	const drivers = useDataStore((state) => state.state?.DriverList);
+type Props = { stints?: Record<string, StintRecord[]>; laps?: Record<string, LapRecord[]>; drivers?: AnalysisDrivers };
+
+export default function StintTimeline({ stints: stintsProp, laps: lapsProp, drivers: driversProp }: Props = {}) {
+	const storeStints = useLapHistoryStore((state) => state.stints);
+	const storeLaps = useLapHistoryStore((state) => state.laps);
+	const storeDrivers = useDataStore((state) => state.state?.DriverList);
+	const stints = stintsProp ?? storeStints;
+	const laps = lapsProp ?? storeLaps;
+	const drivers = driversProp ?? storeDrivers;
 	const timing = useDataStore((state) => state.state?.TimingData?.Lines);
 
 	const rows = useMemo(() => {

@@ -108,8 +108,7 @@ fn timestamp_millis(update: &str) -> Option<u64> {
     let seconds = seconds_parts.next()?.parse::<u64>().ok()?;
     let millis = seconds_parts
         .next()
-        .map(|fraction| format!("{fraction:0<3}")[..3].parse::<u64>().ok())
-        .flatten()
+        .and_then(|fraction| format!("{fraction:0<3}")[..3].parse::<u64>().ok())
         .unwrap_or(0);
 
     Some((((hours * 60 + minutes) * 60 + seconds) * 1000) + millis)
@@ -135,7 +134,10 @@ async fn wait_for_subscribe_invocation(
             continue;
         };
 
-        for frame in text.split('\u{001e}').filter(|frame| !frame.trim().is_empty()) {
+        for frame in text
+            .split('\u{001e}')
+            .filter(|frame| !frame.trim().is_empty())
+        {
             let Ok(parsed) = serde_json::from_str::<Value>(frame) else {
                 continue;
             };

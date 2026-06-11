@@ -4,6 +4,7 @@ use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use tracing::{error, trace, warn};
 
+use crate::recorder::{RecorderHandle, RecorderMsg};
 use crate::services::state_service::StateService;
 
 const URL: &str = "livetiming.formula1.com/signalrcore";
@@ -32,10 +33,12 @@ const TOPICS: [&str; 17] = [
 pub async fn ingest_f1(
     state_service: StateService,
     update_sender: Sender<String>,
+    recorder: RecorderHandle,
 ) -> Result<(), Error> {
     let mut client = signalr::create_client(URL, HUB).await?;
 
     let initial = signalr::subscribe(&mut client, &TOPICS).await?;
+    recorder.send(RecorderMsg::Initial(initial.clone()));
     state_service.set_state(initial).await?;
 
     let mut stream = signalr::listen(client);
@@ -43,6 +46,12 @@ pub async fn ingest_f1(
     while let Some(items) = stream.next().await {
         for update in items {
             trace!(?update.topic, "received update");
+
+            recorder.send(RecorderMsg::Update {
+                topic: update.topic.clone(),
+                data: update.data.clone(),
+                timestamp: update.timestamp.clone(),
+            });
 
             if update.topic == "SessionInfo" && update.data.pointer("/Name").is_some() {
                 warn!("received SessionInfo event, restarting...");

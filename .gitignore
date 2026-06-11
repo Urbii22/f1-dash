@@ -17,3 +17,6 @@ compose.env
 .superpowers/
 output/
 sample-replay/*.png
+recordings/
+archive.sqlite*
+artifacts/archive-test.sqlite*

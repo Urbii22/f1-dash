@@ -7,6 +7,7 @@ use crate::services::state_service::StateService;
 
 mod f1;
 mod http_server;
+mod recorder;
 mod services {
     pub mod state_service;
 }
@@ -18,13 +19,15 @@ async fn main() -> Result<(), Error> {
     let state_service = StateService::new();
 
     let (sender, _reciver) = broadcast::channel::<String>(16);
+    let recorder = recorder::spawn_recorder();
 
     {
         let state_service = state_service.clone();
         let sender = sender.clone();
+        let recorder = recorder.clone();
         tokio::spawn(async move {
             loop {
-                match f1::ingest_f1(state_service.clone(), sender.clone()).await {
+                match f1::ingest_f1(state_service.clone(), sender.clone(), recorder.clone()).await {
                     Ok(_) => {}
                     Err(err) => {
                         warn!(?err, "ingest_f1 method returned error");
@@ -36,6 +39,13 @@ async fn main() -> Result<(), Error> {
             }
         });
     }
+
+    let shutdown_recorder = recorder.clone();
+    tokio::spawn(async move {
+        if tokio::signal::ctrl_c().await.is_ok() {
+            shutdown_recorder.send(recorder::RecorderMsg::Flush);
+        }
+    });
 
     http_server::start(state_service, sender).await?;
 

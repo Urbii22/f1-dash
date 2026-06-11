@@ -1,5 +1,5 @@
 [workspace]
-members = ["shared", "realtime", "api", "simulator", "signalr"]
+members = ["shared", "realtime", "api", "simulator", "signalr", "archive"]
 default-members = ["realtime", "api"]
 resolver = "2"
 
