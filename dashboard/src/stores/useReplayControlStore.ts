@@ -5,13 +5,12 @@ type ReplaySpeed = 0.5 | 1 | 2 | 5;
 type ReplayControlStore = {
 	isPaused: boolean;
 	speed: ReplaySpeed;
-	seekOffsetMs: number;
 
-	// playback window exposed by the data engine (local ms timestamps)
+	// playback window and playhead, in wall-clock receive ms (set by the engine)
 	windowStartMs: number | null;
 	windowEndMs: number | null;
 	cursorMs: number | null;
-	// absolute target the engine resolves into a seek offset on its next tick
+	// absolute target the engine moves the playhead to on its next tick
 	pendingSeekMs: number | null;
 
 	setPaused: (isPaused: boolean) => void;
@@ -19,14 +18,20 @@ type ReplayControlStore = {
 	jumpBy: (deltaMs: number) => void;
 	seekTo: (absoluteMs: number) => void;
 	setWindow: (startMs: number | null, endMs: number | null, cursorMs: number | null) => void;
-	applySeekOffset: (seekOffsetMs: number) => void;
+	clearPendingSeek: () => void;
 	resetReplayControls: () => void;
 };
+
+function clampToWindow(target: number, start: number | null, end: number | null): number {
+	let value = target;
+	if (start !== null) value = Math.max(start, value);
+	if (end !== null) value = Math.min(end, value);
+	return value;
+}
 
 export const useReplayControlStore = create<ReplayControlStore>((set) => ({
 	isPaused: false,
 	speed: 1,
-	seekOffsetMs: 0,
 
 	windowStartMs: null,
 	windowEndMs: null,
@@ -35,18 +40,30 @@ export const useReplayControlStore = create<ReplayControlStore>((set) => ({
 
 	setPaused: (isPaused) => set({ isPaused }),
 	setSpeed: (speed) => set({ speed }),
-	jumpBy: (deltaMs) => set((state) => ({ seekOffsetMs: state.seekOffsetMs + deltaMs })),
-	seekTo: (absoluteMs) =>
+
+	jumpBy: (deltaMs) =>
 		set((state) => {
-			// clamp into the available buffer window
-			const min = state.windowStartMs;
-			const max = state.windowEndMs;
-			let target = absoluteMs;
-			if (min !== null) target = Math.max(min, target);
-			if (max !== null) target = Math.min(max, target);
-			return { pendingSeekMs: target };
+			// base off a pending seek if one is queued so rapid presses accumulate
+			const base = state.pendingSeekMs ?? state.cursorMs ?? state.windowEndMs;
+			if (base === null) return {};
+			return { pendingSeekMs: clampToWindow(base + deltaMs, state.windowStartMs, state.windowEndMs) };
 		}),
-	setWindow: (windowStartMs, windowEndMs, cursorMs) => set({ windowStartMs, windowEndMs, cursorMs }),
-	applySeekOffset: (seekOffsetMs) => set({ seekOffsetMs, pendingSeekMs: null }),
-	resetReplayControls: () => set({ isPaused: false, speed: 1, seekOffsetMs: 0, pendingSeekMs: null }),
+
+	seekTo: (absoluteMs) =>
+		set((state) => ({ pendingSeekMs: clampToWindow(absoluteMs, state.windowStartMs, state.windowEndMs) })),
+
+	setWindow: (windowStartMs, windowEndMs, cursorMs) =>
+		set((state) => {
+			// no-op when nothing changed to avoid needless re-renders of subscribers
+			if (state.windowStartMs === windowStartMs && state.windowEndMs === windowEndMs && state.cursorMs === cursorMs) {
+				return {};
+			}
+			return { windowStartMs, windowEndMs, cursorMs };
+		}),
+
+	clearPendingSeek: () => set({ pendingSeekMs: null }),
+
+	// jump back to the live edge and resume at 1x
+	resetReplayControls: () =>
+		set((state) => ({ isPaused: false, speed: 1, pendingSeekMs: state.windowEndMs })),
 }));

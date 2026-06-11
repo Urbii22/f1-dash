@@ -67,6 +67,32 @@ describe("estimatePitLoss", () => {
 		expect(loss).toBeGreaterThan(20_000);
 		expect(loss).toBeLessThan(30_000);
 	});
+
+	it("estimates from a single marked pit lap (only the in-lap flagged)", () => {
+		const laps = [
+			...steadyLaps(8, 84000, 0),
+			lap(9, 84000 + 23_000, { pitted: true }), // whole stop captured on one lap
+			lap(10, 84000, { tyreAge: 1, compound: "HARD", pitted: false }),
+			lap(11, 84000, { tyreAge: 2, compound: "HARD" }),
+			lap(12, 84000, { tyreAge: 3, compound: "HARD" }),
+		];
+
+		const loss = estimatePitLoss({ "1": laps });
+		expect(loss).toBeGreaterThan(20_000);
+		expect(loss).toBeLessThan(26_000);
+	});
+
+	it("clamps an implausibly large pit window to the upper bound", () => {
+		const laps = [
+			...steadyLaps(8, 84000, 0),
+			lap(9, 84000 + 45_000, { pitted: true }), // 45s excess: valid but above the cap
+			lap(10, 84000, { tyreAge: 1 }),
+			lap(11, 84000, { tyreAge: 2 }),
+			lap(12, 84000, { tyreAge: 3 }),
+		];
+
+		expect(estimatePitLoss({ "1": laps })).toBe(35_000); // MAX_PIT_LOSS_MS
+	});
 });
 
 function model(overrides: Partial<PaceModel>): PaceModel {

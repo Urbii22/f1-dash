@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CarData, CarsData, Position, Positions, State } from "@/types/state.type";
 import type { MessageInitial, MessageUpdate } from "@/types/message.type";
 
+import { advancePlayhead } from "@/lib/replayClock";
 import { inflate } from "@/lib/inflate";
 import { utcToLocalMs } from "@/lib/utcToLocalMs";
 
@@ -54,11 +55,15 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 	const delayRef = useRef<number>(0);
 	const replayPausedRef = useRef(false);
 	const replaySpeedRef = useRef(1);
-	const replaySeekOffsetRef = useRef(0);
 	const delay = useSettingsStore((state) => state.delay);
 	const replayPaused = useReplayControlStore((state) => state.isPaused);
 	const replaySpeed = useReplayControlStore((state) => state.speed);
-	const replaySeekOffsetMs = useReplayControlStore((state) => state.seekOffsetMs);
+
+	// playback clock: the playhead advances by real-elapsed-time × speed each
+	// tick, decoupled from the absolute wall clock so variable speeds work.
+	const playheadRef = useRef<number>(0);
+	const lastTickRef = useRef<number>(0);
+	const prevDelayRef = useRef<number>(0);
 
 	const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -69,8 +74,7 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 	useEffect(() => {
 		replayPausedRef.current = replayPaused;
 		replaySpeedRef.current = replaySpeed;
-		replaySeekOffsetRef.current = replaySeekOffsetMs;
-	}, [replayPaused, replaySpeed, replaySeekOffsetMs]);
+	}, [replayPaused, replaySpeed]);
 
 	const handleInitial = ({ CarDataZ: carZ, PositionZ: posZ, ...initial }: MessageInitial) => {
 		updateState(initial);
@@ -129,11 +133,25 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 	};
 
 	const handleCurrentState = () => {
-		if (replayPausedRef.current) return;
+		const now = Date.now();
+		// real time elapsed since the previous tick; 0 on the first tick
+		const realElapsed = lastTickRef.current === 0 ? 0 : now - lastTickRef.current;
+		lastTickRef.current = now;
+
+		// pause freezes the playhead but keeps lastTick fresh so resuming does not
+		// jump by the whole paused duration
+		if (replayPausedRef.current) {
+			prevDelayRef.current = delayRef.current;
+			return;
+		}
 
 		const delay = delayRef.current;
 
 		if (delay === 0) {
+			// live edge: keep the playhead anchored so adding a delay starts cleanly
+			playheadRef.current = now;
+			prevDelayRef.current = 0;
+
 			const newStateFrame: Record<string, State[keyof State]> = {};
 
 			Object.keys(buffers).forEach((key) => {
@@ -141,7 +159,7 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 				const latest = buffer.latest() as State[keyof State];
 				if (latest) newStateFrame[key] = latest;
 
-				setTimeout(() => buffer.cleanup(Date.now(), LIVE_KEEP_SECS), 0);
+				setTimeout(() => buffer.cleanup(now, LIVE_KEEP_SECS), 0);
 			});
 
 			updateState(newStateFrame);
@@ -153,21 +171,35 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 			if (posFrame) updatePosition(posFrame);
 
 			setTimeout(() => {
-				carBuffer.cleanup(Date.now(), LIVE_KEEP_SECS);
-				posBuffer.cleanup(Date.now(), LIVE_KEEP_SECS);
+				carBuffer.cleanup(now, LIVE_KEEP_SECS);
+				posBuffer.cleanup(now, LIVE_KEEP_SECS);
 			}, 0);
 
 			publishWindow(null);
 		} else {
-			// resolve an absolute seek target (timeline scrubbing) into a seek offset
-			const pendingSeek = useReplayControlStore.getState().pendingSeekMs;
-			if (pendingSeek !== null) {
-				const newOffset = pendingSeek - (Date.now() * replaySpeedRef.current - delay * 1000);
-				replaySeekOffsetRef.current = newOffset;
-				useReplayControlStore.getState().applySeekOffset(newOffset);
-			}
+			const oldest = buffers.TimingData.oldestTimestamp() ?? carBuffer.oldestTimestamp();
+			const latest = buffers.TimingData.latestTimestamp() ?? carBuffer.latestTimestamp();
 
-			const delayedTimestamp = Date.now() * replaySpeedRef.current - delay * 1000 + replaySeekOffsetRef.current;
+			// (re)anchor the playhead when entering replay mode from live or on the
+			// very first replay tick: start `delay` seconds behind the live edge
+			if (prevDelayRef.current === 0 || playheadRef.current === 0) {
+				playheadRef.current = now - delay * 1000;
+			}
+			prevDelayRef.current = delay;
+
+			// an explicit scrub/jump overrides organic advancement for this tick
+			const pendingSeek = useReplayControlStore.getState().pendingSeekMs;
+			playheadRef.current = advancePlayhead({
+				current: playheadRef.current,
+				realElapsedMs: realElapsed,
+				speed: replaySpeedRef.current,
+				pendingSeekMs: pendingSeek,
+				oldest,
+				latest,
+			});
+			if (pendingSeek !== null) useReplayControlStore.getState().clearPendingSeek();
+
+			const delayedTimestamp = playheadRef.current;
 			const newStateFrame: Record<string, State[keyof State]> = {};
 
 			Object.keys(buffers).forEach((key) => {

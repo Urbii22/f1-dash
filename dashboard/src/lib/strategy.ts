@@ -78,14 +78,29 @@ export function estimatePitLoss(lapsByDriver: Record<string, LapRecord[]>): numb
 		const baseline = median(clean.map((lap) => lap.lapTimeMs as number));
 		if (baseline === null) continue;
 
-		for (let i = 0; i < laps.length - 1; i++) {
-			const inLap = laps[i];
-			const outLap = laps[i + 1];
-			if (!inLap.pitted || !outLap.pitted) continue;
-			if (inLap.lapTimeMs === null || outLap.lapTimeMs === null) continue;
+		// group maximal runs of consecutive pitted laps (a pit window: the in-lap,
+		// the out-lap, and any extra slow laps). Summing each run's excess over the
+		// clean baseline is robust to the feed marking only one of the pair pitted.
+		let i = 0;
+		while (i < laps.length) {
+			if (!laps[i].pitted) {
+				i++;
+				continue;
+			}
 
-			const loss = inLap.lapTimeMs + outLap.lapTimeMs - 2 * baseline;
-			if (loss > 5000 && loss < 90_000) losses.push(loss);
+			let excess = 0;
+			let valid = true;
+			let runLength = 0;
+			while (i < laps.length && laps[i].pitted) {
+				const lapTime = laps[i].lapTimeMs;
+				if (lapTime === null) valid = false;
+				else excess += lapTime - baseline;
+				runLength++;
+				i++;
+			}
+
+			// a single missing lap time invalidates the window's total
+			if (valid && runLength > 0 && excess > 5000 && excess < 90_000) losses.push(excess);
 		}
 	}
 
