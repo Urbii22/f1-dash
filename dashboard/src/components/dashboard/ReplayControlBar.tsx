@@ -4,7 +4,8 @@ import clsx from "clsx";
 import { Pause, Play, RotateCcw, StepBack, StepForward } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { buildReplayMarkers } from "@/lib/replayMarkers";
+import { buildReplayMarkers, projectMarkerMs } from "@/lib/replayMarkers";
+import { utcToLocalMs } from "@/lib/utcToLocalMs";
 import { useDataStore } from "@/stores/useDataStore";
 import { useLapHistoryStore } from "@/stores/useLapHistoryStore";
 import { useReplayControlStore } from "@/stores/useReplayControlStore";
@@ -121,6 +122,14 @@ function ReplayTimeline() {
 	const [hoverFraction, setHoverFraction] = useState<number | null>(null);
 
 	const markers = useMemo(() => buildReplayMarkers(state, laps), [state, laps]);
+	// the displayed frame's heartbeat anchors recording-clock markers to the
+	// wall-clock window scale (see projectMarkerMs)
+	const heartbeatEventMs = useMemo(() => {
+		const utc = state?.Heartbeat?.Utc;
+		if (!utc) return null;
+		const ms = utcToLocalMs(utc);
+		return Number.isFinite(ms) ? ms : null;
+	}, [state?.Heartbeat?.Utc]);
 
 	if (windowStartMs === null || windowEndMs === null || windowEndMs - windowStartMs < 1000) {
 		return (
@@ -172,21 +181,25 @@ function ReplayTimeline() {
 					/>
 				</div>
 
-				{/* event markers */}
+				{/* event markers, projected from recording-clock onto the window scale */}
 				{markers
-					.filter((marker) => marker.tsMs >= windowStartMs && marker.tsMs <= windowEndMs)
-					.map((marker, index) => (
+					.map((marker) => ({
+						marker,
+						windowMs: cursorMs !== null ? projectMarkerMs(marker.tsMs, cursorMs, heartbeatEventMs) : marker.tsMs,
+					}))
+					.filter(({ windowMs }) => windowMs >= windowStartMs && windowMs <= windowEndMs)
+					.map(({ marker, windowMs }, index) => (
 						<button
 							key={`${marker.type}.${marker.tsMs}.${index}`}
 							className={clsx(
 								"absolute top-1/2 h-3 -translate-x-1/2 -translate-y-1/2 rounded-sm",
 								marker.type === "pit" ? "w-0.5 opacity-60" : "w-1",
 							)}
-							style={{ left: `${fractionOf(marker.tsMs) * 100}%`, backgroundColor: marker.color }}
-							title={`${formatClock(marker.tsMs)} · ${marker.label}`}
+							style={{ left: `${fractionOf(windowMs) * 100}%`, backgroundColor: marker.color }}
+							title={`${formatClock(windowMs)} · ${marker.label}`}
 							onClick={(event) => {
 								event.stopPropagation();
-								seekTo(marker.tsMs);
+								seekTo(windowMs);
 							}}
 						/>
 					))}

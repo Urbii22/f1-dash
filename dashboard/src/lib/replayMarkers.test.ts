@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Message, State } from "@/types/state.type";
 
 import type { LapRecord } from "@/lib/lapHistory";
-import { buildReplayMarkers } from "@/lib/replayMarkers";
+import { buildReplayMarkers, projectMarkerMs } from "@/lib/replayMarkers";
 
 function stateWithMessages(messages: Message[]): State {
 	return {
@@ -71,5 +71,38 @@ describe("buildReplayMarkers", () => {
 
 	it("handles empty state", () => {
 		expect(buildReplayMarkers(null)).toEqual([]);
+	});
+});
+
+describe("projectMarkerMs", () => {
+	// recording clock (2026-06-07) vs receive clock (now) differ by days
+	const RECORD = Date.UTC(2026, 5, 7, 16, 10, 0);
+	const NOW = Date.UTC(2026, 5, 11, 14, 0, 0);
+
+	it("anchors a recording-clock marker onto the receive-clock window", () => {
+		// the displayed frame's heartbeat is at RECORD, shown at cursor NOW.
+		// a marker 60s before the heartbeat must land 60s before the cursor.
+		const heartbeat = RECORD;
+		const marker = RECORD - 60_000;
+		expect(projectMarkerMs(marker, NOW, heartbeat)).toBe(NOW - 60_000);
+	});
+
+	it("places a marker at the cursor when it coincides with the heartbeat", () => {
+		expect(projectMarkerMs(RECORD, NOW, RECORD)).toBe(NOW);
+	});
+
+	it("falls back to the raw timestamp without a heartbeat anchor", () => {
+		expect(projectMarkerMs(RECORD, NOW, null)).toBe(RECORD);
+	});
+
+	it("keeps anchored markers inside the window that a raw compare would drop", () => {
+		// regression for the days-apart scale mismatch bug
+		const windowStart = NOW - 5 * 60_000;
+		const windowEnd = NOW;
+		const rawMarker = RECORD - 30_000; // far outside [windowStart, windowEnd]
+		expect(rawMarker >= windowStart && rawMarker <= windowEnd).toBe(false);
+
+		const projected = projectMarkerMs(rawMarker, NOW - 10_000, RECORD);
+		expect(projected >= windowStart && projected <= windowEnd).toBe(true);
 	});
 });

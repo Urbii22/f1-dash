@@ -82,3 +82,18 @@ export function buildReplayMarkers(state: State | null, lapsByDriver: Record<str
 
 	return markers.sort((a, b) => a.tsMs - b.tsMs);
 }
+
+/**
+ * Markers carry recording-clock timestamps (derived from feed `Utc`), but the
+ * replay window is measured in wall-clock receive time (`Date.now()` when each
+ * frame was buffered). Those scales differ by days in a recorded replay, so a
+ * raw comparison filters every marker out. Anchor both to the same scale using
+ * the currently displayed frame: the cursor (receive time) and the frame's
+ * heartbeat (recording time) describe the same instant, so the offset between a
+ * marker and the heartbeat — invariant to scale — placed relative to the cursor
+ * yields the marker's position on the timeline.
+ */
+export function projectMarkerMs(markerTsMs: number, cursorMs: number, heartbeatEventMs: number | null): number {
+	if (heartbeatEventMs === null || !Number.isFinite(heartbeatEventMs)) return markerTsMs;
+	return cursorMs + (markerTsMs - heartbeatEventMs);
+}
