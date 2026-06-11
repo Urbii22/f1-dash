@@ -12,8 +12,13 @@ import {
 	type ComparisonSector,
 	type DriverComparisonModel,
 } from "@/lib/driverComparison";
+import { formatLapTimeMs } from "@/lib/lapHistory";
+import { formatStrategyGap, projectUndercut } from "@/lib/strategy";
+import { liveGapMs } from "@/components/analysis/StrategyView";
+import { useStrategy } from "@/hooks/useStrategy";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDriverSelectionStore } from "@/stores/useDriverSelectionStore";
+import { useLapHistoryStore } from "@/stores/useLapHistoryStore";
 import type { TimingDataDriver } from "@/types/state.type";
 
 export default function DriverComparisonPanel() {
@@ -100,6 +105,13 @@ function Comparison({
 			</div>
 
 			<LapTimes first={first} second={second} />
+
+			<div className="grid grid-cols-2 gap-2">
+				<PaceSparkline driver={first} />
+				<PaceSparkline driver={second} align="right" />
+			</div>
+
+			<UndercutCard first={first} second={second} />
 
 			<div className="min-h-0 flex-1">
 				<div className="mb-2 flex items-end justify-between gap-3">
@@ -273,6 +285,107 @@ function MicroSector({ status }: { status: number }) {
 				"bg-blue-500": status === 2064,
 			})}
 		/>
+	);
+}
+
+const SPARKLINE_LAPS = 10;
+
+function PaceSparkline({ driver, align = "left" }: { driver: DriverComparisonModel; align?: "left" | "right" }) {
+	const laps = useLapHistoryStore((state) => state.laps[driver.number]);
+
+	const recent = (laps ?? []).filter((lap) => lap.lapTimeMs !== null && !lap.pitted).slice(-SPARKLINE_LAPS);
+
+	if (recent.length < 2) {
+		return (
+			<div className={clsx("rounded-md border border-cyan-300/10 bg-black/20 p-2", align === "right" && "text-right")}>
+				<p className="font-mono text-[0.65rem] font-bold text-zinc-500 uppercase">{driver.tla} pace trend</p>
+				<p className="mt-1 font-mono text-xs text-zinc-600">Building lap history…</p>
+			</div>
+		);
+	}
+
+	const times = recent.map((lap) => lap.lapTimeMs as number);
+	const min = Math.min(...times);
+	const max = Math.max(...times);
+	const span = Math.max(1, max - min);
+
+	const width = 120;
+	const height = 28;
+	const points = recent
+		.map((lap, index) => {
+			const x = (index / (recent.length - 1)) * width;
+			// faster laps plotted higher
+			const y = 2 + (((lap.lapTimeMs as number) - min) / span) * (height - 4);
+			return `${x.toFixed(1)},${y.toFixed(1)}`;
+		})
+		.join(" ");
+
+	const last = recent[recent.length - 1];
+
+	return (
+		<div className={clsx("rounded-md border border-cyan-300/10 bg-black/20 p-2", align === "right" && "text-right")}>
+			<p className="font-mono text-[0.65rem] font-bold text-zinc-500 uppercase">
+				{driver.tla} pace · last {recent.length} laps
+			</p>
+			<div className={clsx("mt-1 flex items-center gap-2", align === "right" && "flex-row-reverse")}>
+				<svg viewBox={`0 0 ${width} ${height}`} className="h-7 w-28 shrink-0">
+					<polyline
+						fill="none"
+						stroke={`#${driver.teamColour}`}
+						strokeWidth={1.5}
+						strokeLinejoin="round"
+						strokeLinecap="round"
+						points={points}
+					/>
+				</svg>
+				<span className="font-mono text-xs text-zinc-300">{formatLapTimeMs(last.lapTimeMs)}</span>
+			</div>
+		</div>
+	);
+}
+
+function UndercutCard({ first, second }: { first: DriverComparisonModel; second: DriverComparisonModel }) {
+	const strategy = useStrategy();
+	const timing = useDataStore((state) => state.state?.TimingData?.Lines);
+
+	if (!strategy.ready) return null;
+
+	const a = strategy.models[first.number];
+	const b = strategy.models[second.number];
+	if (!a || !b) return null;
+
+	const gapMs = liveGapMs(first.number, second.number, timing);
+	if (gapMs === null) return null;
+
+	const attacker = gapMs < 0 ? first : second;
+	const defender = attacker === first ? second : first;
+	const attackerModel = strategy.models[attacker.number];
+	const defenderModel = strategy.models[defender.number];
+	const attackerGap = attacker === first ? gapMs : -gapMs;
+
+	const projection = projectUndercut(attackerModel, defenderModel, attackerGap, strategy.pitLossMs);
+
+	return (
+		<div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-cyan-300/10 bg-black/20 p-3">
+			<div>
+				<p className="font-mono text-xs font-bold text-cyan-300 uppercase">
+					Undercut · {attacker.tla} pits now <span className="text-amber-300/80">EST</span>
+				</p>
+				<p className="mt-0.5 font-mono text-xs text-zinc-500">
+					Pit loss ~{(strategy.pitLossMs / 1000).toFixed(1)}s · vs {defender.tla}
+				</p>
+			</div>
+			<span
+				className={clsx(
+					"rounded-md px-2 py-1 font-mono text-xs font-bold",
+					projection.works ? "bg-emerald-400/15 text-emerald-300" : "bg-rose-400/15 text-rose-300",
+				)}
+			>
+				{projection.works
+					? `WORKS · ahead in ~${projection.crossoverLap}L`
+					: `NO · ${formatStrategyGap(projection.gapAfterStop)} after ${projection.horizonLaps}L`}
+			</span>
+		</div>
 	);
 }
 

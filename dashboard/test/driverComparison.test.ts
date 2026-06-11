@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 import {
 	buildDriverComparison,
@@ -7,8 +6,8 @@ import {
 	getCurrentStint,
 	normalizeSectors,
 	parseTimingSeconds,
-} from "../src/lib/driverComparison.ts";
-import { useDriverSelectionStore } from "../src/stores/useDriverSelectionStore.ts";
+} from "../src/lib/driverComparison";
+import { useDriverSelectionStore } from "../src/stores/useDriverSelectionStore";
 
 test("comparison state replaces the oldest driver when a third is selected", () => {
 	useDriverSelectionStore.getState().clearComparedDrivers();
@@ -16,13 +15,13 @@ test("comparison state replaces the oldest driver when a third is selected", () 
 	useDriverSelectionStore.getState().toggleComparedDriver("3");
 	useDriverSelectionStore.getState().toggleComparedDriver("16");
 
-	assert.deepEqual(useDriverSelectionStore.getState().comparedDrivers, ["3", "16"]);
+	expect(useDriverSelectionStore.getState().comparedDrivers).toEqual(["3", "16"]);
 });
 
 test("parseTimingSeconds handles lap and sector formats", () => {
-	assert.equal(parseTimingSeconds("+4.238"), 4.238);
-	assert.equal(parseTimingSeconds("1:19.271"), 79.271);
-	assert.equal(parseTimingSeconds("LAP 32"), null);
+	expect(parseTimingSeconds("+4.238")).toBe(4.238);
+	expect(parseTimingSeconds("1:19.271")).toBe(79.271);
+	expect(parseTimingSeconds("LAP 32")).toBeNull();
 });
 
 test("direct interval is preferred when compared drivers are adjacent", () => {
@@ -34,7 +33,7 @@ test("direct interval is preferred when compared drivers are adjacent", () => {
 		IntervalToPositionAhead: { Value: "+4.238", Catching: true },
 	});
 
-	assert.deepEqual(calculateDriverGap(leading, trailing), {
+	expect(calculateDriverGap(leading, trailing)).toEqual({
 		value: "+4.238",
 		leaderNumber: "1",
 		trailingNumber: "3",
@@ -46,31 +45,30 @@ test("same-lap gap is derived from both gaps to leader", () => {
 	const first = timingLine({ RacingNumber: "1", Position: "3", GapToLeader: "+18.402" });
 	const second = timingLine({ RacingNumber: "3", Position: "5", GapToLeader: "+22.640" });
 
-	assert.equal(calculateDriverGap(first, second).value, "+4.238");
+	expect(calculateDriverGap(first, second).value).toBe("+4.238");
 });
 
 test("different lap counts produce a lap difference rather than seconds", () => {
 	const first = timingLine({ RacingNumber: "1", Position: "3", NumberOfLaps: 32 });
 	const second = timingLine({ RacingNumber: "3", Position: "5", NumberOfLaps: 31 });
 
-	assert.equal(calculateDriverGap(first, second).value, "1 LAP");
+	expect(calculateDriverGap(first, second).value).toBe("1 LAP");
 });
 
 test("invalid timing values remain unavailable", () => {
 	const first = timingLine({ RacingNumber: "1", Position: "3", GapToLeader: "LAP 32" });
 	const second = timingLine({ RacingNumber: "3", Position: "5", GapToLeader: "--" });
 
-	assert.equal(calculateDriverGap(first, second).value, "--");
+	expect(calculateDriverGap(first, second).value).toBe("--");
 });
 
 test("current stint exposes compound, age, and completed stops", () => {
-	assert.deepEqual(
+	expect(
 		getCurrentStint([
 			{ Compound: "SOFT", TotalLaps: 12, New: "true" },
 			{ Compound: "MEDIUM", TotalLaps: 4, New: "false" },
 		]),
-		{ compound: "MEDIUM", age: 4, stops: 1, isNew: false },
-	);
+	).toEqual({ compound: "MEDIUM", age: 4, stops: 1, isNew: false });
 });
 
 test("sector normalization aligns array and keyed update shapes", () => {
@@ -79,10 +77,10 @@ test("sector normalization aligns array and keyed update shapes", () => {
 		2: sector("24.900", [2051]),
 	});
 
-	assert.equal(sectors.length, 3);
-	assert.equal(sectors[0]?.value, "25.442");
-	assert.equal(sectors[1]?.value, "--");
-	assert.deepEqual(sectors[2]?.segments, [2051]);
+	expect(sectors.length).toBe(3);
+	expect(sectors[0]?.value).toBe("25.442");
+	expect(sectors[1]?.value).toBe("--");
+	expect(sectors[2]?.segments).toEqual([2051]);
 });
 
 test("comparison model exposes timing and strategy without car telemetry or speed traps", () => {
@@ -93,11 +91,11 @@ test("comparison model exposes timing and strategy without car telemetry or spee
 		app: { Stints: [{ Compound: "MEDIUM", TotalLaps: 14, New: "false" }] } as never,
 	});
 
-	assert.equal(model?.tla, "NOR");
-	assert.equal(model?.stint.age, 14);
-	assert.equal(model?.bestLap, "1:19.440");
-	assert.equal("telemetry" in model!, false);
-	assert.equal("speedTraps" in model!, false);
+	expect(model?.tla).toBe("NOR");
+	expect(model?.stint.age).toBe(14);
+	expect(model?.bestLap).toBe("1:19.440");
+	expect("telemetry" in model!).toBe(false);
+	expect("speedTraps" in model!).toBe(false);
 });
 
 test("missing tyre strategy remains unavailable instead of being synthesized", () => {
@@ -106,16 +104,16 @@ test("missing tyre strategy remains unavailable instead of being synthesized", (
 		timing: timingLine({ RacingNumber: "1" }),
 	});
 
-	assert.deepEqual(model?.stint, { compound: "--", age: "--", stops: 0, isNew: false });
+	expect(model?.stint).toEqual({ compound: "--", age: "--", stops: 0, isNew: false });
 });
 
 test("pit and retirement states use concise explicit labels", () => {
 	const driver = { RacingNumber: "1", Tla: "NOR", FullName: "Lando NORRIS", TeamColour: "F47600" } as never;
 
-	assert.equal(buildDriverComparison("1", { driver, timing: timingLine({ InPit: true }) })?.status, "PIT");
-	assert.equal(buildDriverComparison("1", { driver, timing: timingLine({ PitOut: true }) })?.status, "PIT OUT");
-	assert.equal(buildDriverComparison("1", { driver, timing: timingLine({ Stopped: true }) })?.status, "STOPPED");
-	assert.equal(buildDriverComparison("1", { driver, timing: timingLine({ Retired: true }) })?.status, "RETIRED");
+	expect(buildDriverComparison("1", { driver, timing: timingLine({ InPit: true }) })?.status).toBe("PIT");
+	expect(buildDriverComparison("1", { driver, timing: timingLine({ PitOut: true }) })?.status).toBe("PIT OUT");
+	expect(buildDriverComparison("1", { driver, timing: timingLine({ Stopped: true }) })?.status).toBe("STOPPED");
+	expect(buildDriverComparison("1", { driver, timing: timingLine({ Retired: true }) })?.status).toBe("RETIRED");
 });
 
 function timingLine(overrides: Record<string, unknown> = {}) {

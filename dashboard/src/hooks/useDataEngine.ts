@@ -16,6 +16,11 @@ import { useStatefulBuffer } from "@/hooks/useStatefulBuffer";
 
 const UPDATE_MS = 200;
 
+// live without delay only needs a short tail; replay/delay mode keeps a long
+// window so the timeline can scrub backwards
+const LIVE_KEEP_SECS = 5 * 60;
+const REPLAY_KEEP_SECS = 15 * 60;
+
 type Props = {
 	updateState: (state: State) => void;
 	updatePosition: (pos: Positions) => void;
@@ -117,6 +122,12 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 		}
 	};
 
+	const publishWindow = (cursorMs: number | null) => {
+		const windowStart = buffers.TimingData.oldestTimestamp() ?? carBuffer.oldestTimestamp();
+		const windowEnd = buffers.TimingData.latestTimestamp() ?? carBuffer.latestTimestamp();
+		useReplayControlStore.getState().setWindow(windowStart, windowEnd, cursorMs ?? windowEnd);
+	};
+
 	const handleCurrentState = () => {
 		if (replayPausedRef.current) return;
 
@@ -129,6 +140,8 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 				const buffer = buffers[key as keyof typeof buffers];
 				const latest = buffer.latest() as State[keyof State];
 				if (latest) newStateFrame[key] = latest;
+
+				setTimeout(() => buffer.cleanup(Date.now(), LIVE_KEEP_SECS), 0);
 			});
 
 			updateState(newStateFrame);
@@ -138,7 +151,22 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 
 			const posFrame = posBuffer.latest();
 			if (posFrame) updatePosition(posFrame);
+
+			setTimeout(() => {
+				carBuffer.cleanup(Date.now(), LIVE_KEEP_SECS);
+				posBuffer.cleanup(Date.now(), LIVE_KEEP_SECS);
+			}, 0);
+
+			publishWindow(null);
 		} else {
+			// resolve an absolute seek target (timeline scrubbing) into a seek offset
+			const pendingSeek = useReplayControlStore.getState().pendingSeekMs;
+			if (pendingSeek !== null) {
+				const newOffset = pendingSeek - (Date.now() * replaySpeedRef.current - delay * 1000);
+				replaySeekOffsetRef.current = newOffset;
+				useReplayControlStore.getState().applySeekOffset(newOffset);
+			}
+
 			const delayedTimestamp = Date.now() * replaySpeedRef.current - delay * 1000 + replaySeekOffsetRef.current;
 			const newStateFrame: Record<string, State[keyof State]> = {};
 
@@ -148,7 +176,7 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 
 				if (delayed) newStateFrame[key] = delayed;
 
-				setTimeout(() => buffer.cleanup(delayedTimestamp), 0);
+				setTimeout(() => buffer.cleanup(delayedTimestamp, REPLAY_KEEP_SECS), 0);
 			});
 
 			updateState(newStateFrame);
@@ -156,14 +184,16 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 			const carFrame = carBuffer.delayed(delayedTimestamp);
 			if (carFrame) {
 				updateCarData(carFrame);
-				setTimeout(() => carBuffer.cleanup(delayedTimestamp), 0);
+				setTimeout(() => carBuffer.cleanup(delayedTimestamp, REPLAY_KEEP_SECS), 0);
 			}
 
 			const posFrame = posBuffer.delayed(delayedTimestamp);
 			if (posFrame) {
 				updatePosition(posFrame);
-				setTimeout(() => posBuffer.cleanup(delayedTimestamp), 0);
+				setTimeout(() => posBuffer.cleanup(delayedTimestamp, REPLAY_KEEP_SECS), 0);
 			}
+
+			publishWindow(delayedTimestamp);
 		}
 
 		const maxDelay = Math.min(

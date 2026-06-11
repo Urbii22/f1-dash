@@ -28,6 +28,10 @@ const liveTimingItems = [
 		name: "Standings",
 	},
 	{
+		href: "/dashboard/analysis",
+		name: "Analysis",
+	},
+	{
 		href: "/dashboard/weather",
 		name: "Weather",
 	},

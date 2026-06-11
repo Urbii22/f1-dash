@@ -5,6 +5,7 @@ import DriverComparisonPanel from "@/components/dashboard/DriverComparisonPanel"
 import RaceControl from "@/components/dashboard/RaceControl";
 import PresentationMode from "@/components/dashboard/PresentationMode";
 import SmartAlerts from "@/components/dashboard/SmartAlerts";
+import StrategyPanel from "@/components/dashboard/StrategyPanel";
 import TeamRadios from "@/components/dashboard/TeamRadios";
 import TrackViolations from "@/components/dashboard/TrackViolations";
 import Map from "@/components/dashboard/Map";
@@ -85,8 +86,10 @@ function RegularDashboard() {
 				</div>
 			</section>
 
-			<section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+			<section className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-4">
 				<SmartAlerts />
+
+				<StrategyPanel />
 
 				<div className="telemetry-panel tech-scrollbar h-[30rem] overflow-y-auto rounded-lg p-3">
 					<PanelHeader eyebrow="Comms" title="Team Radios" meta="Audio" />

@@ -22,6 +22,7 @@ import DelayInput from "@/components/DelayInput";
 import DelayTimer from "@/components/DelayTimer";
 import ConnectionStatus from "@/components/ConnectionStatus";
 import ReplayControlBar from "@/components/dashboard/ReplayControlBar";
+import AlertToasts from "@/components/dashboard/AlertToasts";
 
 type Props = {
 	children: ReactNode;
@@ -46,6 +47,7 @@ export default function DashboardLayout({ children }: Props) {
 			<div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_16%,transparent_84%,rgba(0,229,255,0.06))]" />
 			<div className="pointer-events-none absolute top-0 left-0 h-px w-full bg-gradient-to-r from-cyan-300/0 via-cyan-300/70 to-rose-400/0" />
 			<Sidebar key="sidebar" connected={connected} />
+			<AlertToasts />
 
 			<motion.div layout="size" className="relative flex h-full min-w-0 flex-1 flex-col gap-2">
 				<DesktopStaticBar show={!syncing || ended} />

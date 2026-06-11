@@ -6,6 +6,7 @@ import Slider from "@/components/ui/Slider";
 import Input from "@/components/ui/Input";
 
 import FavoriteDrivers from "@/components/settings/FavoriteDrivers";
+import AlertSettings from "@/components/settings/AlertSettings";
 
 import DelayInput from "@/components/DelayInput";
 import DelayTimer from "@/components/DelayTimer";
@@ -84,6 +85,12 @@ export default function SettingsPage() {
 					<p className="text-zinc-500">Race Control Chime Volume</p>
 				</div>
 			)}
+
+			<h2 className="my-4 text-2xl">Smart Alerts</h2>
+
+			<p className="mb-4">Choose which race events generate alerts on the dashboard.</p>
+
+			<AlertSettings />
 
 			<h2 className="my-4 text-2xl">Favorite Drivers</h2>
 
