@@ -76,6 +76,31 @@ describe("advancePlayhead", () => {
 		expect(next).toBe(target);
 	});
 
+	it("freezes organic advancement while paused but still honours an explicit seek", () => {
+		const frozen = advancePlayhead({
+			current: BASE,
+			realElapsedMs: 500,
+			speed: 2,
+			pendingSeekMs: null,
+			oldest: BASE - 10_000,
+			latest: BASE + 10_000,
+			paused: true,
+		});
+		expect(frozen).toBe(BASE);
+
+		const target = BASE - 2500;
+		const sought = advancePlayhead({
+			current: BASE,
+			realElapsedMs: 500,
+			speed: 2,
+			pendingSeekMs: target,
+			oldest: BASE - 10_000,
+			latest: BASE + 10_000,
+			paused: true,
+		});
+		expect(sought).toBe(target);
+	});
+
 	it("never moves backwards on a negative elapsed (clock skew)", () => {
 		const next = advancePlayhead({
 			current: BASE,

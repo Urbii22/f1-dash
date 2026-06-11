@@ -30,6 +30,7 @@ type Props = {
 
 export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Props) => {
 	const buffers = {
+		Heartbeat: useStatefulBuffer(),
 		ExtrapolatedClock: useStatefulBuffer(),
 		TopThree: useStatefulBuffer(),
 		TimingStats: useStatefulBuffer(),
@@ -138,14 +139,14 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 		const realElapsed = lastTickRef.current === 0 ? 0 : now - lastTickRef.current;
 		lastTickRef.current = now;
 
-		// pause freezes the playhead but keeps lastTick fresh so resuming does not
-		// jump by the whole paused duration
-		if (replayPausedRef.current) {
-			prevDelayRef.current = delayRef.current;
+		const delay = delayRef.current;
+
+		// Live pause freezes publication entirely. Replay pause still needs to
+		// process explicit scrub/jump requests below.
+		if (replayPausedRef.current && delay === 0) {
+			prevDelayRef.current = 0;
 			return;
 		}
-
-		const delay = delayRef.current;
 
 		if (delay === 0) {
 			// live edge: keep the playhead anchored so adding a delay starts cleanly
@@ -179,6 +180,14 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 		} else {
 			const oldest = buffers.TimingData.oldestTimestamp() ?? carBuffer.oldestTimestamp();
 			const latest = buffers.TimingData.latestTimestamp() ?? carBuffer.latestTimestamp();
+			const pendingSeek = useReplayControlStore.getState().pendingSeekMs;
+
+			// Keep lastTick fresh while paused, but avoid republishing the same frame
+			// unless the user explicitly requested a different position.
+			if (replayPausedRef.current && pendingSeek === null) {
+				prevDelayRef.current = delay;
+				return;
+			}
 
 			// (re)anchor the playhead when entering replay mode from live or on the
 			// very first replay tick: start `delay` seconds behind the live edge
@@ -188,7 +197,6 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 			prevDelayRef.current = delay;
 
 			// an explicit scrub/jump overrides organic advancement for this tick
-			const pendingSeek = useReplayControlStore.getState().pendingSeekMs;
 			playheadRef.current = advancePlayhead({
 				current: playheadRef.current,
 				realElapsedMs: realElapsed,
@@ -196,6 +204,7 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 				pendingSeekMs: pendingSeek,
 				oldest,
 				latest,
+				paused: replayPausedRef.current,
 			});
 			if (pendingSeek !== null) useReplayControlStore.getState().clearPendingSeek();
 

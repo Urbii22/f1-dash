@@ -13,6 +13,7 @@ export type AdvancePlayheadParams = {
 	pendingSeekMs: number | null;
 	oldest: number | null;
 	latest: number | null;
+	paused?: boolean;
 };
 
 export function advancePlayhead({
@@ -22,8 +23,9 @@ export function advancePlayhead({
 	pendingSeekMs,
 	oldest,
 	latest,
+	paused = false,
 }: AdvancePlayheadParams): number {
-	let next = pendingSeekMs !== null ? pendingSeekMs : current + Math.max(0, realElapsedMs) * speed;
+	let next = pendingSeekMs !== null ? pendingSeekMs : current + (paused ? 0 : Math.max(0, realElapsedMs) * speed);
 
 	if (latest !== null) next = Math.min(next, latest);
 	if (oldest !== null) next = Math.max(next, oldest);
