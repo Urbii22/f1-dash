@@ -8,6 +8,7 @@ import {
 	cleanLaps,
 	detectCompletedLaps,
 	formatLapTimeMs,
+	getBestLap,
 	linearRegressionSlope,
 	parseLapTimeMs,
 	type LapRecord,
@@ -222,6 +223,34 @@ describe("cleanLaps", () => {
 
 		const clean = cleanLaps(laps);
 		expect(clean.map((l) => l.lap)).toEqual([1, 2, 6]);
+	});
+});
+
+describe("getBestLap", () => {
+	it("returns the fastest timed lap with its recorded sectors", () => {
+		const laps = [
+			lap(4, 84000, { sectorsMs: [24000, 30000, 30000] }),
+			lap(5, 82500, { sectorsMs: [23500, 29500, 29500], compound: "SOFT", tyreAge: 3 }),
+			lap(6, 83000, { sectorsMs: [23800, 29600, 29600] }),
+		];
+
+		expect(getBestLap(laps)).toMatchObject({
+			lap: 5,
+			lapTimeMs: 82500,
+			sectorsMs: [23500, 29500, 29500],
+			compound: "SOFT",
+			tyreAge: 3,
+		});
+	});
+
+	it("ignores pit laps and laps without a time", () => {
+		const laps = [lap(2, 81000, { pitted: true }), lap(3, null), lap(4, 83000)];
+
+		expect(getBestLap(laps)?.lap).toBe(4);
+	});
+
+	it("returns null without a valid lap", () => {
+		expect(getBestLap([lap(1, null), lap(2, 82000, { pitted: true })])).toBeNull();
 	});
 });
 

@@ -3,16 +3,18 @@
 import clsx from "clsx";
 import { X } from "lucide-react";
 import Image from "next/image";
+import { useState } from "react";
 
 import {
 	buildDriverComparison,
+	buildFeedBestLap,
 	calculateDriverGap,
 	calculateSectorDelta,
 	parseTimingSeconds,
 	type ComparisonSector,
 	type DriverComparisonModel,
 } from "@/lib/driverComparison";
-import { formatLapTimeMs } from "@/lib/lapHistory";
+import { formatLapTimeMs, getBestLap, type LapRecord } from "@/lib/lapHistory";
 import { formatStrategyGap, projectUndercut } from "@/lib/strategy";
 import { liveGapMs } from "@/components/analysis/StrategyView";
 import { useStrategy } from "@/hooks/useStrategy";
@@ -79,6 +81,14 @@ function Comparison({
 	firstTiming: TimingDataDriver | undefined;
 	secondTiming: TimingDataDriver | undefined;
 }) {
+	const [lapView, setLapView] = useState<"live" | "best">("live");
+	const firstLaps = useLapHistoryStore((store) => store.laps[first.number]);
+	const secondLaps = useLapHistoryStore((store) => store.laps[second.number]);
+	const firstBest = getBestLap(firstLaps);
+	const secondBest = getBestLap(secondLaps);
+	const firstFeedBest = buildFeedBestLap(useDataStore((store) => store.state?.TimingStats?.Lines?.[first.number]));
+	const secondFeedBest = buildFeedBestLap(useDataStore((store) => store.state?.TimingStats?.Lines?.[second.number]));
+
 	if (!firstTiming || !secondTiming) return <EmptyState text="Waiting for live timing data." />;
 
 	const gap = calculateDriverGap(firstTiming, secondTiming);
@@ -116,23 +126,186 @@ function Comparison({
 			<div className="min-h-0 flex-1">
 				<div className="mb-2 flex items-end justify-between gap-3">
 					<div>
-						<p className="font-mono text-xs font-bold text-cyan-300 uppercase">Current lap</p>
-						<h3 className="text-lg font-black text-white">Sectors and microsectors</h3>
+						<p className="font-mono text-xs font-bold text-cyan-300 uppercase">
+							{lapView === "live" ? "Current lap" : "Fastest recorded laps"}
+						</p>
+						<h3 className="text-lg font-black text-white">
+							{lapView === "live" ? "Sectors and microsectors" : "Best lap comparison"}
+						</h3>
 					</div>
-					<p className="font-mono text-[0.68rem] text-zinc-500">MEASURED TIMING ONLY</p>
+					<div className="flex rounded-md border border-cyan-300/10 bg-black/30 p-1">
+						<LapViewButton active={lapView === "live"} onClick={() => setLapView("live")}>
+							LIVE LAP
+						</LapViewButton>
+						<LapViewButton active={lapView === "best"} onClick={() => setLapView("best")}>
+							BEST LAPS
+						</LapViewButton>
+					</div>
 				</div>
-				<div className="grid gap-2 md:grid-cols-3">
-					{[0, 1, 2].map((index) => (
-						<SectorComparison
-							key={index}
-							index={index}
-							first={first.sectors[index]}
-							second={second.sectors[index]}
-							firstTla={first.tla}
-							secondTla={second.tla}
-						/>
-					))}
+				{lapView === "live" ? (
+					<div className="grid gap-2 md:grid-cols-3">
+						{[0, 1, 2].map((index) => (
+							<SectorComparison
+								key={index}
+								index={index}
+								first={first.sectors[index]}
+								second={second.sectors[index]}
+								firstTla={first.tla}
+								secondTla={second.tla}
+							/>
+						))}
+					</div>
+				) : (
+					<BestLapsComparison
+						first={first}
+						second={second}
+						firstLap={firstBest}
+						secondLap={secondBest}
+						firstFeed={firstFeedBest}
+						secondFeed={secondFeedBest}
+					/>
+				)}
+			</div>
+		</div>
+	);
+}
+
+function LapViewButton({
+	active,
+	onClick,
+	children,
+}: {
+	active: boolean;
+	onClick: () => void;
+	children: React.ReactNode;
+}) {
+	return (
+		<button
+			type="button"
+			aria-pressed={active}
+			onClick={onClick}
+			className={clsx(
+				"rounded px-2.5 py-1.5 font-mono text-[0.68rem] font-bold transition-colors",
+				active ? "bg-cyan-300 text-cyan-950" : "text-zinc-500 hover:text-cyan-200",
+			)}
+		>
+			{children}
+		</button>
+	);
+}
+
+function BestLapsComparison({
+	first,
+	second,
+	firstLap,
+	secondLap,
+	firstFeed,
+	secondFeed,
+}: {
+	first: DriverComparisonModel;
+	second: DriverComparisonModel;
+	firstLap: LapRecord | null;
+	secondLap: LapRecord | null;
+	firstFeed: ReturnType<typeof buildFeedBestLap>;
+	secondFeed: ReturnType<typeof buildFeedBestLap>;
+}) {
+	const firstData = firstLap ?? firstFeed;
+	const secondData = secondLap ?? secondFeed;
+	if (!firstData || !secondData) {
+		const pending = [!firstData ? first.tla : null, !secondData ? second.tla : null].filter(Boolean).join(" and ");
+		return <EmptyState text={`Waiting for a valid completed lap from ${pending}.`} />;
+	}
+
+	const deltaMs = Math.abs((firstData.lapTimeMs as number) - (secondData.lapTimeMs as number));
+	const faster = (firstData.lapTimeMs as number) <= (secondData.lapTimeMs as number) ? first.tla : second.tla;
+	const exactSectors = Boolean(firstLap && secondLap);
+
+	return (
+		<div className="space-y-2">
+			<div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch overflow-hidden rounded-md border border-cyan-300/10 bg-black/25">
+				<BestLapSummary driver={first} lap={firstLap} feed={firstFeed} />
+				<div className="flex min-w-28 flex-col items-center justify-center border-x border-cyan-300/10 bg-black/30 px-3 text-center">
+					<p className="font-mono text-[0.65rem] font-bold text-zinc-500 uppercase">Delta</p>
+					<p className="mt-1 font-mono text-lg font-black text-emerald-400">{formatLapTimeMs(deltaMs)}</p>
+					<p className="font-mono text-[0.65rem] text-cyan-300">{faster} faster</p>
 				</div>
+				<BestLapSummary driver={second} lap={secondLap} feed={secondFeed} align="right" />
+			</div>
+			<p className="font-mono text-[0.65rem] text-zinc-500 uppercase">
+				{exactSectors ? "Sectors from each recorded best lap" : "Best individual sectors from official timing"}
+			</p>
+			<div className="grid gap-2 md:grid-cols-3">
+				{[0, 1, 2].map((index) => (
+					<BestSectorComparison
+						key={index}
+						index={index}
+						firstTla={first.tla}
+						secondTla={second.tla}
+						firstMs={firstData.sectorsMs[index]}
+						secondMs={secondData.sectorsMs[index]}
+					/>
+				))}
+			</div>
+		</div>
+	);
+}
+
+function BestLapSummary({
+	driver,
+	lap,
+	feed,
+	align = "left",
+}: {
+	driver: DriverComparisonModel;
+	lap: LapRecord | null;
+	feed: ReturnType<typeof buildFeedBestLap>;
+	align?: "left" | "right";
+}) {
+	return (
+		<div className={clsx("min-w-0 p-3", align === "right" && "text-right")}>
+			<p className="font-mono text-xs font-bold text-zinc-500">{driver.tla}{lap ? ` · LAP ${lap.lap}` : " · OFFICIAL BEST"}</p>
+			<p className="mt-1 font-mono text-xl font-black text-white">
+				{formatLapTimeMs(lap?.lapTimeMs ?? feed?.lapTimeMs)}
+			</p>
+			<p className="mt-1 font-mono text-xs text-zinc-400">
+				{lap ? `${lap.compound ?? "UNKNOWN"} · tyre ${lap.tyreAge ?? "--"} laps` : "Session timing feed"}
+			</p>
+		</div>
+	);
+}
+
+function BestSectorComparison({
+	index,
+	firstTla,
+	secondTla,
+	firstMs,
+	secondMs,
+}: {
+	index: number;
+	firstTla: string;
+	secondTla: string;
+	firstMs: number | null;
+	secondMs: number | null;
+}) {
+	const available = firstMs !== null && secondMs !== null;
+	const delta = available ? Math.abs(firstMs - secondMs) : null;
+	const faster = !available ? null : firstMs <= secondMs ? firstTla : secondTla;
+
+	return (
+		<div className="rounded-md border border-cyan-300/10 bg-black/20 p-3">
+			<div className="flex items-center justify-between">
+				<span className="font-mono text-lg font-black text-white">S{index + 1}</span>
+				<span className="font-mono text-xs font-bold text-emerald-400">
+					{delta === null ? "--" : `${faster} -${formatLapTimeMs(delta)}`}
+				</span>
+			</div>
+			<div className="mt-3 flex items-center justify-between font-mono text-sm">
+				<span className="text-zinc-500">{firstTla}</span>
+				<span className="font-bold text-white">{formatLapTimeMs(firstMs)}</span>
+			</div>
+			<div className="mt-2 flex items-center justify-between font-mono text-sm">
+				<span className="text-zinc-500">{secondTla}</span>
+				<span className="font-bold text-white">{formatLapTimeMs(secondMs)}</span>
 			</div>
 		</div>
 	);

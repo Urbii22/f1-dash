@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 
 import {
 	buildDriverComparison,
+	buildFeedBestLap,
 	calculateDriverGap,
 	getCurrentStint,
 	normalizeSectors,
@@ -96,6 +97,31 @@ test("comparison model exposes timing and strategy without car telemetry or spee
 	expect(model?.bestLap).toBe("1:19.440");
 	expect("telemetry" in model!).toBe(false);
 	expect("speedTraps" in model!).toBe(false);
+});
+
+test("feed best lap remains available when local lap history is empty", () => {
+	const best = buildFeedBestLap({
+		PersonalBestLapTime: { Value: "1:15.435", Position: 1 },
+		BestSectors: [
+			{ Value: "22.100", Position: 2 },
+			{ Value: "30.200", Position: 1 },
+			{ Value: "23.135", Position: 3 },
+		],
+	} as never);
+
+	expect(best).toEqual({
+		lapTimeMs: 75435,
+		sectorsMs: [22100, 30200, 23135],
+	});
+});
+
+test("feed best lap tolerates missing sector values", () => {
+	const best = buildFeedBestLap({
+		PersonalBestLapTime: { Value: "1:15.435", Position: 1 },
+		BestSectors: [{ Value: "22.100" }, { Value: "" }, { Value: "23.135" }],
+	} as never);
+
+	expect(best?.sectorsMs).toEqual([22100, null, 23135]);
 });
 
 test("missing tyre strategy remains unavailable instead of being synthesized", () => {

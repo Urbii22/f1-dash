@@ -197,6 +197,15 @@ export function cleanLaps(laps: LapRecord[]): LapRecord[] {
 	return timed.filter((lap) => (lap.lapTimeMs as number) < med + 5000);
 }
 
+export function getBestLap(laps: LapRecord[] | undefined): LapRecord | null {
+	if (!laps) return null;
+	return laps.reduce<LapRecord | null>((best, lap) => {
+		if (lap.lapTimeMs === null || lap.pitted) return best;
+		if (!best || (best.lapTimeMs !== null && lap.lapTimeMs < best.lapTimeMs)) return lap;
+		return best;
+	}, null);
+}
+
 export function linearRegressionSlope(points: Array<[number, number]>): number | null {
 	if (points.length < 3) return null;
 	const n = points.length;

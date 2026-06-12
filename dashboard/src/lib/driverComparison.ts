@@ -6,6 +6,7 @@ import type {
 	TimingDataDriver,
 	TimingStatsDriver,
 } from "@/types/state.type";
+import { parseLapTimeMs } from "@/lib/lapHistory";
 
 export type ComparisonSector = {
 	value: string;
@@ -44,6 +45,20 @@ export type DriverGap = {
 	trailingNumber: string | null;
 	catching: boolean;
 };
+
+export type FeedBestLap = {
+	lapTimeMs: number;
+	sectorsMs: [number | null, number | null, number | null];
+};
+
+export function buildFeedBestLap(stats: TimingStatsDriver | undefined): FeedBestLap | null {
+	const lapTimeMs = parseLapTimeMs(stats?.PersonalBestLapTime?.Value);
+	if (lapTimeMs === null) return null;
+	return {
+		lapTimeMs,
+		sectorsMs: [0, 1, 2].map((index) => parseLapTimeMs(stats?.BestSectors?.[index]?.Value)) as FeedBestLap["sectorsMs"],
+	};
+}
 
 export function parseTimingSeconds(value: string | undefined): number | null {
 	if (!value) return null;
