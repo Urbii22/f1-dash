@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import { ALERT_RULE_IDS, ALERT_RULE_LABELS } from "@/lib/alerts/types";
 import { notificationsSupported, requestNotificationPermission } from "@/lib/alerts/notifications";
@@ -8,18 +8,20 @@ import { useAlertStore } from "@/stores/useAlertStore";
 
 import Toggle from "@/components/ui/Toggle";
 
+const subscribeToNotificationSupport = () => () => {};
+
 export default function AlertSettings() {
-	const [notificationsAvailable, setNotificationsAvailable] = useState(false);
+	const notificationsAvailable = useSyncExternalStore(
+		subscribeToNotificationSupport,
+		notificationsSupported,
+		() => false,
+	);
 	const enabledRules = useAlertStore((store) => store.enabledRules);
 	const setRuleEnabled = useAlertStore((store) => store.setRuleEnabled);
 	const favoritesOnly = useAlertStore((store) => store.favoritesOnly);
 	const setFavoritesOnly = useAlertStore((store) => store.setFavoritesOnly);
 	const browserNotifications = useAlertStore((store) => store.browserNotifications);
 	const setBrowserNotifications = useAlertStore((store) => store.setBrowserNotifications);
-
-	useEffect(() => {
-		setNotificationsAvailable(notificationsSupported());
-	}, []);
 
 	const handleNotificationsToggle = async (enabled: boolean) => {
 		if (!enabled) {
