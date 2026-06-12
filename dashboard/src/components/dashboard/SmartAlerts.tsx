@@ -52,7 +52,10 @@ export default function SmartAlerts() {
 					<h2 className="text-xl font-black text-white">Smart Alerts</h2>
 				</div>
 				{alerts.length > 0 && (
-					<button className="data-chip rounded-md px-2 py-1 font-mono text-xs text-zinc-400 hover:text-white" onClick={clearAll}>
+					<button
+						className="data-chip rounded-md px-2 py-1 font-mono text-xs text-zinc-400 hover:text-white"
+						onClick={clearAll}
+					>
 						Clear
 					</button>
 				)}

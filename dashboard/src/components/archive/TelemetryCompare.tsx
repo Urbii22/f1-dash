@@ -4,12 +4,101 @@ import LineChart from "@/components/analysis/LineChart";
 import type { AnalysisDrivers } from "@/lib/analysisSeries";
 import type { TelemetrySample } from "@/types/archive.type";
 
-export default function TelemetryCompare({sessionId,drivers,laps}:{sessionId:number;drivers:AnalysisDrivers;laps:number[]}){
-	const numbers=Object.keys(drivers);const [first,setFirst]=useState(numbers[0]??"");const [second,setSecond]=useState(numbers[1]??numbers[0]??"");const [lap,setLap]=useState(laps[0]??1);const [series,setSeries]=useState<Awaited<ReturnType<typeof load>>[]>([]);const [loading,setLoading]=useState(false);
-	async function compare(){setLoading(true);setSeries(await Promise.all([load(sessionId,first,lap),load(sessionId,second,lap)]));setLoading(false)}
-	const speed=series.map((entry,index)=>({id:entry.driver,label:drivers[entry.driver]?.Tla??`#${entry.driver}`,color:index===0?"#22d3ee":"#fb7185",points:entry.samples.filter(s=>s.speed!==null).map((s,i,a)=>({x:a.length<=1?0:i/(a.length-1)*100,y:s.speed as number}))}));
-	const pedals=series.flatMap((entry,index)=>["throttle","brake"].map(channel=>({id:`${entry.driver}-${channel}`,label:`${drivers[entry.driver]?.Tla??entry.driver} ${channel}`,color:channel==="throttle"?(index===0?"#22c55e":"#86efac"):(index===0?"#ef4444":"#fda4af"),points:entry.samples.map((s,i,a)=>({x:a.length<=1?0:i/(a.length-1)*100,y:Number(s[channel as "throttle"|"brake"]??0)}))})));
-	const durations=series.map(entry=>entry.samples.at(-1)?.tMs??0);const delta=durations.length===2?(durations[1]-durations[0])/1000:null;
-	return <div className="space-y-3"><div className="flex flex-wrap gap-2">{[first,second].map((value,index)=><select key={index} value={value} onChange={e=>index===0?setFirst(e.target.value):setSecond(e.target.value)} className="data-chip rounded px-2 py-1" aria-label={`Driver ${index+1}`}>{numbers.map(nr=><option key={nr} value={nr}>{drivers[nr]?.Tla??nr}</option>)}</select>)}<select value={lap} onChange={e=>setLap(Number(e.target.value))} className="data-chip rounded px-2 py-1">{laps.map(n=><option key={n} value={n}>Lap {n}</option>)}</select><button onClick={compare} className="rounded bg-cyan-300 px-3 py-1 font-bold text-black">{loading?"Loading...":"Compare"}</button></div>{speed.length>0&&<><LineChart series={speed} xFormatter={x=>`${Math.round(x)}%`} yFormatter={y=>`${Math.round(y)} km/h`}/><LineChart series={pedals} xFormatter={x=>`${Math.round(x)}%`} yFormatter={y=>`${Math.round(y)}%`}/>{delta!==null&&<p className="font-mono text-sm text-cyan-300">Estimated lap delta: {delta>=0?"+":""}{delta.toFixed(3)}s ({drivers[second]?.Tla??second} vs {drivers[first]?.Tla??first})</p>}</>}<p className="font-mono text-xs text-zinc-500">EST: traces are aligned by lap time fraction, not GPS distance. Use braking and acceleration shapes as an approximation.</p></div>
+export default function TelemetryCompare({
+	sessionId,
+	drivers,
+	laps,
+}: {
+	sessionId: number;
+	drivers: AnalysisDrivers;
+	laps: number[];
+}) {
+	const numbers = Object.keys(drivers);
+	const [first, setFirst] = useState(numbers[0] ?? "");
+	const [second, setSecond] = useState(numbers[1] ?? numbers[0] ?? "");
+	const [lap, setLap] = useState(laps[0] ?? 1);
+	const [series, setSeries] = useState<Awaited<ReturnType<typeof load>>[]>([]);
+	const [loading, setLoading] = useState(false);
+	async function compare() {
+		setLoading(true);
+		setSeries(await Promise.all([load(sessionId, first, lap), load(sessionId, second, lap)]));
+		setLoading(false);
+	}
+	const speed = series.map((entry, index) => ({
+		id: entry.driver,
+		label: drivers[entry.driver]?.Tla ?? `#${entry.driver}`,
+		color: index === 0 ? "#22d3ee" : "#fb7185",
+		points: entry.samples
+			.filter((s) => s.speed !== null)
+			.map((s, i, a) => ({ x: a.length <= 1 ? 0 : (i / (a.length - 1)) * 100, y: s.speed as number })),
+	}));
+	const pedals = series.flatMap((entry, index) =>
+		["throttle", "brake"].map((channel) => ({
+			id: `${entry.driver}-${channel}`,
+			label: `${drivers[entry.driver]?.Tla ?? entry.driver} ${channel}`,
+			color: channel === "throttle" ? (index === 0 ? "#22c55e" : "#86efac") : index === 0 ? "#ef4444" : "#fda4af",
+			points: entry.samples.map((s, i, a) => ({
+				x: a.length <= 1 ? 0 : (i / (a.length - 1)) * 100,
+				y: Number(s[channel as "throttle" | "brake"] ?? 0),
+			})),
+		})),
+	);
+	const durations = series.map((entry) => entry.samples.at(-1)?.tMs ?? 0);
+	const delta = durations.length === 2 ? (durations[1] - durations[0]) / 1000 : null;
+	return (
+		<div className="space-y-3">
+			<div className="flex flex-wrap gap-2">
+				{[first, second].map((value, index) => (
+					<select
+						key={index}
+						value={value}
+						onChange={(e) => (index === 0 ? setFirst(e.target.value) : setSecond(e.target.value))}
+						className="data-chip rounded px-2 py-1"
+						aria-label={`Driver ${index + 1}`}
+					>
+						{numbers.map((nr) => (
+							<option key={nr} value={nr}>
+								{drivers[nr]?.Tla ?? nr}
+							</option>
+						))}
+					</select>
+				))}
+				<select value={lap} onChange={(e) => setLap(Number(e.target.value))} className="data-chip rounded px-2 py-1">
+					{laps.map((n) => (
+						<option key={n} value={n}>
+							Lap {n}
+						</option>
+					))}
+				</select>
+				<button onClick={compare} className="rounded bg-cyan-300 px-3 py-1 font-bold text-black">
+					{loading ? "Loading..." : "Compare"}
+				</button>
+			</div>
+			{speed.length > 0 && (
+				<>
+					<LineChart
+						series={speed}
+						xFormatter={(x) => `${Math.round(x)}%`}
+						yFormatter={(y) => `${Math.round(y)} km/h`}
+					/>
+					<LineChart series={pedals} xFormatter={(x) => `${Math.round(x)}%`} yFormatter={(y) => `${Math.round(y)}%`} />
+					{delta !== null && (
+						<p className="font-mono text-sm text-cyan-300">
+							Estimated lap delta: {delta >= 0 ? "+" : ""}
+							{delta.toFixed(3)}s ({drivers[second]?.Tla ?? second} vs {drivers[first]?.Tla ?? first})
+						</p>
+					)}
+				</>
+			)}
+			<p className="font-mono text-xs text-zinc-500">
+				EST: traces are aligned by lap time fraction, not GPS distance. Use braking and acceleration shapes as an
+				approximation.
+			</p>
+		</div>
+	);
 }
-async function load(sessionId:number,driver:string,lap:number){const response=await fetch(`/archive/api/telemetry?sessionId=${sessionId}&driver=${driver}&lap=${lap}`);const data=await response.json() as {samples:TelemetrySample[]};return{driver,samples:data.samples}}
+async function load(sessionId: number, driver: string, lap: number) {
+	const response = await fetch(`/archive/api/telemetry?sessionId=${sessionId}&driver=${driver}&lap=${lap}`);
+	const data = (await response.json()) as { samples: TelemetrySample[] };
+	return { driver, samples: data.samples };
+}

@@ -65,8 +65,15 @@ pub fn ingest_file(path: &Path) -> anyhow::Result<IngestedSession> {
                     compressed.push(encoded.to_owned());
                 }
                 replay.apply(topic, data);
-                laps.ingest(&replay.state, &timestamp);
-                events.ingest(&replay.state, &timestamp);
+                // edge detectors only react to their own topics; calling them on
+                // every frame (CarData arrives ~4x/s) would rescan the merged
+                // state tens of thousands of times per session for no new edges
+                if topic == "TimingData" {
+                    laps.ingest(&replay.state, &timestamp);
+                }
+                if topic == "TrackStatus" || topic == "RaceControlMessages" {
+                    events.ingest(&replay.state, &timestamp);
+                }
                 if topic == "WeatherData" {
                     let minute = timestamp.get(..16).unwrap_or(&timestamp).to_owned();
                     if weather_minutes.insert(minute) {

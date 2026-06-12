@@ -35,15 +35,16 @@ export default function StrategyPanel() {
 					<p className="panel-title">Pit intelligence</p>
 					<h2 className="text-xl font-black text-white">Strategy</h2>
 				</div>
-				<span className="data-chip rounded-md px-2 py-1 font-mono text-xs text-amber-300/80" title="Heuristic estimates derived from live timing, not FIA data">
+				<span
+					className="data-chip rounded-md px-2 py-1 font-mono text-xs text-amber-300/80"
+					title="Heuristic estimates derived from live timing, not FIA data"
+				>
 					EST
 				</span>
 			</div>
 
 			{!strategy.ready && (
-				<p className="mt-3 text-sm text-zinc-400">
-					Strategy estimates appear after a few laps of racing.
-				</p>
+				<p className="mt-3 text-sm text-zinc-400">Strategy estimates appear after a few laps of racing.</p>
 			)}
 
 			{strategy.ready && (
@@ -83,9 +84,7 @@ export default function StrategyPanel() {
 										</span>
 									</td>
 									<td className="py-1 pr-2">
-										<span style={{ color: compoundColor(model.compound) }}>
-											{(model.compound ?? "?").slice(0, 1)}
-										</span>{" "}
+										<span style={{ color: compoundColor(model.compound) }}>{(model.compound ?? "?").slice(0, 1)}</span>{" "}
 										<span className="text-zinc-500">{model.tyreAge}L</span>
 									</td>
 									<td className="py-1 pr-2">

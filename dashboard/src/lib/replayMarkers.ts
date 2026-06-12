@@ -57,7 +57,10 @@ function messageMarker(msg: Message): ReplayMarker | null {
  * Markers shown on the replay timeline, derived from data already in the
  * merged state plus recorded pit laps. Window filtering happens in the UI.
  */
-export function buildReplayMarkers(state: State | null, lapsByDriver: Record<string, LapRecord[]> = {}): ReplayMarker[] {
+export function buildReplayMarkers(
+	state: State | null,
+	lapsByDriver: Record<string, LapRecord[]> = {},
+): ReplayMarker[] {
 	const markers: ReplayMarker[] = [];
 
 	for (const msg of normalizeMessages(state?.RaceControlMessages?.Messages)) {

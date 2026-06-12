@@ -51,7 +51,9 @@ export default function StrategyView() {
 				<span className="data-chip rounded-md px-2 py-1">
 					Pit loss <span className="text-cyan-200">~{(strategy.pitLossMs / 1000).toFixed(1)}s</span>
 				</span>
-				<span className="data-chip rounded-md px-2 py-1 text-amber-300/80">EST · heuristic estimates, not FIA data</span>
+				<span className="data-chip rounded-md px-2 py-1 text-amber-300/80">
+					EST · heuristic estimates, not FIA data
+				</span>
 			</div>
 
 			<div className="tech-scrollbar overflow-x-auto">
@@ -79,9 +81,7 @@ export default function StrategyView() {
 									</span>
 								</td>
 								<td className="py-1.5 pr-2">
-									<span style={{ color: compoundColor(model.compound) }}>
-										{(model.compound ?? "?").slice(0, 1)}
-									</span>{" "}
+									<span style={{ color: compoundColor(model.compound) }}>{(model.compound ?? "?").slice(0, 1)}</span>{" "}
 									<span className="text-zinc-400">{model.tyreAge}L</span>
 								</td>
 								<td className="py-1.5 pr-2 text-zinc-300">{formatLapTimeMs(Math.round(model.baselineMs))}</td>

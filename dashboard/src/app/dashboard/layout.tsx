@@ -33,13 +33,16 @@ export default function DashboardLayout({ children }: Props) {
 	const { handleInitial, handleUpdate, maxDelay } = useDataEngine(stores);
 	const { connected } = useSocket({ handleInitial, handleUpdate });
 	const setConnected = useConnectionStore((s) => s.setConnected);
-	useEffect(() => { setConnected(connected); }, [connected, setConnected]);
+	useEffect(() => {
+		setConnected(connected);
+	}, [connected, setConnected]);
 
 	const delay = useSettingsStore((state) => state.delay);
 	const syncing = delay > maxDelay;
 
 	useWakeLock();
 
+	const hasSession = useDataStore(({ state }) => state?.SessionStatus?.Status === "Started");
 	const ended = useDataStore(({ state }) => state?.SessionStatus?.Status === "Ends");
 
 	return (
@@ -52,7 +55,7 @@ export default function DashboardLayout({ children }: Props) {
 			<motion.div layout="size" className="relative flex h-full min-w-0 flex-1 flex-col gap-2">
 				<DesktopStaticBar show={!syncing || ended} />
 				<MobileStaticBar show={!syncing || ended} connected={connected} />
-				<ReplayControlBar />
+				{hasSession && <ReplayControlBar />}
 
 				<div
 					className={

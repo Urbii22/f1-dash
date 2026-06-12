@@ -30,9 +30,18 @@ pub struct StintRecord {
     pub deg_ms_per_lap: Option<f64>,
 }
 
+/// Last observed per-driver fields needed for edge detection. Tracking only
+/// these (instead of cloning the whole merged state every frame) keeps a full
+/// race ingest at a few MB of allocations instead of gigabytes.
+#[derive(Clone, Default)]
+struct PrevLine {
+    laps: Option<i64>,
+    last_lap_time: Option<String>,
+}
+
 #[derive(Default)]
 pub struct Tracker {
-    prev: Option<Value>,
+    prev: HashMap<String, PrevLine>,
     pit_flags: HashMap<String, bool>,
     session_path: Option<String>,
     pub laps: HashMap<String, Vec<LapRecord>>,
@@ -40,13 +49,35 @@ pub struct Tracker {
 
 impl Tracker {
     pub fn reset_state(&mut self, state: &Value) {
-        self.prev = Some(state.clone());
+        self.prev.clear();
         self.pit_flags.clear();
+        self.remember_lines(state);
         self.session_path = state
             .pointer("/SessionInfo/Path")
             .and_then(Value::as_str)
             .map(str::to_owned);
     }
+
+    fn remember_lines(&mut self, state: &Value) {
+        if let Some(lines) = state
+            .pointer("/TimingData/Lines")
+            .and_then(Value::as_object)
+        {
+            for (nr, line) in lines {
+                self.prev.insert(
+                    nr.clone(),
+                    PrevLine {
+                        laps: line.get("NumberOfLaps").and_then(Value::as_i64),
+                        last_lap_time: line
+                            .pointer("/LastLapTime/Value")
+                            .and_then(Value::as_str)
+                            .map(str::to_owned),
+                    },
+                );
+            }
+        }
+    }
+
     pub fn ingest(&mut self, state: &Value, timestamp: &str) {
         let path = state.pointer("/SessionInfo/Path").and_then(Value::as_str);
         if self
@@ -54,90 +85,93 @@ impl Tracker {
             .as_deref()
             .is_some_and(|old| path.is_some_and(|new| old != new))
         {
-            self.prev = None;
+            self.prev.clear();
             self.pit_flags.clear();
         }
         if let Some(path) = path {
             self.session_path = Some(path.to_owned());
         }
-        if let Some(lines) = state
-            .pointer("/TimingData/Lines")
-            .and_then(Value::as_object)
-        {
-            for (nr, line) in lines {
-                if truthy(line.get("InPit")) || truthy(line.get("PitOut")) {
-                    self.pit_flags.insert(nr.clone(), true);
-                }
-            }
-        }
-        let Some(prev) = &self.prev else {
-            self.prev = Some(state.clone());
-            return;
-        };
         let Some(lines) = state
             .pointer("/TimingData/Lines")
             .and_then(Value::as_object)
         else {
-            self.prev = Some(state.clone());
             return;
         };
-        let prev_lines = prev.pointer("/TimingData/Lines").and_then(Value::as_object);
         for (nr, line) in lines {
-            let Some(prev_line) = prev_lines.and_then(|lines| lines.get(nr)) else {
-                continue;
-            };
-            let Some(lap) = line.get("NumberOfLaps").and_then(Value::as_i64) else {
-                continue;
-            };
-            if lap
-                <= prev_line
-                    .get("NumberOfLaps")
-                    .and_then(Value::as_i64)
-                    .unwrap_or(lap)
-                || truthy(line.get("Retired"))
-                || truthy(line.get("Stopped"))
-            {
-                continue;
+            if truthy(line.get("InPit")) || truthy(line.get("PitOut")) {
+                self.pit_flags.insert(nr.clone(), true);
             }
+
+            let lap = line.get("NumberOfLaps").and_then(Value::as_i64);
             let last = line.pointer("/LastLapTime/Value").and_then(Value::as_str);
-            let prev_last = prev_line
-                .pointer("/LastLapTime/Value")
-                .and_then(Value::as_str);
-            let stint = current_stint(state, nr);
-            let position = line.get("Position").and_then(value_i64);
-            let gap = if position == Some(1) {
-                Some(0)
-            } else {
-                line.get("GapToLeader")
-                    .and_then(Value::as_str)
-                    .filter(|v| !v.to_ascii_uppercase().contains('L'))
-                    .and_then(|v| parse_time_ms(Some(v)))
+
+            let Some(prev_line) = self.prev.get(nr) else {
+                // first observation of this driver: remember, never record
+                self.prev.insert(
+                    nr.clone(),
+                    PrevLine {
+                        laps: lap,
+                        last_lap_time: last.map(str::to_owned),
+                    },
+                );
+                continue;
             };
-            let record = LapRecord {
-                lap,
-                lap_time_ms: if last != prev_last {
-                    parse_time_ms(last)
+
+            let flank = match (lap, prev_line.laps) {
+                (Some(lap), Some(prev_laps)) => lap > prev_laps,
+                _ => false,
+            };
+
+            if flank
+                && let Some(lap) = lap
+                && !truthy(line.get("Retired"))
+                && !truthy(line.get("Stopped"))
+            {
+                let lap_time_changed = last != prev_line.last_lap_time.as_deref();
+                let stint = current_stint(state, nr);
+                let position = line.get("Position").and_then(value_i64);
+                let gap = if position == Some(1) {
+                    Some(0)
                 } else {
-                    None
-                },
-                sectors_ms: [sector(line, 0), sector(line, 1), sector(line, 2)],
-                position,
-                gap_to_leader_ms: gap,
-                compound: stint
-                    .and_then(|x| x.get("Compound"))
-                    .and_then(Value::as_str)
-                    .map(str::to_owned),
-                tyre_age: stint.and_then(|x| x.get("TotalLaps")).and_then(value_i64),
-                pitted: self.pit_flags.get(nr).copied().unwrap_or(false),
-                utc: timestamp.to_owned(),
-            };
-            self.laps.entry(nr.clone()).or_default().push(record);
-            self.pit_flags.insert(
-                nr.clone(),
-                truthy(line.get("InPit")) || truthy(line.get("PitOut")),
-            );
+                    line.get("GapToLeader")
+                        .and_then(Value::as_str)
+                        .filter(|v| !v.to_ascii_uppercase().contains('L'))
+                        .and_then(|v| parse_time_ms(Some(v)))
+                };
+                let record = LapRecord {
+                    lap,
+                    lap_time_ms: if lap_time_changed {
+                        parse_time_ms(last)
+                    } else {
+                        None
+                    },
+                    sectors_ms: [sector(line, 0), sector(line, 1), sector(line, 2)],
+                    position,
+                    gap_to_leader_ms: gap,
+                    compound: stint
+                        .and_then(|x| x.get("Compound"))
+                        .and_then(Value::as_str)
+                        .map(str::to_owned),
+                    tyre_age: stint.and_then(|x| x.get("TotalLaps")).and_then(value_i64),
+                    pitted: self.pit_flags.get(nr).copied().unwrap_or(false),
+                    utc: timestamp.to_owned(),
+                };
+                self.laps.entry(nr.clone()).or_default().push(record);
+                // the flag covered the lap that just closed; re-arm for the out lap
+                self.pit_flags.insert(
+                    nr.clone(),
+                    truthy(line.get("InPit")) || truthy(line.get("PitOut")),
+                );
+            }
+
+            let entry = self.prev.entry(nr.clone()).or_default();
+            if lap.is_some() {
+                entry.laps = lap;
+            }
+            if let Some(last) = last {
+                entry.last_lap_time = Some(last.to_owned());
+            }
         }
-        self.prev = Some(state.clone());
     }
 }
 
@@ -212,9 +246,15 @@ fn clean_laps(laps: &[LapRecord]) -> Vec<LapRecord> {
         return vec![];
     }
     times.sort();
-    let median = times[times.len() / 2];
+    // median matching lib/lapHistory.ts: average the two middle values on even counts
+    let mid = times.len() / 2;
+    let median = if times.len() % 2 == 0 {
+        (times[mid - 1] + times[mid]) as f64 / 2.0
+    } else {
+        times[mid] as f64
+    };
     laps.iter()
-        .filter(|lap| !lap.pitted && lap.lap_time_ms.is_some_and(|t| t < median + 5000))
+        .filter(|lap| !lap.pitted && lap.lap_time_ms.is_some_and(|t| (t as f64) < median + 5000.0))
         .cloned()
         .collect()
 }
@@ -240,6 +280,8 @@ fn slope(laps: &[LapRecord]) -> Option<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
     fn lap(n: i64, t: Option<i64>) -> LapRecord {
         LapRecord {
             lap: n,
@@ -253,6 +295,151 @@ mod tests {
             utc: "x".into(),
         }
     }
+
+    fn state(lines: Value) -> Value {
+        json!({"TimingData": {"Lines": lines}})
+    }
+
+    fn line(laps: i64, last: &str, extra: Value) -> Value {
+        let mut base = json!({"NumberOfLaps": laps, "LastLapTime": {"Value": last}, "Position": "1"});
+        merge_json(&mut base, extra);
+        base
+    }
+
+    fn merge_json(base: &mut Value, update: Value) {
+        if let (Value::Object(base), Value::Object(update)) = (base, update) {
+            for (k, v) in update {
+                base.insert(k, v);
+            }
+        }
+    }
+
+    // port of lapHistory.test.ts: "records a lap when NumberOfLaps increases..."
+    #[test]
+    fn records_lap_on_flank_with_changed_time() {
+        let mut tracker = Tracker::default();
+        tracker.ingest(&state(json!({"1": line(4, "1:24.000", json!({}))})), "t0");
+        tracker.ingest(
+            &state(json!({"1": line(5, "1:23.456", json!({"Position": "3", "GapToLeader": "+2.000"}))})),
+            "t1",
+        );
+
+        let laps = &tracker.laps["1"];
+        assert_eq!(laps.len(), 1);
+        assert_eq!(laps[0].lap, 5);
+        assert_eq!(laps[0].lap_time_ms, Some(83_456));
+        assert_eq!(laps[0].position, Some(3));
+        assert_eq!(laps[0].gap_to_leader_ms, Some(2_000));
+        assert_eq!(laps[0].utc, "t1");
+    }
+
+    // "does not record anything without a lap flank"
+    #[test]
+    fn no_record_without_flank() {
+        let mut tracker = Tracker::default();
+        tracker.ingest(&state(json!({"1": line(5, "", json!({}))})), "t0");
+        tracker.ingest(&state(json!({"1": line(5, "1:23.456", json!({}))})), "t1");
+        assert!(tracker.laps.is_empty());
+    }
+
+    // "nulls the lap time when LastLapTime did not change with the flank"
+    #[test]
+    fn frozen_lap_time_records_null() {
+        let mut tracker = Tracker::default();
+        tracker.ingest(&state(json!({"1": line(4, "1:24.000", json!({}))})), "t0");
+        tracker.ingest(&state(json!({"1": line(5, "1:24.000", json!({}))})), "t1");
+        assert_eq!(tracker.laps["1"][0].lap_time_ms, None);
+    }
+
+    // "skips retired and stopped drivers"
+    #[test]
+    fn skips_retired_drivers() {
+        let mut tracker = Tracker::default();
+        tracker.ingest(&state(json!({"1": line(4, "", json!({}))})), "t0");
+        tracker.ingest(
+            &state(json!({"1": line(5, "1:24.0", json!({"Retired": true}))})),
+            "t1",
+        );
+        assert!(tracker.laps.is_empty());
+    }
+
+    // "treats lapped drivers' gap as null"
+    #[test]
+    fn lapped_gap_is_null() {
+        let mut tracker = Tracker::default();
+        tracker.ingest(&state(json!({"1": line(4, "", json!({}))})), "t0");
+        tracker.ingest(
+            &state(json!({"1": line(5, "1:30.0", json!({"Position": "18", "GapToLeader": "1L"}))})),
+            "t1",
+        );
+        assert_eq!(tracker.laps["1"][0].gap_to_leader_ms, None);
+    }
+
+    // "reads compound and tyre age from TimingAppData"
+    #[test]
+    fn reads_stint_from_timing_app_data() {
+        let mut tracker = Tracker::default();
+        tracker.ingest(&state(json!({"1": line(4, "", json!({}))})), "t0");
+        let mut with_stints = state(json!({"1": line(5, "1:30.0", json!({}))}));
+        merge_json(
+            &mut with_stints,
+            json!({"TimingAppData": {"Lines": {"1": {"Stints": [
+                {"Compound": "SOFT", "TotalLaps": 12},
+                {"Compound": "MEDIUM", "TotalLaps": 3}
+            ]}}}}),
+        );
+        tracker.ingest(&with_stints, "t1");
+        assert_eq!(tracker.laps["1"][0].compound.as_deref(), Some("MEDIUM"));
+        assert_eq!(tracker.laps["1"][0].tyre_age, Some(3));
+    }
+
+    // tracker test: "marks laps as pitted when the driver visited the pit lane"
+    #[test]
+    fn marks_pit_laps_and_rearms() {
+        let mut tracker = Tracker::default();
+        tracker.ingest(&state(json!({"1": line(4, "", json!({}))})), "t0");
+        tracker.ingest(&state(json!({"1": line(4, "", json!({"InPit": true}))})), "t1");
+        tracker.ingest(&state(json!({"1": line(5, "1:40.0", json!({}))})), "t2");
+        tracker.ingest(&state(json!({"1": line(6, "1:24.0", json!({}))})), "t3");
+
+        let laps = &tracker.laps["1"];
+        assert!(laps[0].pitted);
+        assert!(!laps[1].pitted);
+    }
+
+    // tracker test: "never emits on the first observation"
+    #[test]
+    fn first_observation_never_emits() {
+        let mut tracker = Tracker::default();
+        tracker.ingest(&state(json!({"1": line(10, "1:24.0", json!({}))})), "t0");
+        assert!(tracker.laps.is_empty());
+    }
+
+    // session change clears edge state but keeps already-recorded laps
+    #[test]
+    fn session_change_resets_edges() {
+        let mut tracker = Tracker::default();
+        let mut a = state(json!({"1": line(4, "", json!({}))}));
+        merge_json(&mut a, json!({"SessionInfo": {"Path": "2026/race-a/"}}));
+        let mut b = state(json!({"1": line(1, "", json!({}))}));
+        merge_json(&mut b, json!({"SessionInfo": {"Path": "2026/race-b/"}}));
+
+        tracker.ingest(&a, "t0");
+        tracker.ingest(&b, "t1");
+        // no flank across the session boundary, and first observation of the new session
+        assert!(tracker.laps.is_empty());
+    }
+
+    // snapshot reset arms the detector so the next flank is caught
+    #[test]
+    fn snapshot_reset_arms_detector() {
+        let mut tracker = Tracker::default();
+        tracker.reset_state(&state(json!({"1": line(12, "1:25.0", json!({}))})));
+        tracker.ingest(&state(json!({"1": line(13, "1:24.5", json!({}))})), "t1");
+        assert_eq!(tracker.laps["1"][0].lap, 13);
+        assert_eq!(tracker.laps["1"][0].lap_time_ms, Some(84_500));
+    }
+
     #[test]
     fn builds_stint_metrics() {
         let s = build_stints(&[
@@ -262,5 +449,49 @@ mod tests {
         ]);
         assert_eq!(s[0].best_ms, Some(84000));
         assert_eq!(s[0].deg_ms_per_lap, Some(100.0));
+    }
+
+    // port of "splits stints on compound change and tyre age reset"
+    #[test]
+    fn splits_stints_on_compound_and_age_reset() {
+        let mk = |n: i64, t: i64, compound: &str, age: i64, pitted: bool| LapRecord {
+            compound: Some(compound.into()),
+            tyre_age: Some(age),
+            pitted,
+            ..lap(n, Some(t))
+        };
+        let stints = build_stints(&[
+            mk(1, 84000, "SOFT", 1, false),
+            mk(2, 84200, "SOFT", 2, false),
+            mk(3, 84400, "SOFT", 3, true),
+            mk(4, 86000, "MEDIUM", 1, true),
+            mk(5, 84800, "MEDIUM", 2, false),
+            mk(6, 84900, "MEDIUM", 3, false),
+        ]);
+        assert_eq!(stints.len(), 2);
+        assert_eq!(
+            (stints[0].start_lap, stints[0].end_lap, stints[0].lap_count),
+            (1, 3, 3)
+        );
+        assert_eq!(stints[1].compound.as_deref(), Some("MEDIUM"));
+    }
+
+    // port of cleanLaps: "filters pit laps, missing times and outliers" (even-count median)
+    #[test]
+    fn clean_laps_filters_outliers_with_averaged_median() {
+        let mut outlier = lap(4, Some(110_000));
+        outlier.tyre_age = Some(4);
+        let mut pit = lap(5, Some(84_200));
+        pit.pitted = true;
+        let laps = vec![
+            lap(1, Some(84_000)),
+            lap(2, Some(84_100)),
+            lap(3, None),
+            outlier,
+            pit,
+            lap(6, Some(84_300)),
+        ];
+        let clean = clean_laps(&laps);
+        assert_eq!(clean.iter().map(|l| l.lap).collect::<Vec<_>>(), vec![1, 2, 6]);
     }
 }

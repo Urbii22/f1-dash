@@ -18,11 +18,13 @@ export default function DriverToggles({ selected, onToggle, drivers: driversProp
 
 	if (!drivers) return null;
 
-	const ordered = Object.entries(drivers).map(([nr, driver]) => ({ nr, ...driver })).sort((a, b) => {
-		const posA = Number(timing?.[a.nr]?.Position) || 99;
-		const posB = Number(timing?.[b.nr]?.Position) || 99;
-		return posA - posB;
-	});
+	const ordered = Object.entries(drivers)
+		.map(([nr, driver]) => ({ nr, ...driver }))
+		.sort((a, b) => {
+			const posA = Number(timing?.[a.nr]?.Position) || 99;
+			const posB = Number(timing?.[b.nr]?.Position) || 99;
+			return posA - posB;
+		});
 
 	return (
 		<div className="flex flex-wrap gap-1.5">

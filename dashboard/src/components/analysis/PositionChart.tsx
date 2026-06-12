@@ -20,10 +20,7 @@ export default function PositionChart({ selected, laps: lapsProp, drivers: drive
 	const laps = lapsProp ?? storeLaps;
 	const drivers = driversProp ?? storeDrivers;
 
-	const series = useMemo<ChartSeries[]>(
-		() => lapsToPositionSeries(laps, selected, drivers),
-		[laps, selected, drivers],
-	);
+	const series = useMemo<ChartSeries[]>(() => lapsToPositionSeries(laps, selected, drivers), [laps, selected, drivers]);
 
 	if (series.length === 0) {
 		return (

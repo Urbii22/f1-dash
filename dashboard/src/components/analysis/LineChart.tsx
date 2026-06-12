@@ -81,8 +81,7 @@ export default function LineChart({ series, yInverted, yFormatter, xFormatter, y
 	const yTicks = niceTicks(yMin, yMax, yTickCount, !!integerY);
 	const xTicks = niceTicks(xMin, xMax, Math.min(10, Math.floor(xMax - xMin) + 1), true);
 
-	const hoveredX =
-		hoverX !== null ? Math.round(xMin + ((hoverX - PAD.left) / PLOT_W) * (xMax - xMin)) : null;
+	const hoveredX = hoverX !== null ? Math.round(xMin + ((hoverX - PAD.left) / PLOT_W) * (xMax - xMin)) : null;
 
 	const hoverEntries =
 		hoveredX !== null
@@ -110,14 +109,15 @@ export default function LineChart({ series, yInverted, yFormatter, xFormatter, y
 			>
 				{yTicks.map((tick) => (
 					<g key={`y.${tick}`}>
-						<line
-							x1={PAD.left}
-							x2={VIEW_W - PAD.right}
-							y1={toY(tick)}
-							y2={toY(tick)}
-							stroke="rgba(0,229,255,0.08)"
-						/>
-						<text x={PAD.left - 8} y={toY(tick) + 4} textAnchor="end" fontSize={11} fill="#71717a" fontFamily="monospace">
+						<line x1={PAD.left} x2={VIEW_W - PAD.right} y1={toY(tick)} y2={toY(tick)} stroke="rgba(0,229,255,0.08)" />
+						<text
+							x={PAD.left - 8}
+							y={toY(tick) + 4}
+							textAnchor="end"
+							fontSize={11}
+							fill="#71717a"
+							fontFamily="monospace"
+						>
 							{yFormatter ? yFormatter(tick) : String(tick)}
 						</text>
 					</g>

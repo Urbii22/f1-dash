@@ -64,6 +64,5 @@ export const useReplayControlStore = create<ReplayControlStore>((set) => ({
 	clearPendingSeek: () => set({ pendingSeekMs: null }),
 
 	// jump back to the live edge and resume at 1x
-	resetReplayControls: () =>
-		set((state) => ({ isPaused: false, speed: 1, pendingSeekMs: state.windowEndMs })),
+	resetReplayControls: () => set((state) => ({ isPaused: false, speed: 1, pendingSeekMs: state.windowEndMs })),
 }));

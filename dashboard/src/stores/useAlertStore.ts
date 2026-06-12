@@ -46,8 +46,7 @@ export const useAlertStore = create<AlertStore>()(
 			clearAll: () => set({ alerts: [] }),
 
 			enabledRules: defaultEnabledRules,
-			setRuleEnabled: (rule, enabled) =>
-				set((state) => ({ enabledRules: { ...state.enabledRules, [rule]: enabled } })),
+			setRuleEnabled: (rule, enabled) => set((state) => ({ enabledRules: { ...state.enabledRules, [rule]: enabled } })),
 
 			favoritesOnly: false,
 			setFavoritesOnly: (favoritesOnly) => set({ favoritesOnly }),

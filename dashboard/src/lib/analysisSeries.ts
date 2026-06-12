@@ -15,15 +15,29 @@ export function lapsToPaceSeries(laps: LapsByDriver, selected: string[], drivers
 	if (timed.length === 0) return [];
 	const sorted = timed.map((lap) => lap.lapTimeMs as number).sort((a, b) => a - b);
 	const clipMax = sorted[Math.floor(sorted.length / 2)] + 5000;
-	return selected.map((nr) => ({
-		id: nr, ...identity(nr, drivers), points: (laps[nr] ?? []).filter((lap) => lap.lapTimeMs !== null).map((lap) => ({
-			x: lap.lap, y: Math.min(lap.lapTimeMs as number, clipMax), clipped: (lap.lapTimeMs as number) > clipMax || lap.pitted,
-		})),
-	})).filter((series) => series.points.length > 0);
+	return selected
+		.map((nr) => ({
+			id: nr,
+			...identity(nr, drivers),
+			points: (laps[nr] ?? [])
+				.filter((lap) => lap.lapTimeMs !== null)
+				.map((lap) => ({
+					x: lap.lap,
+					y: Math.min(lap.lapTimeMs as number, clipMax),
+					clipped: (lap.lapTimeMs as number) > clipMax || lap.pitted,
+				})),
+		}))
+		.filter((series) => series.points.length > 0);
 }
 
 export function lapsToPositionSeries(laps: LapsByDriver, selected: string[], drivers?: AnalysisDrivers): ChartSeries[] {
-	return selected.map((nr) => ({
-		id: nr, ...identity(nr, drivers), points: (laps[nr] ?? []).filter((lap) => lap.position !== null).map((lap) => ({ x: lap.lap, y: lap.position as number })),
-	})).filter((series) => series.points.length > 0);
+	return selected
+		.map((nr) => ({
+			id: nr,
+			...identity(nr, drivers),
+			points: (laps[nr] ?? [])
+				.filter((lap) => lap.position !== null)
+				.map((lap) => ({ x: lap.lap, y: lap.position as number })),
+		}))
+		.filter((series) => series.points.length > 0);
 }

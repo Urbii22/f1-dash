@@ -100,8 +100,8 @@ export default function HelpPage() {
 			<h2 className="my-4 text-2xl">Pit Status</h2>
 
 			<p className="mb-4">
-				The status column uses the real timing feed to show when a driver is in the pit lane or has just left it. The cell
-				remains empty while the driver is on track.
+				The status column uses the real timing feed to show when a driver is in the pit lane or has just left it. The
+				cell remains empty while the driver is on track.
 			</p>
 
 			<p className="mb-4">

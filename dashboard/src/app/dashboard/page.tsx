@@ -18,7 +18,7 @@ import { useDataStore } from "@/stores/useDataStore";
 export default function Page() {
 	const presentationMode = usePresentationModeStore((state) => state.enabled);
 	const setPresentationMode = usePresentationModeStore((state) => state.setEnabled);
-	const hasSession = useDataStore((s) => !!s.state?.SessionInfo);
+	const hasSession = useDataStore(({ state }) => state?.SessionStatus?.Status === "Started");
 	const connected = useConnectionStore((s) => s.connected);
 
 	return (
@@ -34,7 +34,11 @@ export default function Page() {
 				</div>
 			)}
 			{hasSession ? (
-				presentationMode ? <PresentationMode /> : <RegularDashboard />
+				presentationMode ? (
+					<PresentationMode />
+				) : (
+					<RegularDashboard />
+				)
 			) : connected ? (
 				<NoLiveSession />
 			) : (

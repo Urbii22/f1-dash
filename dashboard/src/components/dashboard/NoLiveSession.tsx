@@ -10,17 +10,14 @@ import { useCountdown } from "@/hooks/useCountdown";
 export default function NoLiveSession() {
 	const { round, nextSession, nextRace, loading } = useNextSession();
 
-	const raceIsDistinct =
-		nextRace && nextSession && nextRace.start !== nextSession.start;
+	const raceIsDistinct = nextRace && nextSession && nextRace.start !== nextSession.start;
 
 	return (
 		<div className="flex min-h-[60vh] items-center justify-center p-6">
 			<div className="telemetry-panel w-full max-w-2xl rounded-xl p-8">
 				<p className="panel-title mb-2">Live timing</p>
 				<h1 className="text-3xl font-black tracking-tight text-white">No session live</h1>
-				<p className="mt-1 text-sm text-zinc-400">
-					The timing feed is connected — no active session is broadcasting.
-				</p>
+				<p className="mt-1 text-sm text-zinc-400">The timing feed is connected — no active session is broadcasting.</p>
 
 				<div className="mt-6 border-t border-cyan-300/10 pt-6">
 					{loading ? (
@@ -37,15 +34,14 @@ export default function NoLiveSession() {
 							</div>
 
 							<p className="mb-3 text-sm text-zinc-400">
-								Next:{" "}
-								<span className="font-semibold text-cyan-200">{nextSession.kind}</span>
+								Next: <span className="font-semibold text-cyan-200">{nextSession.kind}</span>
 							</p>
 
 							<CountdownDisplay isoStart={nextSession.start} />
 
 							{raceIsDistinct && (
 								<div className="mt-6 border-t border-cyan-300/10 pt-4">
-									<p className="mb-2 text-xs text-zinc-500 uppercase tracking-widest">Race</p>
+									<p className="mb-2 text-xs tracking-widest text-zinc-500 uppercase">Race</p>
 									<CountdownDisplay isoStart={nextRace!.start} secondary />
 								</div>
 							)}
@@ -72,13 +68,7 @@ export default function NoLiveSession() {
 	);
 }
 
-function CountdownDisplay({
-	isoStart,
-	secondary = false,
-}: {
-	isoStart: string;
-	secondary?: boolean;
-}) {
+function CountdownDisplay({ isoStart, secondary = false }: { isoStart: string; secondary?: boolean }) {
 	const reduced = useReducedMotion();
 	const [days, hours, minutes, seconds] = useCountdown(isoStart);
 

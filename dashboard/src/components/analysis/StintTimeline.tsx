@@ -43,10 +43,7 @@ export default function StintTimeline({ stints: stintsProp, laps: lapsProp, driv
 			.sort((a, b) => a.position - b.position);
 	}, [stints, laps, drivers, timing]);
 
-	const maxLap = useMemo(
-		() => Math.max(1, ...rows.flatMap((row) => row.stints.map((stint) => stint.endLap))),
-		[rows],
-	);
+	const maxLap = useMemo(() => Math.max(1, ...rows.flatMap((row) => row.stints.map((stint) => stint.endLap))), [rows]);
 
 	if (rows.length === 0) {
 		return (

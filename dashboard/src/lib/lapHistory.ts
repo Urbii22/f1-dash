@@ -87,7 +87,11 @@ function sectorMs(timing: TimingDataDriver, index: number): number | null {
 	return parseLapTimeMs(value);
 }
 
-export function detectCompletedLaps(prev: State | null, next: State, pitFlags: Record<string, boolean>): CompletedLap[] {
+export function detectCompletedLaps(
+	prev: State | null,
+	next: State,
+	pitFlags: Record<string, boolean>,
+): CompletedLap[] {
 	const nextLines = next.TimingData?.Lines;
 	const prevLines = prev?.TimingData?.Lines;
 	if (!nextLines || !prevLines) return [];
@@ -213,8 +217,7 @@ export function buildStints(laps: LapRecord[]): StintRecord[] {
 
 	for (const lap of laps) {
 		const last = current[current.length - 1];
-		const tyreReset =
-			last && lap.tyreAge !== null && last.tyreAge !== null && lap.tyreAge < last.tyreAge;
+		const tyreReset = last && lap.tyreAge !== null && last.tyreAge !== null && lap.tyreAge < last.tyreAge;
 		const compoundChanged = last && lap.compound !== null && last.compound !== null && lap.compound !== last.compound;
 
 		if (last && (tyreReset || compoundChanged)) {

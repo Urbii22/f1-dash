@@ -72,23 +72,38 @@ fn ingest(db: &mut rusqlite::Connection, path: &Path) -> anyhow::Result<bool> {
     println!("ingested session {id} from {}", path.display());
     Ok(complete)
 }
+struct WatchEntry {
+    modified: SystemTime,
+    ingested: bool,
+}
+
 fn watch(db: &mut rusqlite::Connection) -> anyhow::Result<()> {
     let root = PathBuf::from(env::var("RECORDINGS_DIR").unwrap_or_else(|_| "./recordings".into()));
-    let mut seen = std::collections::HashMap::new();
+    let mut seen: std::collections::HashMap<PathBuf, WatchEntry> = std::collections::HashMap::new();
     loop {
         for file in archive::reader::recording_files(&root).unwrap_or_default() {
             let modified = std::fs::metadata(&file)?.modified()?;
-            if seen.get(&file) == Some(&modified) {
-                if modified.elapsed().unwrap_or_default() >= Duration::from_secs(60)
-                    && let Ok(complete) = ingest(db, &file)
-                {
-                    seen.insert(file.clone(), SystemTime::UNIX_EPOCH);
-                    if complete {
-                        purge_if_needed(&file);
-                    }
+            let entry = seen.entry(file.clone()).or_insert(WatchEntry {
+                modified,
+                ingested: false,
+            });
+
+            // any new write re-arms the file, even after a previous ingest
+            // (e.g. realtime restarting and appending to the same session)
+            if entry.modified != modified {
+                entry.modified = modified;
+                entry.ingested = false;
+                continue;
+            }
+
+            if !entry.ingested
+                && modified.elapsed().unwrap_or_default() >= Duration::from_secs(60)
+                && let Ok(complete) = ingest(db, &file)
+            {
+                entry.ingested = true;
+                if complete {
+                    purge_if_needed(&file);
                 }
-            } else if seen.get(&file) != Some(&SystemTime::UNIX_EPOCH) {
-                seen.insert(file, modified);
             }
         }
         thread::sleep(Duration::from_secs(10));

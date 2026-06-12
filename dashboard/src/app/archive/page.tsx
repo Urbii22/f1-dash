@@ -1,4 +1,35 @@
 import SessionPicker from "@/components/archive/SessionPicker";
 import { env } from "@/env";
 import type { ArchiveSession } from "@/types/archive.type";
-export default async function ArchivePage(){let sessions:ArchiveSession[]=[];try{const response=await fetch(`${env.API_URL}/api/archive/sessions`,{cache:"no-store"});if(response.ok)sessions=await response.json();}catch{}return <div className="telemetry-panel rounded-lg p-5"><div className="mb-6"><p className="panel-title">Recorded history</p><h1 className="text-3xl font-black">Session Archive</h1><p className="mt-2 text-zinc-400">Review race pace, qualifying, strategy, events and lap telemetry without a live connection.</p></div>{sessions.length?<SessionPicker sessions={sessions}/>:<div className="data-chip rounded-lg p-8 text-center"><h2 className="text-xl font-bold">No archived sessions yet</h2><p className="mt-2 text-zinc-400">Enable <code>RECORDING_ENABLED=true</code>, run a session, then start the archive watcher or ingest a recording manually.</p><a href="https://github.com/slowlydev/f1-dash/blob/main/SETUP.md" className="mt-4 inline-block text-cyan-300">Read setup instructions</a></div>}</div>}
+export default async function ArchivePage() {
+	let sessions: ArchiveSession[] = [];
+	try {
+		const response = await fetch(`${env.API_URL}/api/archive/sessions`, { cache: "no-store" });
+		if (response.ok) sessions = await response.json();
+	} catch {}
+	return (
+		<div className="telemetry-panel rounded-lg p-5">
+			<div className="mb-6">
+				<p className="panel-title">Recorded history</p>
+				<h1 className="text-3xl font-black">Session Archive</h1>
+				<p className="mt-2 text-zinc-400">
+					Review race pace, qualifying, strategy, events and lap telemetry without a live connection.
+				</p>
+			</div>
+			{sessions.length ? (
+				<SessionPicker sessions={sessions} />
+			) : (
+				<div className="data-chip rounded-lg p-8 text-center">
+					<h2 className="text-xl font-bold">No archived sessions yet</h2>
+					<p className="mt-2 text-zinc-400">
+						Enable <code>RECORDING_ENABLED=true</code>, run a session, then start the archive watcher or ingest a
+						recording manually.
+					</p>
+					<a href="https://github.com/slowlydev/f1-dash/blob/main/SETUP.md" className="mt-4 inline-block text-cyan-300">
+						Read setup instructions
+					</a>
+				</div>
+			)}
+		</div>
+	);
+}

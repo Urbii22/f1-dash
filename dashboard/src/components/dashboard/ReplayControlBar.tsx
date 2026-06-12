@@ -175,10 +175,7 @@ function ReplayTimeline() {
 			>
 				{/* track */}
 				<div className="absolute top-1/2 right-0 left-0 h-1.5 -translate-y-1/2 rounded-full bg-black/50">
-					<div
-						className="h-full rounded-full bg-cyan-300/40"
-						style={{ width: `${cursorFraction * 100}%` }}
-					/>
+					<div className="h-full rounded-full bg-cyan-300/40" style={{ width: `${cursorFraction * 100}%` }} />
 				</div>
 
 				{/* event markers, projected from recording-clock onto the window scale */}
