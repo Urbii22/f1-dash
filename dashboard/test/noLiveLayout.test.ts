@@ -20,4 +20,18 @@ test("hides replay controls when there is no live session", () => {
 	expect(pageSource).toContain(
 		"const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);",
 	);
+	expect(pageSource).toContain("const [dashboardPreview, setDashboardPreview] = useState(false);");
+	expect(pageSource).toContain("<NoLiveSession onOpenDashboard={() => setDashboardPreview(true)} />");
+	expect(pageSource).toContain("<OfflineDashboardNotice onExit={() => setDashboardPreview(false)} />");
+});
+
+test("offers manual dashboard access from the next-session countdown", () => {
+	const source = fs.readFileSync(
+		path.resolve(__dirname, "../src/components/dashboard/NoLiveSession.tsx"),
+		"utf8",
+	);
+
+	expect(source).toContain("onOpenDashboard: () => void");
+	expect(source).toContain("Open dashboard anyway");
+	expect(source).toContain("onClick={onOpenDashboard}");
 });

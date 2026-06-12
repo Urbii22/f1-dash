@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import LeaderBoard from "@/components/dashboard/LeaderBoard";
 import DriverComparisonPanel from "@/components/dashboard/DriverComparisonPanel";
 import RaceControl from "@/components/dashboard/RaceControl";
@@ -20,6 +22,8 @@ export default function Page() {
 	const setPresentationMode = usePresentationModeStore((state) => state.setEnabled);
 	const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);
 	const connected = useConnectionStore((s) => s.connected);
+	const [dashboardPreview, setDashboardPreview] = useState(false);
+	const showDashboard = hasSession || dashboardPreview;
 
 	return (
 		<div className="flex w-full flex-col gap-3 p-3">
@@ -33,18 +37,39 @@ export default function Page() {
 					</button>
 				</div>
 			)}
-			{hasSession ? (
-				presentationMode ? (
+			{showDashboard ? (
+				<>
+					{!hasSession && <OfflineDashboardNotice onExit={() => setDashboardPreview(false)} />}
+					{hasSession && presentationMode ? (
 					<PresentationMode />
 				) : (
 					<RegularDashboard />
-				)
+					)}
+				</>
 			) : connected ? (
-				<NoLiveSession />
+				<NoLiveSession onOpenDashboard={() => setDashboardPreview(true)} />
 			) : (
 				<ConnectingState />
 			)}
 			<Footer />
+		</div>
+	);
+}
+
+function OfflineDashboardNotice({ onExit }: { onExit: () => void }) {
+	return (
+		<div className="telemetry-panel flex flex-wrap items-center justify-between gap-3 rounded-lg border-amber-300/30 bg-amber-300/8 px-4 py-3">
+			<div>
+				<p className="font-mono text-xs font-black tracking-widest text-amber-200 uppercase">Offline dashboard</p>
+				<p className="mt-1 text-sm text-zinc-300">No live telemetry is available. Panels may be empty until the next session starts.</p>
+			</div>
+			<button
+				type="button"
+				onClick={onExit}
+				className="data-chip rounded-md px-3 py-2 text-sm font-semibold text-amber-100 hover:border-amber-300/50"
+			>
+				Back to countdown
+			</button>
 		</div>
 	);
 }

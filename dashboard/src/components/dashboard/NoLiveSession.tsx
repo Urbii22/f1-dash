@@ -7,7 +7,11 @@ import { useReducedMotion } from "motion/react";
 import { useNextSession } from "@/hooks/useNextSession";
 import { useCountdown } from "@/hooks/useCountdown";
 
-export default function NoLiveSession() {
+type Props = {
+	onOpenDashboard: () => void;
+};
+
+export default function NoLiveSession({ onOpenDashboard }: Props) {
 	const { round, nextSession, nextRace, loading } = useNextSession();
 
 	const raceIsDistinct = nextRace && nextSession && nextRace.start !== nextSession.start;
@@ -50,6 +54,13 @@ export default function NoLiveSession() {
 				</div>
 
 				<div className="mt-8 flex flex-wrap gap-3 border-t border-cyan-300/10 pt-6">
+					<button
+						type="button"
+						onClick={onOpenDashboard}
+						className="rounded-md border border-cyan-300/40 bg-cyan-300/15 px-3 py-2 text-sm font-bold text-cyan-100 transition-colors hover:bg-cyan-300/25"
+					>
+						Open dashboard anyway
+					</button>
 					<Link
 						href="/schedule"
 						className="data-chip rounded-md px-3 py-2 text-sm text-cyan-200 transition-opacity hover:opacity-80"

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 
-import type { PositionCar, TimingDataDriver } from "@/types/state.type";
+import type { CarDataChannels, PositionCar, TimingDataDriver } from "@/types/state.type";
 import type { Map, TrackPosition } from "@/types/map.type";
 
 import { fetchMap } from "@/lib/fetchMap";
@@ -13,12 +13,21 @@ import { getTrackStatusMessage } from "@/lib/getTrackStatusMessage";
 import {
 	createSectors,
 	findYellowSectors,
+	findMinDistance,
 	getSectorColor,
 	type MapSector,
 	prioritizeColoredSectors,
 	rad,
 	rotate,
 } from "@/lib/map";
+import {
+	estimateTrackVelocity,
+	getInitialTelemetryCalibration,
+	getTelemetryTrackVelocity,
+	getTrackPoint,
+	stepTrackMotion,
+	updateTelemetryCalibration,
+} from "@/lib/mapMotion";
 
 // This is basically fearlessly copied from
 // https://github.com/tdjsnelling/monaco
@@ -117,6 +126,7 @@ export default function Map({ filter }: Props) {
 	const toggleComparedDriver = useDriverSelectionStore((state) => state.toggleComparedDriver);
 
 	const positions = useDataStore((state) => state.positions);
+	const carsData = useDataStore((state) => state.carsData);
 	const drivers = useDataStore((state) => state?.state?.DriverList);
 	const trackStatus = useDataStore((state) => state?.state?.TrackStatus);
 	const timingDrivers = useDataStore((state) => state?.state?.TimingData);
@@ -342,10 +352,9 @@ export default function Map({ filter }: Props) {
 						.filter((driver) => (filter ? filter.includes(driver.RacingNumber) : true))
 						.map((driver) => {
 							const timingDriver = timingDrivers?.Lines[driver.RacingNumber];
-							const hidden = timingDriver
-								? timingDriver.KnockedOut || timingDriver.Stopped || timingDriver.Retired
-								: false;
+							const hidden = timingDriver ? timingDriver.KnockedOut || timingDriver.Retired : false;
 							const pit = timingDriver ? timingDriver.InPit : false;
+							const stopped = timingDriver ? timingDriver.Stopped : false;
 
 							const driverPosition =
 								positions?.[driver.RacingNumber] ?? getDriverPosition(timingDriver, originalTrackPoints);
@@ -360,11 +369,12 @@ export default function Map({ filter }: Props) {
 									name={driver.Tla}
 									color={driver.TeamColour}
 									pit={pit}
+									stopped={stopped}
 									hidden={hidden}
 									pos={driverPosition}
-									rotation={rotation}
-									centerX={centerX}
-									centerY={centerY}
+									carData={carsData?.[driver.RacingNumber]?.Channels}
+									trackPoints={points}
+									originalTrackPoints={originalTrackPoints ?? []}
 									selected={selectedDriver === driver.RacingNumber}
 									onSelect={() => setSelectedDriver(driver.RacingNumber)}
 									onCompare={() => toggleComparedDriver(driver.RacingNumber)}
@@ -397,13 +407,13 @@ type CarDotProps = {
 	favoriteDriver: boolean;
 
 	pit: boolean;
+	stopped: boolean;
 	hidden: boolean;
 
 	pos: PositionCar;
-	rotation: number;
-
-	centerX: number;
-	centerY: number;
+	carData: CarDataChannels | undefined;
+	trackPoints: TrackPosition[];
+	originalTrackPoints: TrackPosition[];
 	selected: boolean;
 	onSelect: () => void;
 	onCompare: () => void;
@@ -411,23 +421,98 @@ type CarDotProps = {
 
 const CarDot = ({
 	pos,
+	carData,
 	name,
 	color,
 	favoriteDriver,
 	pit,
+	stopped,
 	hidden,
-	rotation,
-	centerX,
-	centerY,
+	trackPoints,
+	originalTrackPoints,
 	selected,
 	onSelect,
 	onCompare,
 }: CarDotProps) => {
-	const rotatedPos = rotate(pos.X, pos.Y, rotation, centerX, centerY);
-	const transform = [`translateX(${rotatedPos.x}px)`, `translateY(${rotatedPos.y}px)`].join(" ");
+	const targetProgress = findMinDistance({ x: pos.X, y: pos.Y }, originalTrackPoints);
+	const groupRef = useRef<SVGGElement>(null);
+	const motionRef = useRef({ progress: targetProgress, velocity: 0 });
+	const targetRef = useRef(targetProgress);
+	const targetVelocityRef = useRef(0);
+	const targetTimeRef = useRef(0);
+	const stoppedRef = useRef(stopped);
+	const carDataRef = useRef(carData);
+	const calibrationRef = useRef(getInitialTelemetryCalibration(trackPoints.length));
+
+	useEffect(() => {
+		carDataRef.current = carData;
+	}, [carData]);
+
+	useEffect(() => {
+		const now = performance.now();
+		const sampledVelocity = targetTimeRef.current
+			? estimateTrackVelocity(
+					targetRef.current,
+					targetProgress,
+					trackPoints.length,
+					now - targetTimeRef.current,
+				)
+			: 0;
+		targetVelocityRef.current = targetVelocityRef.current * 0.65 + sampledVelocity * 0.35;
+		const speedKph = carDataRef.current?.["2"] ?? 0;
+		calibrationRef.current = updateTelemetryCalibration(
+			calibrationRef.current,
+			sampledVelocity,
+			speedKph,
+		);
+		targetRef.current = targetProgress;
+		targetTimeRef.current = now;
+		stoppedRef.current = stopped;
+		if (stopped) targetVelocityRef.current = 0;
+	}, [stopped, targetProgress, trackPoints.length]);
+
+	useEffect(() => {
+		let animationFrame = 0;
+		let previousTime = performance.now();
+
+		const animate = (time: number) => {
+			const deltaMs = Math.min(time - previousTime, 100);
+			previousTime = time;
+			const telemetry = carDataRef.current;
+			const telemetryVelocity = telemetry
+				? getTelemetryTrackVelocity(
+						{
+							speedKph: telemetry["2"],
+							throttle: telemetry["4"],
+							braking: Boolean(telemetry["5"]),
+						},
+						calibrationRef.current,
+					)
+				: targetVelocityRef.current;
+			motionRef.current = stepTrackMotion(
+				motionRef.current,
+				targetRef.current,
+				telemetryVelocity,
+				trackPoints.length,
+				deltaMs,
+				stoppedRef.current,
+				pit ? 1500 : 950,
+			);
+
+			const point = getTrackPoint(motionRef.current.progress, trackPoints);
+			groupRef.current?.setAttribute("transform", `translate(${point.x} ${point.y})`);
+			animationFrame = requestAnimationFrame(animate);
+		};
+
+		animationFrame = requestAnimationFrame(animate);
+		return () => cancelAnimationFrame(animationFrame);
+	}, [pit, trackPoints]);
+
+	const initialPoint = getTrackPoint(targetProgress, trackPoints);
 
 	return (
 		<g
+			ref={groupRef}
 			role="button"
 			tabIndex={0}
 			onClick={onSelect}
@@ -444,12 +529,14 @@ const CarDot = ({
 				{ "opacity-30": pit },
 				{ "opacity-0!": hidden },
 			)}
+			transform={`translate(${initialPoint.x} ${initialPoint.y})`}
 			style={{
-				transition: "all 1s linear",
-				transform,
 				...(color && { fill: `#${color}` }),
 			}}
 		>
+			{stopped && (
+				<circle className="animate-ping stroke-red-400" r={260} fill="transparent" strokeWidth={55} />
+			)}
 			<circle id={`map.driver.circle`} r={120} />
 			{selected && <circle className="stroke-white" r={260} fill="transparent" strokeWidth={60} />}
 			<text
@@ -462,6 +549,11 @@ const CarDot = ({
 			>
 				{name}
 			</text>
+			{stopped && (
+				<text x={150} y={230} className="fill-red-400" fontSize={145} fontWeight="bold">
+					STOPPED
+				</text>
+			)}
 
 			{favoriteDriver && (
 				<circle
@@ -470,7 +562,6 @@ const CarDot = ({
 					r={180}
 					fill="transparent"
 					strokeWidth={40}
-					style={{ transition: "all 1s linear" }}
 				/>
 			)}
 		</g>
