@@ -42,7 +42,7 @@ export default function DashboardLayout({ children }: Props) {
 
 	useWakeLock();
 
-	const hasSession = useDataStore(({ state }) => state?.SessionStatus?.Status === "Started");
+	const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);
 	const ended = useDataStore(({ state }) => state?.SessionStatus?.Status === "Ends");
 
 	return (

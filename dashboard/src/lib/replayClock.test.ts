@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { advancePlayhead } from "@/lib/replayClock";
+import { adjustPlayheadForDelay, advancePlayhead, resolveDelayAnchor } from "@/lib/replayClock";
 
 const BASE = 1_000_000;
 
@@ -111,5 +111,47 @@ describe("advancePlayhead", () => {
 			latest: null,
 		});
 		expect(next).toBe(BASE);
+	});
+});
+
+describe("adjustPlayheadForDelay", () => {
+	it("anchors the playhead behind live when delay mode starts", () => {
+		expect(adjustPlayheadForDelay(BASE, 0, 10, BASE + 20_000)).toBe(BASE + 10_000);
+	});
+
+	it("moves the playhead back when a running sync timer increases the delay", () => {
+		expect(adjustPlayheadForDelay(BASE, 1, 10, BASE + 20_000)).toBe(BASE - 9_000);
+	});
+
+	it("moves the playhead forward when the requested delay is reduced", () => {
+		expect(adjustPlayheadForDelay(BASE, 10, 4, BASE + 20_000)).toBe(BASE + 6_000);
+	});
+});
+
+describe("resolveDelayAnchor", () => {
+	it("waits at the oldest frame until the requested delay is buffered", () => {
+		expect(
+			resolveDelayAnchor({
+				current: BASE,
+				previousDelaySeconds: 0,
+				nextDelaySeconds: 35,
+				now: BASE + 10_000,
+				oldest: BASE + 5_000,
+				wasWaiting: false,
+			}),
+		).toEqual({ playhead: BASE + 5_000, waiting: true });
+	});
+
+	it("jumps to live minus delay when buffering finishes", () => {
+		expect(
+			resolveDelayAnchor({
+				current: BASE + 5_000,
+				previousDelaySeconds: 35,
+				nextDelaySeconds: 35,
+				now: BASE + 40_000,
+				oldest: BASE,
+				wasWaiting: true,
+			}),
+		).toEqual({ playhead: BASE + 5_000, waiting: false });
 	});
 });

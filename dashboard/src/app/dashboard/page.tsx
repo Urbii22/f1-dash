@@ -18,7 +18,7 @@ import { useDataStore } from "@/stores/useDataStore";
 export default function Page() {
 	const presentationMode = usePresentationModeStore((state) => state.enabled);
 	const setPresentationMode = usePresentationModeStore((state) => state.setEnabled);
-	const hasSession = useDataStore(({ state }) => state?.SessionStatus?.Status === "Started");
+	const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);
 	const connected = useConnectionStore((s) => s.connected);
 
 	return (
@@ -64,7 +64,7 @@ function ConnectingState() {
 function RegularDashboard() {
 	return (
 		<>
-			<section className="flex flex-col gap-3 2xl:grid 2xl:grid-cols-[minmax(48rem,0.95fr)_minmax(36rem,1.05fr)]">
+			<section className="flex flex-col gap-3 2xl:grid 2xl:grid-cols-[minmax(48rem,0.95fr)_minmax(36rem,1.05fr)] 2xl:items-stretch">
 				<div className="telemetry-panel rounded-lg p-3">
 					<PanelHeader eyebrow="Grid matrix" title="Live Classification" meta="Timing data" />
 					<div className="tech-scrollbar mt-3 overflow-x-auto">
@@ -72,22 +72,11 @@ function RegularDashboard() {
 					</div>
 				</div>
 
-				<div className="telemetry-panel min-h-[34rem] rounded-lg p-3 2xl:max-h-[52rem]">
-					<PanelHeader eyebrow="Circuit radar" title="Track Positioning" meta="Sector overlay" />
-					<div className="relative mt-3 h-[32rem] overflow-hidden rounded-md border border-cyan-300/10 bg-black/30 2xl:h-[calc(100%-3.5rem)]">
-						<div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-cyan-300/10 to-transparent" />
-						<Map />
-					</div>
-				</div>
+				<CircuitColumn />
 			</section>
 
-			<section className="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(20rem,3fr)]">
+			<section>
 				<DriverComparisonPanel />
-
-				<div className="telemetry-panel tech-scrollbar max-h-[34rem] overflow-y-auto rounded-lg p-4 xl:h-[34rem]">
-					<PanelHeader eyebrow="FIA feed" title="Race Control" meta="Messages" />
-					<RaceControl />
-				</div>
 			</section>
 
 			<section className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-4">
@@ -105,6 +94,29 @@ function RegularDashboard() {
 				</div>
 			</section>
 		</>
+	);
+}
+
+function CircuitColumn() {
+	return (
+		<div className="min-w-0 2xl:relative 2xl:min-h-0">
+			<div className="flex min-w-0 flex-col gap-3 2xl:absolute 2xl:inset-0">
+				<div className="telemetry-panel min-h-[34rem] rounded-lg p-3">
+					<PanelHeader eyebrow="Circuit radar" title="Track Positioning" meta="Sector overlay" />
+					<div className="relative mt-3 h-[32rem] overflow-hidden rounded-md border border-cyan-300/10 bg-black/30">
+						<div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-cyan-300/10 to-transparent" />
+						<Map />
+					</div>
+				</div>
+
+				<div className="telemetry-panel flex min-h-0 flex-1 flex-col rounded-lg p-3">
+					<PanelHeader eyebrow="FIA feed" title="Race Control" meta="Latest messages" />
+					<div className="tech-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
+						<RaceControl />
+					</div>
+				</div>
+			</div>
+		</div>
 	);
 }
 

@@ -16,6 +16,44 @@ export type AdvancePlayheadParams = {
 	paused?: boolean;
 };
 
+export function adjustPlayheadForDelay(
+	current: number,
+	previousDelaySeconds: number,
+	nextDelaySeconds: number,
+	now: number,
+): number {
+	if (previousDelaySeconds === 0 || current === 0) return now - nextDelaySeconds * 1000;
+	return current - (nextDelaySeconds - previousDelaySeconds) * 1000;
+}
+
+type ResolveDelayAnchorParams = {
+	current: number;
+	previousDelaySeconds: number;
+	nextDelaySeconds: number;
+	now: number;
+	oldest: number | null;
+	wasWaiting: boolean;
+};
+
+export function resolveDelayAnchor({
+	current,
+	previousDelaySeconds,
+	nextDelaySeconds,
+	now,
+	oldest,
+	wasWaiting,
+}: ResolveDelayAnchorParams): { playhead: number; waiting: boolean } {
+	const target = now - nextDelaySeconds * 1000;
+	if (oldest === null) return { playhead: current, waiting: true };
+	if (target < oldest) return { playhead: oldest, waiting: true };
+	if (wasWaiting) return { playhead: target, waiting: false };
+
+	return {
+		playhead: adjustPlayheadForDelay(current, previousDelaySeconds, nextDelaySeconds, now),
+		waiting: false,
+	};
+}
+
 export function advancePlayhead({
 	current,
 	realElapsedMs,

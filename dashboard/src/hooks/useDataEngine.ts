@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CarData, CarsData, Position, Positions, State } from "@/types/state.type";
 import type { MessageInitial, MessageUpdate } from "@/types/message.type";
 
-import { advancePlayhead } from "@/lib/replayClock";
+import { advancePlayhead, resolveDelayAnchor } from "@/lib/replayClock";
 import { inflate } from "@/lib/inflate";
 import { utcToLocalMs } from "@/lib/utcToLocalMs";
 
@@ -65,6 +65,7 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 	const playheadRef = useRef<number>(0);
 	const lastTickRef = useRef<number>(0);
 	const prevDelayRef = useRef<number>(0);
+	const waitingForDelayRef = useRef(false);
 
 	const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -152,6 +153,7 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 			// live edge: keep the playhead anchored so adding a delay starts cleanly
 			playheadRef.current = now;
 			prevDelayRef.current = 0;
+			waitingForDelayRef.current = false;
 
 			const newStateFrame: Record<string, State[keyof State]> = {};
 
@@ -189,11 +191,18 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 				return;
 			}
 
-			// (re)anchor the playhead when entering replay mode from live or on the
-			// very first replay tick: start `delay` seconds behind the live edge
-			if (prevDelayRef.current === 0 || playheadRef.current === 0) {
-				playheadRef.current = now - delay * 1000;
-			}
+			// If the requested TV delay is not buffered yet, hold at the oldest
+			// frame. As soon as it becomes available, jump to live minus delay.
+			const anchor = resolveDelayAnchor({
+				current: playheadRef.current,
+				previousDelaySeconds: prevDelayRef.current,
+				nextDelaySeconds: delay,
+				now,
+				oldest,
+				wasWaiting: waitingForDelayRef.current,
+			});
+			playheadRef.current = anchor.playhead;
+			waitingForDelayRef.current = anchor.waiting;
 			prevDelayRef.current = delay;
 
 			// an explicit scrub/jump overrides organic advancement for this tick
@@ -204,7 +213,7 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 				pendingSeekMs: pendingSeek,
 				oldest,
 				latest,
-				paused: replayPausedRef.current,
+				paused: replayPausedRef.current || waitingForDelayRef.current,
 			});
 			if (pendingSeek !== null) useReplayControlStore.getState().clearPendingSeek();
 

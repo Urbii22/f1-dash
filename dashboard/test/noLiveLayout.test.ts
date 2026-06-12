@@ -14,10 +14,10 @@ test("hides replay controls when there is no live session", () => {
 	);
 
 	expect(layoutSource).toContain(
-		'const hasSession = useDataStore(({ state }) => state?.SessionStatus?.Status === "Started");',
+		"const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);",
 	);
 	expect(layoutSource).toMatch(/\{hasSession && <ReplayControlBar \/>\}/);
 	expect(pageSource).toContain(
-		'const hasSession = useDataStore(({ state }) => state?.SessionStatus?.Status === "Started");',
+		"const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);",
 	);
 });
