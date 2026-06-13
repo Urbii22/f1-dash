@@ -4,6 +4,8 @@ import {
 	buildDriverComparison,
 	buildFeedBestLap,
 	calculateDriverGap,
+	compareMilliseconds,
+	compareTimingValues,
 	getCurrentStint,
 	normalizeSectors,
 	parseTimingSeconds,
@@ -23,6 +25,15 @@ test("parseTimingSeconds handles lap and sector formats", () => {
 	expect(parseTimingSeconds("+4.238")).toBe(4.238);
 	expect(parseTimingSeconds("1:19.271")).toBe(79.271);
 	expect(parseTimingSeconds("LAP 32")).toBeNull();
+});
+
+test("timing comparison identifies the faster value and handles ties or missing data", () => {
+	expect(compareTimingValues("1:16.258", "1:16.500")).toBe("first");
+	expect(compareTimingValues("22.473", "22.226")).toBe("second");
+	expect(compareTimingValues("30.711", "30.711")).toBe("tie");
+	expect(compareTimingValues("--", "30.711")).toBe("unavailable");
+	expect(compareMilliseconds(76258, 76500)).toBe("first");
+	expect(compareMilliseconds(null, 76500)).toBe("unavailable");
 });
 
 test("direct interval is preferred when compared drivers are adjacent", () => {

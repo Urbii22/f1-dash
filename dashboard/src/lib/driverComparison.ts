@@ -51,6 +51,8 @@ export type FeedBestLap = {
 	sectorsMs: [number | null, number | null, number | null];
 };
 
+export type TimingComparison = "first" | "second" | "tie" | "unavailable";
+
 export function buildFeedBestLap(stats: TimingStatsDriver | undefined): FeedBestLap | null {
 	const lapTimeMs = parseLapTimeMs(stats?.PersonalBestLapTime?.Value);
 	if (lapTimeMs === null) return null;
@@ -72,6 +74,16 @@ export function parseTimingSeconds(value: string | undefined): number | null {
 	if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
 	const parsed = Number(normalized);
 	return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function compareMilliseconds(first: number | null, second: number | null): TimingComparison {
+	if (first === null || second === null) return "unavailable";
+	if (first === second) return "tie";
+	return first < second ? "first" : "second";
+}
+
+export function compareTimingValues(first: string, second: string): TimingComparison {
+	return compareMilliseconds(parseTimingSeconds(first), parseTimingSeconds(second));
 }
 
 export function calculateDriverGap(first: TimingDataDriver, second: TimingDataDriver): DriverGap {

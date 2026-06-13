@@ -10,7 +10,8 @@ import {
 	buildFeedBestLap,
 	calculateDriverGap,
 	calculateSectorDelta,
-	parseTimingSeconds,
+	compareMilliseconds,
+	compareTimingValues,
 	type ComparisonSector,
 	type DriverComparisonModel,
 } from "@/lib/driverComparison";
@@ -216,20 +217,31 @@ function BestLapsComparison({
 		return <EmptyState text={`Waiting for a valid completed lap from ${pending}.`} />;
 	}
 
-	const deltaMs = Math.abs((firstData.lapTimeMs as number) - (secondData.lapTimeMs as number));
-	const faster = (firstData.lapTimeMs as number) <= (secondData.lapTimeMs as number) ? first.tla : second.tla;
+	const firstLapTimeMs = firstData.lapTimeMs as number;
+	const secondLapTimeMs = secondData.lapTimeMs as number;
+	const deltaMs = Math.abs(firstLapTimeMs - secondLapTimeMs);
+	const lapWinner = compareMilliseconds(firstLapTimeMs, secondLapTimeMs);
+	const faster = lapWinner === "first" ? first.tla : lapWinner === "second" ? second.tla : "EVEN";
 	const exactSectors = Boolean(firstLap && secondLap);
 
 	return (
 		<div className="space-y-2">
 			<div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch overflow-hidden rounded-md border border-cyan-300/10 bg-black/25">
-				<BestLapSummary driver={first} lap={firstLap} feed={firstFeed} />
+				<BestLapSummary driver={first} lap={firstLap} feed={firstFeed} fastest={lapWinner === "first"} />
 				<div className="flex min-w-28 flex-col items-center justify-center border-x border-cyan-300/10 bg-black/30 px-3 text-center">
 					<p className="font-mono text-[0.65rem] font-bold text-zinc-500 uppercase">Delta</p>
-					<p className="mt-1 font-mono text-lg font-black text-emerald-400">{formatLapTimeMs(deltaMs)}</p>
-					<p className="font-mono text-[0.65rem] text-cyan-300">{faster} faster</p>
+					<p className="mt-1 font-mono text-lg font-black text-violet-300">{formatLapTimeMs(deltaMs)}</p>
+					<p className="font-mono text-[0.65rem] font-bold text-violet-300">
+						{faster === "EVEN" ? "EVEN" : `${faster} FASTEST`}
+					</p>
 				</div>
-				<BestLapSummary driver={second} lap={secondLap} feed={secondFeed} align="right" />
+				<BestLapSummary
+					driver={second}
+					lap={secondLap}
+					feed={secondFeed}
+					fastest={lapWinner === "second"}
+					align="right"
+				/>
 			</div>
 			<p className="font-mono text-[0.65rem] text-zinc-500 uppercase">
 				{exactSectors ? "Sectors from each recorded best lap" : "Best individual sectors from official timing"}
@@ -254,17 +266,33 @@ function BestLapSummary({
 	driver,
 	lap,
 	feed,
+	fastest,
 	align = "left",
 }: {
 	driver: DriverComparisonModel;
 	lap: LapRecord | null;
 	feed: ReturnType<typeof buildFeedBestLap>;
+	fastest: boolean;
 	align?: "left" | "right";
 }) {
 	return (
-		<div className={clsx("min-w-0 p-3", align === "right" && "text-right")}>
-			<p className="font-mono text-xs font-bold text-zinc-500">{driver.tla}{lap ? ` · LAP ${lap.lap}` : " · OFFICIAL BEST"}</p>
-			<p className="mt-1 font-mono text-xl font-black text-white">
+		<div
+			className={clsx(
+				"min-w-0 p-3 transition-colors",
+				fastest && "bg-violet-500/10 ring-1 ring-violet-400/35 ring-inset",
+				align === "right" && "text-right",
+			)}
+		>
+			{fastest && (
+				<span className="mb-1 inline-flex rounded bg-violet-400/15 px-1.5 py-0.5 font-mono text-[0.6rem] font-black tracking-wider text-violet-300">
+					FASTEST
+				</span>
+			)}
+			<p className="font-mono text-xs font-bold text-zinc-500">
+				{driver.tla}
+				{lap ? ` · LAP ${lap.lap}` : " · OFFICIAL BEST"}
+			</p>
+			<p className={clsx("mt-1 font-mono text-xl font-black", fastest ? "text-violet-300" : "text-zinc-300")}>
 				{formatLapTimeMs(lap?.lapTimeMs ?? feed?.lapTimeMs)}
 			</p>
 			<p className="mt-1 font-mono text-xs text-zinc-400">
@@ -289,24 +317,40 @@ function BestSectorComparison({
 }) {
 	const available = firstMs !== null && secondMs !== null;
 	const delta = available ? Math.abs(firstMs - secondMs) : null;
-	const faster = !available ? null : firstMs <= secondMs ? firstTla : secondTla;
+	const winner = compareMilliseconds(firstMs, secondMs);
+	const faster = winner === "first" ? firstTla : winner === "second" ? secondTla : null;
 
 	return (
 		<div className="rounded-md border border-cyan-300/10 bg-black/20 p-3">
 			<div className="flex items-center justify-between">
 				<span className="font-mono text-lg font-black text-white">S{index + 1}</span>
-				<span className="font-mono text-xs font-bold text-emerald-400">
-					{delta === null ? "--" : `${faster} -${formatLapTimeMs(delta)}`}
+				<span className={clsx("font-mono text-xs font-bold", faster ? "text-violet-300" : "text-zinc-500")}>
+					{delta === null ? "--" : faster ? `${faster} FASTEST · -${formatLapTimeMs(delta)}` : "EVEN"}
 				</span>
 			</div>
-			<div className="mt-3 flex items-center justify-between font-mono text-sm">
-				<span className="text-zinc-500">{firstTla}</span>
-				<span className="font-bold text-white">{formatLapTimeMs(firstMs)}</span>
+			<div className="mt-3 space-y-1.5">
+				<BestSectorRow tla={firstTla} value={firstMs} fastest={winner === "first"} />
+				<BestSectorRow tla={secondTla} value={secondMs} fastest={winner === "second"} />
 			</div>
-			<div className="mt-2 flex items-center justify-between font-mono text-sm">
-				<span className="text-zinc-500">{secondTla}</span>
-				<span className="font-bold text-white">{formatLapTimeMs(secondMs)}</span>
-			</div>
+		</div>
+	);
+}
+
+function BestSectorRow({ tla, value, fastest }: { tla: string; value: number | null; fastest: boolean }) {
+	return (
+		<div
+			className={clsx(
+				"flex items-center justify-between rounded px-2 py-1.5 font-mono text-sm transition-colors",
+				fastest ? "bg-violet-500/15 text-violet-200 ring-1 ring-violet-400/30 ring-inset" : "text-zinc-500",
+			)}
+		>
+			<span className="flex items-center gap-2 font-bold">
+				{tla}
+				{fastest && <span className="text-[0.58rem] font-black tracking-wider text-violet-300">FASTEST</span>}
+			</span>
+			<span className={clsx("font-black", fastest ? "text-violet-200" : "text-zinc-300")}>
+				{formatLapTimeMs(value)}
+			</span>
 		</div>
 	);
 }
@@ -361,26 +405,42 @@ function StrategyCard({ driver, align }: { driver: DriverComparisonModel; align:
 }
 
 function LapTimes({ first, second }: { first: DriverComparisonModel; second: DriverComparisonModel }) {
-	const lastWinner = compareLower(first.lastLap, second.lastLap);
-	const bestWinner = compareLower(first.bestLap, second.bestLap);
+	const lastWinner = compareTimingValues(first.lastLap, second.lastLap);
+	const bestWinner = compareTimingValues(first.bestLap, second.bestLap);
 
 	return (
 		<div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-cyan-300/10 bg-cyan-300/10 sm:grid-cols-4">
-			<LapValue label={`${first.tla} last`} value={first.lastLap} accent={lastWinner === "first"} />
-			<LapValue label={`${second.tla} last`} value={second.lastLap} accent={lastWinner === "second"} />
-			<LapValue label={`${first.tla} best`} value={first.bestLap} accent={bestWinner === "first"} />
-			<LapValue label={`${second.tla} best`} value={second.bestLap} accent={bestWinner === "second"} />
+			<LapValue label={`${first.tla} last`} value={first.lastLap} winner={lastWinner === "first"} />
+			<LapValue label={`${second.tla} last`} value={second.lastLap} winner={lastWinner === "second"} />
+			<LapValue label={`${first.tla} best`} value={first.bestLap} winner={bestWinner === "first"} best />
+			<LapValue label={`${second.tla} best`} value={second.bestLap} winner={bestWinner === "second"} best />
 		</div>
 	);
 }
 
-function LapValue({ label, value, accent }: { label: string; value: string; accent: boolean }) {
+function LapValue({
+	label,
+	value,
+	winner,
+	best = false,
+}: {
+	label: string;
+	value: string;
+	winner: boolean;
+	best?: boolean;
+}) {
 	return (
-		<div className="bg-black/35 px-3 py-2.5 text-center">
+		<div className={clsx("px-3 py-2.5 text-center", winner && best ? "bg-violet-500/10" : "bg-black/35")}>
 			<p className="font-mono text-xs font-bold text-zinc-500 uppercase">{label}</p>
-			<p className={clsx("mt-1 font-mono text-base font-bold", accent ? "text-emerald-400" : "text-zinc-200")}>
+			<p
+				className={clsx(
+					"mt-1 font-mono text-base font-bold",
+					winner ? (best ? "text-violet-300" : "text-emerald-400") : "text-zinc-200",
+				)}
+			>
 				{value}
 			</p>
+			{winner && best && <p className="mt-0.5 font-mono text-[0.55rem] font-black text-violet-300">FASTEST</p>}
 		</div>
 	);
 }
@@ -579,11 +639,4 @@ function SingleDriverState({ driver }: { driver: DriverComparisonModel }) {
 
 function EmptyState({ text }: { text: string }) {
 	return <p className="mt-3 rounded-md border border-cyan-300/10 bg-black/20 p-4 text-sm text-zinc-400">{text}</p>;
-}
-
-function compareLower(first: string, second: string): "first" | "second" | null {
-	const firstValue = parseTimingSeconds(first);
-	const secondValue = parseTimingSeconds(second);
-	if (firstValue === null || secondValue === null || firstValue === secondValue) return null;
-	return firstValue < secondValue ? "first" : "second";
 }

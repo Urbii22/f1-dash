@@ -72,5 +72,6 @@ export const isQualifyingSession = (sessionInfo: SessionInfo | undefined): boole
 	const type = sessionInfo.Type.trim().toLowerCase();
 	const name = sessionInfo.Name.trim().toLowerCase();
 
-	return type === "qualifying" || type === "sprint qualifying" || name === "sprint qualifying";
+	// covers "Qualifying", "Sprint Qualifying" (2024+) and "Sprint Shootout" (2023)
+	return type.includes("qualifying") || name.includes("qualifying") || name.includes("shootout");
 };

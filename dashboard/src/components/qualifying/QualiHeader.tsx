@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { Check, Clock3, Flag } from "lucide-react";
 
+import CountryFlag from "@/components/Flag";
 import { useSessionClock } from "@/hooks/useSessionClock";
 import { getTrackStatusMessage } from "@/lib/getTrackStatusMessage";
 import { getQualiPrefix } from "@/lib/qualiView";
@@ -12,6 +13,8 @@ const endedStatuses = new Set(["Finished", "Finalised", "Ends"]);
 
 export default function QualiHeader() {
 	const sessionName = useDataStore((state) => state.state?.SessionInfo?.Name);
+	const meetingName = useDataStore((state) => state.state?.SessionInfo?.Meeting?.Name);
+	const countryCode = useDataStore((state) => state.state?.SessionInfo?.Meeting?.Country?.Code);
 	const sessionPart = useDataStore((state) => state.state?.TimingData?.SessionPart);
 	const trackStatus = useDataStore((state) => state.state?.TrackStatus);
 	const sessionStatus = useDataStore((state) => state.state?.SessionStatus?.Status);
@@ -31,9 +34,12 @@ export default function QualiHeader() {
 	return (
 		<header className="telemetry-panel rounded-lg p-4">
 			<div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-				<div>
-					<p className="panel-title">Qualifying command</p>
-					<h1 className="text-2xl font-black tracking-tight text-white">Live Classification</h1>
+				<div className="flex items-center gap-3">
+					<CountryFlag countryCode={countryCode} className="hidden h-10 w-14 shrink-0 sm:flex" />
+					<div>
+						<p className="panel-title">{meetingName ?? "Qualifying command"}</p>
+						<h1 className="text-2xl font-black tracking-tight text-white">Live Classification</h1>
+					</div>
 				</div>
 
 				<div className="grid grid-cols-3 gap-2 sm:flex sm:min-w-[24rem] sm:flex-1 sm:justify-center">

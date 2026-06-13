@@ -56,7 +56,10 @@ export type QualiProgressionGroups = {
 	q3: QualiProgressionEntry[];
 };
 
-export const getQualiPrefix = (sessionName: string | undefined) => (sessionName === "Sprint Qualifying" ? "SQ" : "Q");
+export const getQualiPrefix = (sessionName: string | undefined) => {
+	const name = sessionName?.toLowerCase() ?? "";
+	return name.includes("sprint") || name.includes("shootout") ? "SQ" : "Q";
+};
 
 export const getQualiDriverStatus = (driver: QualiStatusDriver, flying: boolean) => {
 	if (driver.Stopped) return "STOPPED";
