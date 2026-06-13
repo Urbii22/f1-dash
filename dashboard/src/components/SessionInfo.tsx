@@ -1,9 +1,7 @@
 "use client";
 
-import { utc, duration } from "moment";
-
 import { useDataStore } from "@/stores/useDataStore";
-import { useSettingsStore } from "@/stores/useSettingsStore";
+import { useSessionClock } from "@/hooks/useSessionClock";
 
 import Flag from "@/components/Flag";
 
@@ -19,22 +17,9 @@ const sessionPartPrefix = (name: string) => {
 };
 
 export default function SessionInfo() {
-	const clock = useDataStore((state) => state.state?.ExtrapolatedClock);
 	const session = useDataStore((state) => state.state?.SessionInfo);
 	const timingData = useDataStore((state) => state.state?.TimingData);
-
-	const delay = useSettingsStore((state) => state.delay);
-
-	const timeRemaining =
-		!!clock && !!clock.Remaining
-			? clock.Extrapolating
-				? utc(
-						duration(clock.Remaining)
-							.subtract(utc().diff(utc(clock.Utc)))
-							.asMilliseconds() + (delay ? delay * 1000 : 0),
-					).format("HH:mm:ss")
-				: clock.Remaining
-			: undefined;
+	const timeRemaining = useSessionClock();
 
 	return (
 		<div className="data-chip flex items-center gap-3 rounded-md px-3 py-2">

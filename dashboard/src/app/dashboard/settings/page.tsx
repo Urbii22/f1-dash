@@ -49,6 +49,24 @@ export default function SettingsPage() {
 			</div>
 
 			<div className="flex gap-2">
+				<Toggle
+					enabled={settings.qualiShowTheoreticalBest}
+					setEnabled={(v) => settings.setQualiShowTheoreticalBest(v)}
+					label="Show Theoretical Best Lap in Qualifying"
+				/>
+				<p className="text-zinc-500">Show Theoretical Best Lap in Qualifying</p>
+			</div>
+
+			<div className="flex gap-2">
+				<Toggle
+					enabled={settings.qualiShowSpeedTrap}
+					setEnabled={(v) => settings.setQualiShowSpeedTrap(v)}
+					label="Show Speed Trap in Qualifying"
+				/>
+				<p className="text-zinc-500">Show Speed Trap in Qualifying</p>
+			</div>
+
+			<div className="flex gap-2">
 				<Toggle enabled={settings.oledMode} setEnabled={(v) => settings.setOledMode(v)} />
 				<p className="text-zinc-500">OLED Mode (Pure Black Background)</p>
 			</div>

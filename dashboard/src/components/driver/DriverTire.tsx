@@ -4,9 +4,10 @@ import type { Stint } from "@/types/state.type";
 
 type Props = {
 	stints: Stint[] | undefined;
+	secondaryLabel?: string;
 };
 
-export default function DriverTire({ stints }: Props) {
+export default function DriverTire({ stints, secondaryLabel }: Props) {
 	const stops = stints ? stints.length - 1 : 0;
 	const currentStint = stints ? stints[stints.length - 1] : null;
 	const unknownCompound = !["soft", "medium", "hard", "intermediate", "wet"].includes(
@@ -38,7 +39,7 @@ export default function DriverTire({ stints }: Props) {
 					{currentStint?.New ? "" : "*"}
 				</p>
 
-				<p className="text-sm leading-none text-zinc-500">PIT {stops}</p>
+				<p className="text-sm leading-none text-zinc-500">{secondaryLabel ?? `PIT ${stops}`}</p>
 			</div>
 		</div>
 	);

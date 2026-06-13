@@ -18,23 +18,12 @@ import DriverLapTime from "./DriverLapTime";
 import DriverInfo from "./DriverInfo";
 import DriverCarMetrics from "./DriverCarMetrics";
 import { getDriverStatus, getSessionYear } from "@/lib/driverStatus";
+import { inEliminationZone } from "@/lib/quali";
 
 type Props = {
 	position: number;
 	driver: Driver;
 	timingDriver: TimingDataDriver;
-};
-
-const inDangerZone = (position: number, sessionPart: number) => {
-	switch (sessionPart) {
-		case 1:
-			return position > 15;
-		case 2:
-			return position > 10;
-		case 3:
-		default:
-			return false;
-	}
 };
 
 export default function Driver({ driver, timingDriver, position }: Props) {
@@ -98,7 +87,7 @@ export default function Driver({ driver, timingDriver, position }: Props) {
 					"border-white/70! bg-white/10!": selected,
 					"border-cyan-300/60! bg-cyan-300/15! shadow-[0_0_30px_rgba(0,229,255,0.16)]": favoriteDriver,
 					"border-fuchsia-300/50! bg-fuchsia-500/15!": hasFastest,
-					"border-rose-400/50! bg-rose-500/15!": sessionPart != undefined && inDangerZone(position, sessionPart),
+					"border-rose-400/50! bg-rose-500/15!": inEliminationZone(position, sessionPart),
 				},
 			)}
 		>

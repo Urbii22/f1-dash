@@ -6,12 +6,14 @@ import clsx from "clsx";
 type Props = {
 	enabled: boolean;
 	setEnabled: (value: boolean) => void;
+	label?: string;
 };
 
-export default function Toggle({ enabled, setEnabled }: Props) {
+export default function Toggle({ enabled, setEnabled, label }: Props) {
 	return (
 		<Switch.Group as="div" className="">
 			<Switch
+				aria-label={label}
 				checked={enabled}
 				onChange={setEnabled}
 				className={clsx(

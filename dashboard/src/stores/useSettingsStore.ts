@@ -25,6 +25,12 @@ type SettingsStore = {
 	showMiniSectors: boolean;
 	setShowMiniSectors: (showMiniSectors: boolean) => void;
 
+	qualiShowTheoreticalBest: boolean;
+	setQualiShowTheoreticalBest: (qualiShowTheoreticalBest: boolean) => void;
+
+	qualiShowSpeedTrap: boolean;
+	setQualiShowSpeedTrap: (qualiShowSpeedTrap: boolean) => void;
+
 	oledMode: boolean;
 	setOledMode: (oledMode: boolean) => void;
 
@@ -69,6 +75,12 @@ export const useSettingsStore = create<SettingsStore>()(
 
 				showMiniSectors: true,
 				setShowMiniSectors: (showMiniSectors: boolean) => set({ showMiniSectors }),
+
+				qualiShowTheoreticalBest: false,
+				setQualiShowTheoreticalBest: (qualiShowTheoreticalBest: boolean) => set({ qualiShowTheoreticalBest }),
+
+				qualiShowSpeedTrap: true,
+				setQualiShowSpeedTrap: (qualiShowSpeedTrap: boolean) => set({ qualiShowSpeedTrap }),
 
 				oledMode: false,
 				setOledMode: (oledMode: boolean) => set({ oledMode }),

@@ -12,6 +12,7 @@ import DriverLapTime from "@/components/driver/DriverLapTime";
 
 import { sortPos } from "@/lib/sorting";
 import { getDriverStatus, getSessionYear } from "@/lib/driverStatus";
+import { inEliminationZone } from "@/lib/quali";
 
 import { useDataStore } from "@/stores/useDataStore";
 import type { Driver, TimingDataDriver } from "@/types/state.type";
@@ -56,18 +57,6 @@ type TrackMapDriverProps = {
 	timingDriver: TimingDataDriver;
 };
 
-const inDangerZone = (position: number, sessionPart: number) => {
-	switch (sessionPart) {
-		case 1:
-			return position > 15;
-		case 2:
-			return position > 10;
-		case 3:
-		default:
-			return false;
-	}
-};
-
 const TrackMapDriver = ({ position, driver, timingDriver }: TrackMapDriverProps) => {
 	const sessionPart = useDataStore((state) => state.state?.TimingData?.SessionPart);
 	const sessionInfo = useDataStore((state) => state.state?.SessionInfo);
@@ -92,7 +81,7 @@ const TrackMapDriver = ({ position, driver, timingDriver }: TrackMapDriverProps)
 				"opacity-50": timingDriver.KnockedOut || timingDriver.Retired || timingDriver.Stopped,
 				"bg-sky-800/30": favoriteDriver,
 				"bg-violet-800/30": hasFastest,
-				"bg-red-800/30": sessionPart != undefined && inDangerZone(position, sessionPart),
+				"bg-red-800/30": inEliminationZone(position, sessionPart),
 			})}
 		>
 			<div
