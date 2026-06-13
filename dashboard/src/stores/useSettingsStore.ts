@@ -1,6 +1,8 @@
 import { persist, createJSONStorage, subscribeWithSelector } from "zustand/middleware";
 import { create } from "zustand";
 
+import { clampDashboardSplit } from "@/lib/dashboardSplit";
+
 type SpeedUnit = "metric" | "imperial";
 
 type SettingsStore = {
@@ -15,6 +17,9 @@ type SettingsStore = {
 
 	carMetrics: boolean;
 	setCarMetrics: (carMetrics: boolean) => void;
+
+	dashboardPanelSplit: number;
+	setDashboardPanelSplit: (dashboardPanelSplit: number) => void;
 
 	tableHeaders: boolean;
 	setTableHeaders: (tableHeaders: boolean) => void;
@@ -66,6 +71,10 @@ export const useSettingsStore = create<SettingsStore>()(
 
 				carMetrics: false,
 				setCarMetrics: (carMetrics: boolean) => set({ carMetrics }),
+
+				dashboardPanelSplit: 50,
+				setDashboardPanelSplit: (dashboardPanelSplit: number) =>
+					set({ dashboardPanelSplit: clampDashboardSplit(dashboardPanelSplit) }),
 
 				tableHeaders: false,
 				setTableHeaders: (tableHeaders: boolean) => set({ tableHeaders }),

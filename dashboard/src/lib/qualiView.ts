@@ -136,8 +136,8 @@ export const buildProgressionGroups = (lines: Record<string, ProgressionLine> | 
 		.sort((a, b) => a.position - b.position);
 
 	return {
-		q1: ordered.filter((entry) => entry.position >= 16 && entry.position <= 20),
-		q2: ordered.filter((entry) => entry.position >= 11 && entry.position <= 15),
+		q1: ordered.filter((entry) => entry.position >= 17 && entry.position <= 22),
+		q2: ordered.filter((entry) => entry.position >= 11 && entry.position <= 16),
 		q3: ordered.filter((entry) => entry.position >= 1 && entry.position <= 10),
 	};
 };

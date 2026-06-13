@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import LeaderBoard from "@/components/dashboard/LeaderBoard";
 import DriverComparisonPanel from "@/components/dashboard/DriverComparisonPanel";
@@ -16,6 +16,8 @@ import NoLiveSession from "@/components/dashboard/NoLiveSession";
 import { usePresentationModeStore } from "@/stores/usePresentationModeStore";
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { dashboardSplitBounds, dashboardSplitFromPointer } from "@/lib/dashboardSplit";
 
 export default function Page() {
 	const presentationMode = usePresentationModeStore((state) => state.enabled);
@@ -87,14 +89,65 @@ function ConnectingState() {
 }
 
 function RegularDashboard() {
+	const dashboardPanelSplit = useSettingsStore((state) => state.dashboardPanelSplit);
+	const setDashboardPanelSplit = useSettingsStore((state) => state.setDashboardPanelSplit);
+	const splitContainerRef = useRef<HTMLElement>(null);
+
+	const updateSplit = (pointerX: number) => {
+		const bounds = splitContainerRef.current?.getBoundingClientRect();
+		if (!bounds) return;
+		setDashboardPanelSplit(
+			dashboardSplitFromPointer({
+				pointerX,
+				containerLeft: bounds.left,
+				containerWidth: bounds.width,
+			}),
+		);
+	};
+
 	return (
 		<>
-			<section className="flex flex-col gap-3 2xl:grid 2xl:grid-cols-[minmax(48rem,0.95fr)_minmax(36rem,1.05fr)] 2xl:items-stretch">
-				<div className="telemetry-panel rounded-lg p-3">
+			<section
+				ref={splitContainerRef}
+				className="flex flex-col gap-3 2xl:grid 2xl:gap-0 2xl:items-stretch"
+				style={{
+					gridTemplateColumns: `minmax(0, ${dashboardPanelSplit}fr) 0.75rem minmax(0, ${100 - dashboardPanelSplit}fr)`,
+				}}
+			>
+				<div className="telemetry-panel min-w-0 rounded-lg p-3">
 					<PanelHeader eyebrow="Grid matrix" title="Live Classification" meta="Timing data" />
 					<div className="tech-scrollbar mt-3 overflow-x-auto">
 						<LeaderBoard />
 					</div>
+				</div>
+
+				<div
+					role="separator"
+					aria-label="Resize dashboard panels"
+					aria-orientation="vertical"
+					aria-valuemin={dashboardSplitBounds.min}
+					aria-valuemax={dashboardSplitBounds.max}
+					aria-valuenow={Math.round(dashboardPanelSplit)}
+					tabIndex={0}
+					className="group hidden cursor-col-resize touch-none items-stretch justify-center 2xl:flex"
+					onPointerDown={(event) => event.currentTarget.setPointerCapture(event.pointerId)}
+					onPointerMove={(event) => {
+						if (event.currentTarget.hasPointerCapture(event.pointerId)) updateSplit(event.clientX);
+					}}
+					onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}
+					onKeyDown={(event) => {
+						const step = event.shiftKey ? 5 : 1;
+						if (event.key === "ArrowLeft") {
+							event.preventDefault();
+							setDashboardPanelSplit(dashboardPanelSplit - step);
+						}
+						if (event.key === "ArrowRight") {
+							event.preventDefault();
+							setDashboardPanelSplit(dashboardPanelSplit + step);
+						}
+					}}
+				>
+					<div className="my-3 w-px rounded-full bg-cyan-300/20 transition-all group-hover:w-1 group-hover:bg-cyan-300/70 group-focus:w-1 group-focus:bg-cyan-300/70" />
 				</div>
 
 				<CircuitColumn />

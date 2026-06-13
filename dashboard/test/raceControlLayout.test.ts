@@ -4,20 +4,23 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("dashboard race control layout", () => {
+	const getCircuitColumn = (source: string) =>
+		source.split("function CircuitColumn()")[1]?.split("function PanelHeader")[0] ?? "";
+
 	it("places the FIA feed in the circuit column below the map without duplicating it", () => {
 		const source = fs.readFileSync(path.resolve(__dirname, "../src/app/dashboard/page.tsx"), "utf8");
-		const circuitColumn = source.match(/function CircuitColumn\(\)[\s\S]*?\n}\n/);
+		const circuitColumn = getCircuitColumn(source);
 
 		expect(source).toContain("<CircuitColumn />");
-		expect(circuitColumn?.[0]).toContain("<Map />");
-		expect(circuitColumn?.[0]).toContain("<RaceControl />");
-		expect(circuitColumn?.[0].indexOf("<Map />")).toBeLessThan(circuitColumn?.[0].indexOf("<RaceControl />") ?? -1);
+		expect(circuitColumn).toContain("<Map />");
+		expect(circuitColumn).toContain("<RaceControl />");
+		expect(circuitColumn.indexOf("<Map />")).toBeLessThan(circuitColumn.indexOf("<RaceControl />"));
 		expect(source.match(/<RaceControl \/>/g)).toHaveLength(1);
 	});
 
 	it("stretches race control to the bottom of the live classification row", () => {
 		const source = fs.readFileSync(path.resolve(__dirname, "../src/app/dashboard/page.tsx"), "utf8");
-		const circuitColumn = source.match(/function CircuitColumn\(\)[\s\S]*?\n}\n/)?.[0] ?? "";
+		const circuitColumn = getCircuitColumn(source);
 
 		expect(source).toContain("2xl:items-stretch");
 		expect(circuitColumn).toContain('className="min-w-0 2xl:relative 2xl:min-h-0"');

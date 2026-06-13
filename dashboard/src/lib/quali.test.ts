@@ -50,7 +50,7 @@ const sessionInfo = (Type: string, Name: string): SessionInfo => ({ Type, Name }
 
 describe("getCutoffPosition", () => {
 	it("returns the Q1 and Q2 cutoff positions", () => {
-		expect(getCutoffPosition(1)).toBe(15);
+		expect(getCutoffPosition(1)).toBe(16);
 		expect(getCutoffPosition(2)).toBe(10);
 	});
 
@@ -155,12 +155,12 @@ describe("isOnFlyingLap", () => {
 
 describe("inEliminationZone", () => {
 	it("marks positions below the cutoff in Q1 and Q2", () => {
-		expect(inEliminationZone(16, 1)).toBe(true);
+		expect(inEliminationZone(17, 1)).toBe(true);
 		expect(inEliminationZone(11, 2)).toBe(true);
 	});
 
 	it("does not mark the cutoff itself or sessions without a cutoff", () => {
-		expect(inEliminationZone(15, 1)).toBe(false);
+		expect(inEliminationZone(16, 1)).toBe(false);
 		expect(inEliminationZone(10, 2)).toBe(false);
 		expect(inEliminationZone(20, 3)).toBe(false);
 		expect(inEliminationZone(20, undefined)).toBe(false);

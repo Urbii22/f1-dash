@@ -1,7 +1,7 @@
 import type { PersonalBestLapTime, SessionInfo, TimingDataDriver } from "@/types/state.type";
 
 export const getCutoffPosition = (sessionPart: number | undefined): number | undefined => {
-	if (sessionPart === 1) return 15;
+	if (sessionPart === 1) return 16;
 	if (sessionPart === 2) return 10;
 
 	return undefined;

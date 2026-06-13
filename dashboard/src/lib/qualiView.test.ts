@@ -37,7 +37,8 @@ describe("qualifying view helpers", () => {
 
 	it("only exposes cutoff deltas inside the threat window", () => {
 		expect(shouldShowCutoffDelta(1, 1)).toBe(false);
-		expect(shouldShowCutoffDelta(12, 1)).toBe(true);
+		expect(shouldShowCutoffDelta(12, 1)).toBe(false);
+		expect(shouldShowCutoffDelta(13, 1)).toBe(true);
 		expect(shouldShowCutoffDelta(16, 1)).toBe(true);
 		expect(shouldShowCutoffDelta(7, 2)).toBe(true);
 		expect(shouldShowCutoffDelta(10, 2)).toBe(true);
@@ -76,7 +77,7 @@ describe("qualifying view helpers", () => {
 
 	it("reconstructs Q1, Q2 and Q3 groups from final positions", () => {
 		const lines = Object.fromEntries(
-			Array.from({ length: 20 }, (_, index) => {
+			Array.from({ length: 22 }, (_, index) => {
 				const position = index + 1;
 				return [
 					String(position),
@@ -92,8 +93,8 @@ describe("qualifying view helpers", () => {
 
 		const groups = buildProgressionGroups(lines);
 
-		expect(groups.q1.map((entry) => entry.position)).toEqual([16, 17, 18, 19, 20]);
-		expect(groups.q2.map((entry) => entry.position)).toEqual([11, 12, 13, 14, 15]);
+		expect(groups.q1.map((entry) => entry.position)).toEqual([17, 18, 19, 20, 21, 22]);
+		expect(groups.q2.map((entry) => entry.position)).toEqual([11, 12, 13, 14, 15, 16]);
 		expect(groups.q3.map((entry) => entry.position)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 	});
 
