@@ -77,6 +77,73 @@ foreach ($exe in $required) {
     if (-not (Test-Path $exe)) { throw "Missing binary: $exe (run without -SkipBuild)" }
 }
 
+function Get-NodeVersion([string]$NodeExe) {
+    try {
+        $versionText = & $NodeExe --version 2>$null
+        if ($LASTEXITCODE -eq 0 -and $versionText -match '^v(\d+)\.(\d+)\.(\d+)$') {
+            return [version]"$($matches[1]).$($matches[2]).$($matches[3])"
+        }
+    } catch {
+        return $null
+    }
+
+    return $null
+}
+
+function Resolve-DashboardRuntime() {
+    $minimumNode = [version]'20.9.0'
+    $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
+    $systemNode = if ($nodeCommand) { $nodeCommand.Source } else { $null }
+    $corepackJs = $null
+    if ($systemNode) {
+        $corepackCandidate = Join-Path (Split-Path -Parent $systemNode) "node_modules\corepack\dist\corepack.js"
+        if (Test-Path $corepackCandidate) {
+            $corepackJs = $corepackCandidate
+        }
+    }
+
+    $bundledNode = Join-Path $env:USERPROFILE ".cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe"
+    $candidates = @()
+    if ($systemNode) { $candidates += @{ Path = $systemNode; Source = "system" } }
+    if (Test-Path $bundledNode) { $candidates += @{ Path = $bundledNode; Source = "bundled" } }
+
+    foreach ($candidate in $candidates) {
+        $candidateVersion = Get-NodeVersion $candidate.Path
+        if ($candidateVersion -and $candidateVersion -ge $minimumNode) {
+            if (-not $corepackJs) {
+                throw "Found a compatible Node.js runtime at '$($candidate.Path)', but corepack.js was not found next to the system Node install."
+            }
+
+            return @{
+                NodeExe   = $candidate.Path
+                NodeVer   = $candidateVersion
+                Source    = $candidate.Source
+                CorepackJs = $corepackJs
+            }
+        }
+    }
+
+    $detected = if ($candidates.Count -gt 0) {
+        ($candidates | ForEach-Object {
+            $version = Get-NodeVersion $_.Path
+            if ($version) { "$($_.Path) ($version)" } else { "$($_.Path) (unknown version)" }
+        }) -join ", "
+    } else {
+        "no Node.js installations found"
+    }
+
+    throw "Dashboard requires Node.js >= $minimumNode. Detected: $detected"
+}
+
+$dashboardDir = Join-Path $Root "dashboard"
+$dashboardRuntime = Resolve-DashboardRuntime
+$dashboardPackageJson = Get-Content (Join-Path $dashboardDir "package.json") -Raw | ConvertFrom-Json
+$dashboardPackageManager = [string]$dashboardPackageJson.packageManager
+if (-not $dashboardPackageManager.StartsWith("yarn@")) {
+    throw "Unsupported dashboard package manager '$dashboardPackageManager'."
+}
+$dashboardYarnVersion = $dashboardPackageManager.Substring(5)
+
 # Helper: open a new PowerShell window running a command, with a window title.
 function Start-ServiceWindow([string]$Title, [string]$Command) {
     $full = "`$host.UI.RawUI.WindowTitle = '$Title'; $Command"
@@ -103,12 +170,15 @@ if ($WithArchive) {
 }
 
 # dashboard :3000 (Next.js dev)
-if (-not (Test-Path (Join-Path $Root "dashboard\node_modules"))) {
+if (-not (Test-Path (Join-Path $dashboardDir "node_modules"))) {
     Write-Host "  - dashboard deps missing; running 'corepack yarn install' first ..." -ForegroundColor DarkGray
 }
-$dashCmd = "Set-Location '$Root\dashboard'; " +
+Write-Host "  - dashboard node -> $($dashboardRuntime.NodeExe) [$($dashboardRuntime.NodeVer)]" -ForegroundColor DarkGray
+$dashCorepack = "& '$($dashboardRuntime.NodeExe)' '$($dashboardRuntime.CorepackJs)'"
+$dashCmd = "Set-Location '$dashboardDir'; " +
     "`$env:NEXT_PUBLIC_LIVE_URL='http://localhost:4000'; `$env:API_URL='http://localhost:4001'; " +
-    "if (-not (Test-Path node_modules)) { corepack yarn install }; corepack yarn dev"
+    "if (-not (Test-Path node_modules)) { $dashCorepack yarn@$dashboardYarnVersion install }; " +
+    "$dashCorepack yarn@$dashboardYarnVersion dev"
 Start-ServiceWindow "f1-dash dashboard :3000" $dashCmd
 Write-Host "  - dashboard  -> http://localhost:3000" -ForegroundColor Green
 
@@ -116,7 +186,7 @@ Write-Host "  - dashboard  -> http://localhost:3000" -ForegroundColor Green
 Write-Host "`n[4/4] Waiting for the dashboard to come up ..." -ForegroundColor Yellow
 if (-not $NoBrowser) {
     $up = $false
-    for ($i = 0; $i -lt 30; $i++) {
+    for ($i = 0; $i -lt 90; $i++) {
         Start-Sleep -Seconds 1
         try {
             $null = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -TimeoutSec 2
@@ -128,10 +198,10 @@ if (-not $NoBrowser) {
     }
     if ($up) {
         Write-Host "  - dashboard is up, opening browser" -ForegroundColor Green
+        Start-Process "http://localhost:3000"
     } else {
-        Write-Host "  - dashboard not confirmed yet, opening browser anyway" -ForegroundColor DarkYellow
+        Write-Host "  - dashboard did not respond on http://localhost:3000; check the dashboard window for errors" -ForegroundColor DarkYellow
     }
-    Start-Process "http://localhost:3000"
 }
 
 Write-Host "`nAll services launched. Close their windows (or run stop-f1-dash.bat) to stop." -ForegroundColor Cyan
