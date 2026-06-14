@@ -4,8 +4,8 @@
 
 .DESCRIPTION
     Frees the ports it owns, builds the Rust services once, then starts each
-    service in its own PowerShell window so logs stay visible and any service
-    can be stopped independently with Ctrl+C. Finally opens the dashboard.
+    service as a hidden child process. This console stays open as the single
+    supervisor and stops every service when Ctrl+C is pressed.
 
     Topology (real-data / live mode):
       - api        Rust  http://localhost:4001   (schedule feed)
@@ -31,10 +31,43 @@ param(
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $dashboardDir = Join-Path $Root "dashboard"
+$logDir = Join-Path $Root "logs"
+$runtimeDir = Join-Path $Root ".runtime"
+$statePath = Join-Path $runtimeDir "launcher-state.json"
+$stopRequestPath = Join-Path $runtimeDir "stop-requested"
 
 . (Join-Path $PSScriptRoot "launcher-utils.ps1")
 
 Write-Host "==================================================" -ForegroundColor Cyan
+Clear-LauncherStopRequest -Path $stopRequestPath
+
+$previousState = Read-LauncherState -Path $statePath
+if ($previousState) {
+    Write-Host "Stopping previous launcher state ..." -ForegroundColor DarkGray
+    $previousStopRequestPath = if ($previousState.StopRequestPath) {
+        [string]$previousState.StopRequestPath
+    } else {
+        $stopRequestPath
+    }
+    Request-LauncherStop -Path $previousStopRequestPath
+    if ($previousState.LauncherPid -and [int]$previousState.LauncherPid -ne $PID) {
+        $previousLauncherPid = [int]$previousState.LauncherPid
+        for ($i = 0; $i -lt 30; $i++) {
+            if (-not (Get-Process -Id $previousLauncherPid -ErrorAction SilentlyContinue)) {
+                break
+            }
+            Start-Sleep -Milliseconds 500
+        }
+        if (Get-Process -Id $previousLauncherPid -ErrorAction SilentlyContinue) {
+            Stop-Process -Id $previousLauncherPid -Force -ErrorAction SilentlyContinue
+        }
+    }
+    foreach ($service in @($previousState.Services)) {
+        Stop-ProcessTree -RootProcessId ([int]$service.ProcessId)
+    }
+    Clear-LauncherStopRequest -Path $previousStopRequestPath
+    Remove-Item -LiteralPath $statePath -Force -ErrorAction SilentlyContinue
+}
 Write-Host " f1-dash launcher" -ForegroundColor Cyan
 Write-Host " root: $Root" -ForegroundColor DarkGray
 Write-Host "==================================================" -ForegroundColor Cyan
@@ -62,6 +95,13 @@ $dashboardProcesses = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" 
 $dashboardProcessIds = @(Get-DashboardDevProcessIds -Processes $dashboardProcesses -DashboardDir $dashboardDir)
 foreach ($processId in $dashboardProcessIds) {
     Write-Host "  - stopping dashboard PID $processId (alternate port or stale dev instance)" -ForegroundColor DarkGray
+    Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+}
+
+$legacyWindows = Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue
+$legacyWindowIds = @(Get-LegacyServiceWindowProcessIds -Processes $legacyWindows -RootDir $Root)
+foreach ($processId in $legacyWindowIds) {
+    Write-Host "  - closing legacy service window PID $processId" -ForegroundColor DarkGray
     Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
 }
 
@@ -156,27 +196,55 @@ if (-not $dashboardPackageManager.StartsWith("yarn@")) {
 }
 $dashboardYarnVersion = $dashboardPackageManager.Substring(5)
 
-# Helper: open a new PowerShell window running a command, with a window title.
-function Start-ServiceWindow([string]$Title, [string]$Command) {
-    $full = "`$host.UI.RawUI.WindowTitle = '$Title'; $Command"
-    Start-Process powershell -ArgumentList '-NoExit', '-Command', $full | Out-Null
+New-Item -ItemType Directory -Path $logDir, $runtimeDir -Force | Out-Null
+
+function Start-HiddenService {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Url,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Command
+    )
+
+    $logs = Get-ServiceLogPaths -LogDir $logDir -ServiceName $Name
+    Remove-Item -LiteralPath $logs.StdOut, $logs.StdErr -Force -ErrorAction SilentlyContinue
+    $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Command))
+    $process = Start-Process powershell `
+        -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', $encodedCommand `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $logs.StdOut `
+        -RedirectStandardError $logs.StdErr `
+        -PassThru
+
+    [pscustomobject]@{
+        Name = $Name
+        ProcessId = $process.Id
+        Url = $Url
+        StdOut = $logs.StdOut
+        StdErr = $logs.StdErr
+    }
 }
 
-# --- 3. Launch the services, each in its own window ---
+# --- 3. Launch hidden services under this supervisor console ---
 Write-Host "`n[3/4] Starting services ..." -ForegroundColor Yellow
+$services = @()
 
 # api :4001 (schedule)
-Start-ServiceWindow "f1-dash api :4001" `
+$services += Start-HiddenService -Name "api" -Url "http://localhost:4001" -Command `
     "`$env:ADDRESS='0.0.0.0:4001'; `$env:RUST_LOG='api=info'; `$env:ORIGIN='http://localhost:3000'; `$env:ARCHIVE_DB='$Root\archive.sqlite'; & '$apiExe'"
 Write-Host "  - api        -> http://localhost:4001" -ForegroundColor Green
 
 # realtime :4000 (live timing SSE)
-Start-ServiceWindow "f1-dash realtime :4000" `
+$services += Start-HiddenService -Name "realtime" -Url "http://localhost:4000" -Command `
     "`$env:ADDRESS='0.0.0.0:4000'; `$env:RUST_LOG='realtime=info'; `$env:ORIGIN='http://localhost:3000'; `$env:RECORDINGS_DIR='$Root\recordings'; `$env:RECORDING_ENABLED='true'; `$env:RECORDING_GZIP='true'; & '$realtimeExe'"
 Write-Host "  - realtime   -> http://localhost:4000" -ForegroundColor Green
 
 if ($WithArchive) {
-    Start-ServiceWindow "f1-dash archive watcher" `
+    $services += Start-HiddenService -Name "archive" -Url "watcher" -Command `
         "`$env:ARCHIVE_DB='$Root\archive.sqlite'; `$env:RECORDINGS_DIR='$Root\recordings'; `$env:RUST_LOG='archive=info'; & '$archiveExe' watch"
     Write-Host "  - archive watcher -> $Root\archive.sqlite" -ForegroundColor Green
 }
@@ -191,29 +259,70 @@ $dashCmd = "Set-Location '$dashboardDir'; " +
     "`$env:NEXT_PUBLIC_LIVE_URL='http://localhost:4000'; `$env:API_URL='http://localhost:4001'; " +
     "if (-not (Test-Path node_modules)) { $dashCorepack yarn@$dashboardYarnVersion install }; " +
     "$dashCorepack yarn@$dashboardYarnVersion dev"
-Start-ServiceWindow "f1-dash dashboard :3000" $dashCmd
+$services += Start-HiddenService -Name "dashboard" -Url "http://localhost:3000" -Command $dashCmd
 Write-Host "  - dashboard  -> http://localhost:3000" -ForegroundColor Green
+
+$launcherState = [pscustomobject]@{
+    LauncherPid = $PID
+    StartedAt = (Get-Date).ToString("o")
+    StopRequestPath = $stopRequestPath
+    Services = $services
+}
+Write-LauncherState -Path $statePath -State $launcherState
 
 # --- 4. Open the dashboard once it is likely up ---
 Write-Host "`n[4/4] Waiting for the dashboard to come up ..." -ForegroundColor Yellow
-if (-not $NoBrowser) {
-    $up = $false
-    for ($i = 0; $i -lt 90; $i++) {
-        Start-Sleep -Seconds 1
-        try {
-            $null = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -TimeoutSec 2
-            $up = $true
-            break
-        } catch {
-            # not ready yet
-        }
+$up = $false
+for ($i = 0; $i -lt 90; $i++) {
+    Start-Sleep -Seconds 1
+    $failedService = $services | Where-Object { -not (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue) } | Select-Object -First 1
+    if ($failedService) {
+        Write-Host "  - $($failedService.Name) exited during startup; inspect $($failedService.StdErr)" -ForegroundColor Red
+        break
     }
-    if ($up) {
-        Write-Host "  - dashboard is up, opening browser" -ForegroundColor Green
-        Start-Process "http://localhost:3000"
-    } else {
-        Write-Host "  - dashboard did not respond on http://localhost:3000; check the dashboard window for errors" -ForegroundColor DarkYellow
+    try {
+        $null = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -TimeoutSec 2
+        $up = $true
+        break
+    } catch {
+        # not ready yet
     }
 }
+if ($up) {
+    Write-Host "  - dashboard is ready" -ForegroundColor Green
+    if (-not $NoBrowser) {
+        Start-Process "http://localhost:3000"
+    }
+} else {
+    $dashboardService = $services | Where-Object Name -eq "dashboard" | Select-Object -First 1
+    Write-Host "  - dashboard did not respond; inspect $($dashboardService.StdErr)" -ForegroundColor DarkYellow
+}
 
-Write-Host "`nAll services launched. Close their windows (or run stop-f1-dash.bat) to stop." -ForegroundColor Cyan
+Write-Host "`nLogs: $logDir" -ForegroundColor Cyan
+foreach ($service in $services) {
+    Write-Host "  - $($service.Name): $($service.StdOut) | $($service.StdErr)" -ForegroundColor DarkGray
+}
+Write-Host "`nServices are running. Press Ctrl+C or run stop-f1-dash.bat to stop all." -ForegroundColor Cyan
+
+try {
+    while ($true) {
+        Start-Sleep -Seconds 2
+        if (Test-LauncherStopRequested -Path $stopRequestPath) {
+            break
+        }
+        foreach ($service in $services) {
+            if (-not (Get-Process -Id $service.ProcessId -ErrorAction SilentlyContinue)) {
+                Write-Host "`n$($service.Name) exited unexpectedly. Inspect $($service.StdErr)" -ForegroundColor Red
+                throw "$($service.Name) service exited"
+            }
+        }
+    }
+} finally {
+    Write-Host "`nStopping f1-dash services ..." -ForegroundColor Yellow
+    foreach ($service in $services) {
+        Stop-ProcessTree -RootProcessId ([int]$service.ProcessId)
+    }
+    Clear-LauncherStopRequest -Path $stopRequestPath
+    Remove-Item -LiteralPath $statePath -Force -ErrorAction SilentlyContinue
+    Write-Host "Stopped." -ForegroundColor Cyan
+}
