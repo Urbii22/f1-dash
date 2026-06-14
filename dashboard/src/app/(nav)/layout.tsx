@@ -25,6 +25,9 @@ export default function Layout({ children }: Props) {
 					<Link className="transition duration-100 active:scale-95" href="/schedule">
 						Schedule
 					</Link>
+					<Link className="transition duration-100 active:scale-95" href="/results">
+						Results
+					</Link>
 					<Link className="transition duration-100 active:scale-95" href="/help">
 						Help
 					</Link>
@@ -51,7 +54,7 @@ export default function Layout({ children }: Props) {
 				</div>
 			</nav>
 
-			<main className="container mx-auto max-w-(--breakpoint-lg) px-4">
+			<main className="container mx-auto max-w-7xl px-4">
 				{children}
 
 				<Footer />

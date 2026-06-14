@@ -1,9 +1,6 @@
-import {
-	driverFullName,
-	gapToLeader,
-	type ConstructorStandingRow,
-	type DriverStandingRow,
-} from "@/lib/f1data";
+import Link from "next/link";
+
+import { driverFullName, gapToLeader, type ConstructorStandingRow, type DriverStandingRow } from "@/lib/f1data";
 
 function GapCell({ points, leader }: { points: number | null; leader: number | null }) {
 	const gap = gapToLeader(points, leader);
@@ -13,9 +10,11 @@ function GapCell({ points, leader }: { points: number | null; leader: number | n
 export default function StandingsView({
 	drivers,
 	constructors,
+	season,
 }: {
 	drivers: DriverStandingRow[];
 	constructors: ConstructorStandingRow[];
+	season: number;
 }) {
 	const driverLeader = drivers[0]?.points ?? null;
 	const teamLeader = constructors[0]?.points ?? null;
@@ -44,7 +43,16 @@ export default function StandingsView({
 									<td className="p-1 font-mono text-zinc-400">{row.position}</td>
 									<td className="font-bold">
 										{row.driver.code ?? ""}{" "}
-										<span className="font-normal text-zinc-400">{driverFullName(row.driver)}</span>
+										{row.driver.driverId ? (
+											<Link
+												href={`/driver/${row.driver.driverId}?season=${season}`}
+												className="font-normal text-zinc-400 hover:text-cyan-200"
+											>
+												{driverFullName(row.driver)}
+											</Link>
+										) : (
+											<span className="font-normal text-zinc-400">{driverFullName(row.driver)}</span>
+										)}
 									</td>
 									<td className="text-zinc-300">{row.constructor ?? "—"}</td>
 									<td className="text-right font-mono text-cyan-200">{row.points ?? 0}</td>

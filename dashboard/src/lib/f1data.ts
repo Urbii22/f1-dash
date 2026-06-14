@@ -123,6 +123,22 @@ export function getDriverSeason(driverId: string, season?: number) {
 	return getJson<{ rounds: DriverSeasonRound[] }>(`/api/f1/driver/${driverId}${seasonParam(season)}`);
 }
 
+export async function getRoundResults(rounds: SeasonRound[], season: number, now = new Date()) {
+	const loaded: Array<{ round: SeasonRound; result: RaceResult | null }> = [];
+	for (const round of rounds) {
+		if (
+			round.round == null ||
+			!round.date ||
+			Date.parse(`${round.date}T${round.time ?? "00:00:00Z"}`) > now.getTime()
+		) {
+			loaded.push({ round, result: null });
+			continue;
+		}
+		loaded.push({ round, result: await getResults(round.round, season) });
+	}
+	return loaded;
+}
+
 // --- pure helpers (unit-tested) ----------------------------------------------
 
 export function driverFullName(driver: DriverRef): string {

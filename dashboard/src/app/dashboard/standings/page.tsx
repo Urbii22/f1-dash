@@ -3,11 +3,7 @@ import SeasonSelect from "@/components/standings/SeasonSelect";
 import StandingsView from "@/components/standings/StandingsView";
 import { getConstructorStandings, getDriverStandings } from "@/lib/f1data";
 
-export default async function StandingsPage({
-	searchParams,
-}: {
-	searchParams: Promise<{ season?: string }>;
-}) {
+export default async function StandingsPage({ searchParams }: { searchParams: Promise<{ season?: string }> }) {
 	const { season: seasonParam } = await searchParams;
 	const season = seasonParam ? Number(seasonParam) : undefined;
 
@@ -39,6 +35,7 @@ export default async function StandingsPage({
 				<StandingsView
 					drivers={driverData?.standings ?? []}
 					constructors={constructorData?.standings ?? []}
+					season={resolvedSeason}
 				/>
 			)}
 		</div>
