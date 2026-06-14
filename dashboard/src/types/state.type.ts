@@ -222,11 +222,13 @@ export type Sector = {
 	}[];
 };
 
+// The live F1 feed keys speeds in upper case: I1/I2 (intermediates), FL (finish
+// line) and ST (speed trap on the straight). Matching the wire format exactly.
 export type Speeds = {
 	I1: I1;
 	I2: I1;
-	Fl: I1;
-	St: I1;
+	FL: I1;
+	ST: I1;
 };
 
 export type I1 = {
@@ -244,8 +246,8 @@ export type TimingStatsDriver = {
 	BestSpeeds: {
 		I1: PersonalBestLapTime;
 		I2: PersonalBestLapTime;
-		Fl: PersonalBestLapTime;
-		St: PersonalBestLapTime;
+		FL: PersonalBestLapTime;
+		ST: PersonalBestLapTime;
 	};
 };
 

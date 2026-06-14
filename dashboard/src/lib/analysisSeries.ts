@@ -5,9 +5,13 @@ export type AnalysisDriver = { Tla?: string; TeamColour?: string };
 export type AnalysisDrivers = Record<string, AnalysisDriver>;
 export type LapsByDriver = Record<string, LapRecord[]>;
 
-function identity(nr: string, drivers?: AnalysisDrivers) {
+export function driverIdentity(nr: string, drivers?: AnalysisDrivers) {
 	const driver = drivers?.[nr];
 	return { label: driver?.Tla ?? `#${nr}`, color: driver?.TeamColour ? `#${driver.TeamColour}` : "#22d3ee" };
+}
+
+function identity(nr: string, drivers?: AnalysisDrivers) {
+	return driverIdentity(nr, drivers);
 }
 
 export function lapsToPaceSeries(laps: LapsByDriver, selected: string[], drivers?: AnalysisDrivers): ChartSeries[] {

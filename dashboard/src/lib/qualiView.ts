@@ -19,8 +19,8 @@ type SpeedValue = { Value?: string };
 
 type SpeedStatsLine = {
 	BestSpeeds?: {
-		St?: SpeedValue;
-		Fl?: SpeedValue;
+		ST?: SpeedValue;
+		FL?: SpeedValue;
 	};
 };
 
@@ -104,8 +104,8 @@ export const rankSpeedTrap = (
 ): SpeedTrapEntry[] =>
 	Object.entries(lines ?? {})
 		.flatMap(([racingNumber, line]) => {
-			const speedTrap = parseSpeed(line.BestSpeeds?.St?.Value);
-			const finishLine = parseSpeed(line.BestSpeeds?.Fl?.Value);
+			const speedTrap = parseSpeed(line.BestSpeeds?.ST?.Value);
+			const finishLine = parseSpeed(line.BestSpeeds?.FL?.Value);
 			const speed = speedTrap ?? finishLine;
 			const driver = drivers?.[racingNumber];
 			if (speed === undefined || !driver?.Tla) return [];

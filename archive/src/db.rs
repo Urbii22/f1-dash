@@ -14,12 +14,34 @@ pub fn migrate(db: &Connection) -> anyhow::Result<()> {
     db.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
  CREATE TABLE IF NOT EXISTS sessions(id INTEGER PRIMARY KEY,path TEXT NOT NULL UNIQUE,year INTEGER NOT NULL,meeting TEXT NOT NULL,country TEXT,circuit TEXT,kind TEXT NOT NULL,name TEXT NOT NULL,start_utc TEXT,end_utc TEXT,total_laps INTEGER,complete INTEGER NOT NULL DEFAULT 0,source_file TEXT NOT NULL,ingested_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS drivers(session_id INTEGER NOT NULL REFERENCES sessions(id),nr TEXT NOT NULL,tla TEXT,full_name TEXT,team_name TEXT,team_colour TEXT,PRIMARY KEY(session_id,nr));
- CREATE TABLE IF NOT EXISTS laps(session_id INTEGER NOT NULL REFERENCES sessions(id),driver_nr TEXT NOT NULL,lap INTEGER NOT NULL,lap_time_ms INTEGER,s1_ms INTEGER,s2_ms INTEGER,s3_ms INTEGER,position INTEGER,gap_leader_ms INTEGER,compound TEXT,tyre_age INTEGER,pitted INTEGER NOT NULL DEFAULT 0,utc TEXT NOT NULL,PRIMARY KEY(session_id,driver_nr,lap)); CREATE INDEX IF NOT EXISTS idx_laps_session ON laps(session_id,lap);
+ CREATE TABLE IF NOT EXISTS laps(session_id INTEGER NOT NULL REFERENCES sessions(id),driver_nr TEXT NOT NULL,lap INTEGER NOT NULL,lap_time_ms INTEGER,s1_ms INTEGER,s2_ms INTEGER,s3_ms INTEGER,position INTEGER,gap_leader_ms INTEGER,compound TEXT,tyre_age INTEGER,pitted INTEGER NOT NULL DEFAULT 0,utc TEXT NOT NULL,speed_trap_kph INTEGER,PRIMARY KEY(session_id,driver_nr,lap)); CREATE INDEX IF NOT EXISTS idx_laps_session ON laps(session_id,lap);
  CREATE TABLE IF NOT EXISTS stints(session_id INTEGER NOT NULL,driver_nr TEXT NOT NULL,stint INTEGER NOT NULL,compound TEXT,start_lap INTEGER,end_lap INTEGER,lap_count INTEGER,best_ms INTEGER,avg_ms REAL,deg_ms_per_lap REAL,PRIMARY KEY(session_id,driver_nr,stint));
  CREATE TABLE IF NOT EXISTS events(session_id INTEGER NOT NULL,utc TEXT NOT NULL,kind TEXT NOT NULL,driver_nr TEXT NOT NULL DEFAULT '',lap INTEGER,message TEXT,PRIMARY KEY(session_id,utc,kind,driver_nr));
  CREATE TABLE IF NOT EXISTS weather(session_id INTEGER NOT NULL,utc TEXT NOT NULL,air_temp REAL,track_temp REAL,rainfall REAL,wind_speed REAL,humidity REAL,PRIMARY KEY(session_id,utc));
- CREATE TABLE IF NOT EXISTS telemetry(session_id INTEGER NOT NULL,driver_nr TEXT NOT NULL,ts_ms INTEGER NOT NULL,lap INTEGER,speed INTEGER,rpm INTEGER,gear INTEGER,throttle INTEGER,brake INTEGER,PRIMARY KEY(session_id,driver_nr,ts_ms)); CREATE INDEX IF NOT EXISTS idx_tel_lap ON telemetry(session_id,driver_nr,lap); PRAGMA user_version=1;")?;
+ CREATE TABLE IF NOT EXISTS telemetry(session_id INTEGER NOT NULL,driver_nr TEXT NOT NULL,ts_ms INTEGER NOT NULL,lap INTEGER,speed INTEGER,rpm INTEGER,gear INTEGER,throttle INTEGER,brake INTEGER,PRIMARY KEY(session_id,driver_nr,ts_ms)); CREATE INDEX IF NOT EXISTS idx_tel_lap ON telemetry(session_id,driver_nr,lap);")?;
+    // Additive migrations. `user_version` advances as schema grows; each step is
+    // idempotent so re-opening an already-migrated DB is a no-op.
+    let version: i64 = db.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+    if version < 2 {
+        // v2: per-lap speed trap. CREATE above already includes it for fresh DBs;
+        // older DBs need the column appended.
+        if !column_exists(db, "laps", "speed_trap_kph")? {
+            db.execute_batch("ALTER TABLE laps ADD COLUMN speed_trap_kph INTEGER;")?;
+        }
+    }
+    db.execute_batch("PRAGMA user_version=2;")?;
     Ok(())
+}
+
+fn column_exists(db: &Connection, table: &str, column: &str) -> anyhow::Result<bool> {
+    let mut stmt = db.prepare(&format!("PRAGMA table_info({table})"))?;
+    let mut rows = stmt.query([])?;
+    while let Some(row) = rows.next()? {
+        if row.get::<_, String>(1)? == column {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 pub fn persist(db: &mut Connection, session: &IngestedSession) -> anyhow::Result<i64> {
@@ -75,7 +97,7 @@ pub fn persist(db: &mut Connection, session: &IngestedSession) -> anyhow::Result
     for (nr, laps) in &session.laps {
         for l in laps {
             tx.execute(
-                "INSERT INTO laps VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO laps(session_id,driver_nr,lap,lap_time_ms,s1_ms,s2_ms,s3_ms,position,gap_leader_ms,compound,tyre_age,pitted,utc,speed_trap_kph) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 params![
                     id,
                     nr,
@@ -89,7 +111,8 @@ pub fn persist(db: &mut Connection, session: &IngestedSession) -> anyhow::Result
                     l.compound,
                     l.tyre_age,
                     l.pitted as i64,
-                    l.utc
+                    l.utc,
+                    l.speed_trap_kph
                 ],
             )?;
         }

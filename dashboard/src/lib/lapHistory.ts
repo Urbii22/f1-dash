@@ -9,6 +9,9 @@ export type LapRecord = {
 	compound: string | null;
 	tyreAge: number | null;
 	pitted: boolean;
+	// speed trap (km/h) for the lap; null when the feed has no value or reports 0.
+	// optional so persisted/archived records without it stay backwards-compatible.
+	speedTrapKph?: number | null;
 	utc: string;
 };
 
@@ -79,6 +82,13 @@ function currentStint(stints: Stint[] | undefined): Stint | null {
 	return entries[entries.length - 1]?.[1] ?? null;
 }
 
+function speedTrapKph(timing: TimingDataDriver): number | null {
+	const value = timing.Speeds?.ST?.Value;
+	if (!value) return null;
+	const parsed = parseInt(value, 10);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 function sectorMs(timing: TimingDataDriver, index: number): number | null {
 	const sectors = timing.Sectors;
 	const sector = Array.isArray(sectors) ? sectors[index] : (sectors as Record<string, unknown>)?.[String(index)];
@@ -127,6 +137,7 @@ export function detectCompletedLaps(
 				compound: stint?.Compound ?? null,
 				tyreAge: stint?.TotalLaps ?? null,
 				pitted: pitFlags[racingNumber] ?? false,
+				speedTrapKph: speedTrapKph(line),
 				utc,
 			},
 		});
@@ -143,6 +154,9 @@ export function detectCompletedLaps(
 export class LapHistoryTracker {
 	private prev: State | null = null;
 	private pitFlags: Record<string, boolean> = {};
+	// last positive speed trap (ST) latched during the lap; the feed clears it
+	// before the lap flank, so we keep it here and attach it when the lap closes
+	private lastTrap: Record<string, number> = {};
 	private sessionPath: string | null = null;
 
 	ingest(next: State): { completed: CompletedLap[]; sessionChanged: boolean } {
@@ -153,6 +167,7 @@ export class LapHistoryTracker {
 			sessionChanged = true;
 			this.prev = null;
 			this.pitFlags = {};
+			this.lastTrap = {};
 		}
 		if (path) this.sessionPath = path;
 
@@ -160,12 +175,17 @@ export class LapHistoryTracker {
 		if (lines) {
 			for (const [racingNumber, line] of Object.entries(lines)) {
 				if (line.InPit || line.PitOut) this.pitFlags[racingNumber] = true;
+				const kph = speedTrapKph(line);
+				if (kph !== null) this.lastTrap[racingNumber] = kph;
 			}
 		}
 
 		const completed = detectCompletedLaps(this.prev, next, this.pitFlags);
 
 		for (const lap of completed) {
+			// the latched trap belongs to the lap that just closed; take it and re-arm
+			lap.record.speedTrapKph = this.lastTrap[lap.racingNumber] ?? lap.record.speedTrapKph ?? null;
+			delete this.lastTrap[lap.racingNumber];
 			// the flag covers the lap that just closed; re-arm for the out lap
 			this.pitFlags[lap.racingNumber] = lines?.[lap.racingNumber]?.InPit || lines?.[lap.racingNumber]?.PitOut || false;
 		}
@@ -177,6 +197,7 @@ export class LapHistoryTracker {
 	reset() {
 		this.prev = null;
 		this.pitFlags = {};
+		this.lastTrap = {};
 		this.sessionPath = null;
 	}
 }

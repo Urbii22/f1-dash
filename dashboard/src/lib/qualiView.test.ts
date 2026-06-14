@@ -58,9 +58,9 @@ describe("qualifying view helpers", () => {
 	it("ranks speed traps by ST and falls back to finish-line speed", () => {
 		const ranked = rankSpeedTrap(
 			{
-				"1": { BestSpeeds: { St: { Value: "331.4" }, Fl: { Value: "320.1" } } },
-				"4": { BestSpeeds: { St: { Value: "" }, Fl: { Value: "329.8" } } },
-				"16": { BestSpeeds: { St: { Value: "not-a-number" }, Fl: { Value: "" } } },
+				"1": { BestSpeeds: { ST: { Value: "331.4" }, FL: { Value: "320.1" } } },
+				"4": { BestSpeeds: { ST: { Value: "" }, FL: { Value: "329.8" } } },
+				"16": { BestSpeeds: { ST: { Value: "not-a-number" }, FL: { Value: "" } } },
 			},
 			{
 				"1": { Tla: "VER", TeamColour: "3671C6" },

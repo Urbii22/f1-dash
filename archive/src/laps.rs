@@ -14,6 +14,7 @@ pub struct LapRecord {
     pub compound: Option<String>,
     pub tyre_age: Option<i64>,
     pub pitted: bool,
+    pub speed_trap_kph: Option<i64>,
     pub utc: String,
 }
 
@@ -43,6 +44,10 @@ struct PrevLine {
 pub struct Tracker {
     prev: HashMap<String, PrevLine>,
     pit_flags: HashMap<String, bool>,
+    // last positive speed-trap (ST) seen since the driver's previous lap flank;
+    // the feed clears Speeds.ST at lap start, so it is gone by the time the lap
+    // closes — we latch it during the lap and attach it when the lap completes.
+    last_trap: HashMap<String, i64>,
     session_path: Option<String>,
     pub laps: HashMap<String, Vec<LapRecord>>,
 }
@@ -51,6 +56,7 @@ impl Tracker {
     pub fn reset_state(&mut self, state: &Value) {
         self.prev.clear();
         self.pit_flags.clear();
+        self.last_trap.clear();
         self.remember_lines(state);
         self.session_path = state
             .pointer("/SessionInfo/Path")
@@ -87,6 +93,7 @@ impl Tracker {
         {
             self.prev.clear();
             self.pit_flags.clear();
+            self.last_trap.clear();
         }
         if let Some(path) = path {
             self.session_path = Some(path.to_owned());
@@ -100,6 +107,10 @@ impl Tracker {
         for (nr, line) in lines {
             if truthy(line.get("InPit")) || truthy(line.get("PitOut")) {
                 self.pit_flags.insert(nr.clone(), true);
+            }
+            // latch the speed trap as soon as it appears; it is cleared before the flank
+            if let Some(kph) = speed_trap(line) {
+                self.last_trap.insert(nr.clone(), kph);
             }
 
             let lap = line.get("NumberOfLaps").and_then(Value::as_i64);
@@ -154,6 +165,8 @@ impl Tracker {
                         .map(str::to_owned),
                     tyre_age: stint.and_then(|x| x.get("TotalLaps")).and_then(value_i64),
                     pitted: self.pit_flags.get(nr).copied().unwrap_or(false),
+                    // the latched trap belongs to the lap that just closed; take it and re-arm
+                    speed_trap_kph: self.last_trap.remove(nr).or_else(|| speed_trap(line)),
                     utc: timestamp.to_owned(),
                 };
                 self.laps.entry(nr.clone()).or_default().push(record);
@@ -180,6 +193,12 @@ fn truthy(value: Option<&Value>) -> bool {
 }
 fn value_i64(value: &Value) -> Option<i64> {
     value.as_i64().or_else(|| value.as_str()?.parse().ok())
+}
+fn speed_trap(line: &Value) -> Option<i64> {
+    // F1 feed keys the speed trap as "ST" (upper case) under Speeds.
+    line.pointer("/Speeds/ST/Value")
+        .and_then(value_i64)
+        .filter(|&kph| kph > 0)
 }
 fn sector(line: &Value, index: usize) -> Option<i64> {
     object_values(line.get("Sectors"))
@@ -292,6 +311,7 @@ mod tests {
             compound: Some("SOFT".into()),
             tyre_age: Some(n),
             pitted: false,
+            speed_trap_kph: None,
             utc: "x".into(),
         }
     }
@@ -391,6 +411,43 @@ mod tests {
         tracker.ingest(&with_stints, "t1");
         assert_eq!(tracker.laps["1"][0].compound.as_deref(), Some("MEDIUM"));
         assert_eq!(tracker.laps["1"][0].tyre_age, Some(3));
+    }
+
+    // reads the speed trap (Speeds.St.Value) on the lap flank, ignoring 0/absent
+    #[test]
+    fn reads_speed_trap_on_flank() {
+        let mut tracker = Tracker::default();
+        tracker.ingest(&state(json!({"1": line(4, "", json!({}))})), "t0");
+        tracker.ingest(
+            &state(json!({"1": line(5, "1:24.0", json!({"Speeds": {"ST": {"Value": "318"}}}))})),
+            "t1",
+        );
+        assert_eq!(tracker.laps["1"][0].speed_trap_kph, Some(318));
+
+        // a 0/absent reading must record None, not 0
+        tracker.ingest(
+            &state(json!({"1": line(6, "1:25.0", json!({"Speeds": {"ST": {"Value": "0"}}}))})),
+            "t2",
+        );
+        assert_eq!(tracker.laps["1"][1].speed_trap_kph, None);
+    }
+
+    // latches the trap seen mid-lap and attaches it when the lap closes without ST
+    #[test]
+    fn latches_speed_trap_across_lap() {
+        let mut tracker = Tracker::default();
+        tracker.ingest(&state(json!({"1": line(4, "", json!({}))})), "t0");
+        // trap appears mid-lap (no flank yet)
+        tracker.ingest(
+            &state(json!({"1": line(4, "", json!({"Speeds": {"ST": {"Value": "330"}}}))})),
+            "t1",
+        );
+        // lap closes; ST already cleared by the feed
+        tracker.ingest(
+            &state(json!({"1": line(5, "1:24.0", json!({"Speeds": {"ST": {"Value": ""}}}))})),
+            "t2",
+        );
+        assert_eq!(tracker.laps["1"][0].speed_trap_kph, Some(330));
     }
 
     // tracker test: "marks laps as pitted when the driver visited the pit lane"

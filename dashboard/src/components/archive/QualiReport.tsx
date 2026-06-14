@@ -1,19 +1,21 @@
 import { formatLapTimeMs, type LapRecord } from "@/lib/lapHistory";
 import type { AnalysisDrivers } from "@/lib/analysisSeries";
+import { buildPotentialLapsFromLaps } from "@/lib/sessionInsights";
+
+/**
+ * Quali ranking ordered by real best lap, with the theoretical best and the gap
+ * to the provisional pole. Thin wrapper over the shared potential-lap builder so
+ * the live insights tab and the archive report stay in sync (here `deltaMs` is
+ * the gap to pole, i.e. the builder's `gapMs`).
+ */
 export function buildQualiRanking(laps: Record<string, LapRecord[]>, drivers: AnalysisDrivers) {
-	const rows = Object.entries(laps)
-		.map(([nr, items]) => {
-			const timed = items.filter((l) => l.lapTimeMs !== null);
-			const bestMs = Math.min(...timed.map((l) => l.lapTimeMs as number));
-			const theoreticalMs = [0, 1, 2]
-				.map((i) => Math.min(...timed.map((l) => l.sectorsMs[i]).filter((v): v is number => v !== null)))
-				.reduce((a, b) => a + b, 0);
-			return { nr, label: drivers[nr]?.Tla ?? `#${nr}`, bestMs, theoreticalMs };
-		})
-		.filter((r) => Number.isFinite(r.bestMs))
-		.sort((a, b) => a.bestMs - b.bestMs);
-	const best = rows[0]?.bestMs ?? 0;
-	return rows.map((r) => ({ ...r, deltaMs: r.bestMs - best }));
+	return buildPotentialLapsFromLaps(laps, drivers).map((r) => ({
+		nr: r.nr,
+		label: r.label,
+		bestMs: r.bestMs,
+		theoreticalMs: r.theoreticalMs,
+		deltaMs: r.gapMs,
+	}));
 }
 export default function QualiReport({
 	laps,

@@ -4,22 +4,40 @@ import clsx from "clsx";
 import { useMemo, useState } from "react";
 
 import { useDataStore } from "@/stores/useDataStore";
+import { useLapHistoryStore } from "@/stores/useLapHistoryStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 
 import DriverToggles from "@/components/analysis/DriverToggles";
+import InsightsPanel from "@/components/analysis/InsightsPanel";
 import PositionChart from "@/components/analysis/PositionChart";
+import QualiInsights from "@/components/analysis/QualiInsights";
 import RacePaceChart from "@/components/analysis/RacePaceChart";
+import SpeedScatter from "@/components/analysis/SpeedScatter";
 import StintTimeline from "@/components/analysis/StintTimeline";
 import StrategyView from "@/components/analysis/StrategyView";
+import {
+	buildBestSectors,
+	buildPotentialLaps,
+	buildTopSpeeds,
+} from "@/lib/sessionInsights";
 
-const TABS = [
+const BASE_TABS = [
 	{ id: "pace", name: "Race Pace" },
 	{ id: "positions", name: "Positions" },
 	{ id: "stints", name: "Stints" },
 	{ id: "strategy", name: "Strategy" },
+	{ id: "insights", name: "Insights" },
+	{ id: "speed", name: "Speed" },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
+const QUALI_TAB = { id: "quali", name: "Quali" } as const;
+
+type TabId = (typeof BASE_TABS)[number]["id"] | typeof QUALI_TAB.id;
+
+function isQualifying(type: string | undefined): boolean {
+	const t = (type ?? "").toLowerCase();
+	return t.includes("qual") || t.includes("shootout");
+}
 
 export default function AnalysisPage() {
 	const [tab, setTab] = useState<TabId>("pace");
@@ -28,7 +46,14 @@ export default function AnalysisPage() {
 
 	const drivers = useDataStore((state) => state.state?.DriverList);
 	const timing = useDataStore((state) => state.state?.TimingData?.Lines);
+	const stats = useDataStore((state) => state.state?.TimingStats?.Lines);
+	const sessionType = useDataStore((state) => state.state?.SessionInfo?.Type);
+	const laps = useLapHistoryStore((state) => state.laps);
+	const stints = useLapHistoryStore((state) => state.stints);
 	const favoriteDrivers = useSettingsStore((state) => state.favoriteDrivers);
+
+	const quali = isQualifying(sessionType);
+	const tabs = useMemo(() => (quali ? [...BASE_TABS, QUALI_TAB] : [...BASE_TABS]), [quali]);
 
 	// default chart selection: favorite drivers, otherwise the current top 5
 	const defaultSelection = useMemo(() => {
@@ -48,10 +73,14 @@ export default function AnalysisPage() {
 
 	const selected = userSelected ?? defaultSelection;
 
+	const potential = useMemo(() => buildPotentialLaps(stats, drivers), [stats, drivers]);
+	const topSpeeds = useMemo(() => buildTopSpeeds(stats, drivers), [stats, drivers]);
+	const sectors = useMemo(() => buildBestSectors(stats, drivers), [stats, drivers]);
+
 	const toggleDriver = (nr: string) =>
 		setUserSelected(selected.includes(nr) ? selected.filter((item) => item !== nr) : [...selected, nr]);
 
-	const showToggles = tab === "pace" || tab === "positions";
+	const showToggles = tab === "pace" || tab === "positions" || tab === "speed" || tab === "quali";
 
 	return (
 		<div className="flex w-full flex-col gap-3 p-3">
@@ -62,8 +91,8 @@ export default function AnalysisPage() {
 						<h2 className="text-xl font-black text-white">Analysis</h2>
 					</div>
 
-					<div className="flex items-center gap-1">
-						{TABS.map((item) => (
+					<div className="flex flex-wrap items-center gap-1">
+						{tabs.map((item) => (
 							<button
 								key={item.id}
 								className={clsx(
@@ -89,6 +118,19 @@ export default function AnalysisPage() {
 					{tab === "positions" && <PositionChart selected={selected} />}
 					{tab === "stints" && <StintTimeline />}
 					{tab === "strategy" && <StrategyView />}
+					{tab === "insights" && (
+						<InsightsPanel
+							potential={potential}
+							topSpeeds={topSpeeds}
+							sectors={sectors}
+							stints={stints}
+							drivers={drivers}
+						/>
+					)}
+					{tab === "speed" && <SpeedScatter laps={laps} selected={selected} drivers={drivers} />}
+					{tab === "quali" && quali && (
+						<QualiInsights potential={potential} laps={laps} selected={selected} drivers={drivers} />
+					)}
 				</div>
 			</div>
 		</div>

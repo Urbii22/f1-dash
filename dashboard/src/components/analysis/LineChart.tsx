@@ -22,6 +22,9 @@ type Props = {
 	xFormatter?: (value: number) => string;
 	yTickCount?: number;
 	integerY?: boolean;
+	// "line" connects points in x order; "scatter" plots independent points
+	// (x is continuous, not a lap index) and skips the index-based hover tooltip
+	variant?: "line" | "scatter";
 };
 
 const VIEW_W = 800;
@@ -47,7 +50,16 @@ function niceTicks(min: number, max: number, count: number, integer: boolean): n
 	return ticks;
 }
 
-export default function LineChart({ series, yInverted, yFormatter, xFormatter, yTickCount = 5, integerY }: Props) {
+export default function LineChart({
+	series,
+	yInverted,
+	yFormatter,
+	xFormatter,
+	yTickCount = 5,
+	integerY,
+	variant = "line",
+}: Props) {
+	const scatter = variant === "scatter";
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const [hoverX, setHoverX] = useState<number | null>(null);
 
@@ -79,7 +91,9 @@ export default function LineChart({ series, yInverted, yFormatter, xFormatter, y
 	};
 
 	const yTicks = niceTicks(yMin, yMax, yTickCount, !!integerY);
-	const xTicks = niceTicks(xMin, xMax, Math.min(10, Math.floor(xMax - xMin) + 1), true);
+	const xTicks = scatter
+		? niceTicks(xMin, xMax, 6, false)
+		: niceTicks(xMin, xMax, Math.min(10, Math.floor(xMax - xMin) + 1), true);
 
 	const hoveredX = hoverX !== null ? Math.round(xMin + ((hoverX - PAD.left) / PLOT_W) * (xMax - xMin)) : null;
 
@@ -104,8 +118,8 @@ export default function LineChart({ series, yInverted, yFormatter, xFormatter, y
 			<svg
 				viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
 				className="h-auto w-full select-none"
-				onMouseMove={handleMove}
-				onMouseLeave={() => setHoverX(null)}
+				onMouseMove={scatter ? undefined : handleMove}
+				onMouseLeave={scatter ? undefined : () => setHoverX(null)}
 			>
 				{yTicks.map((tick) => (
 					<g key={`y.${tick}`}>
@@ -137,31 +151,46 @@ export default function LineChart({ series, yInverted, yFormatter, xFormatter, y
 					</text>
 				))}
 
-				{visible.map((s) => (
-					<g key={s.id}>
-						<polyline
-							fill="none"
-							stroke={s.color}
-							strokeWidth={2}
-							strokeLinejoin="round"
-							strokeLinecap="round"
-							points={s.points.map((p) => `${toX(p.x)},${toY(p.y)}`).join(" ")}
-						/>
-						{s.points
-							.filter((p) => p.clipped)
-							.map((p) => (
+				{visible.map((s) =>
+					scatter ? (
+						<g key={s.id}>
+							{s.points.map((p, i) => (
 								<circle
-									key={`${s.id}.${p.x}`}
+									key={`${s.id}.${i}`}
 									cx={toX(p.x)}
 									cy={toY(p.y)}
-									r={3.5}
-									fill="none"
-									stroke={s.color}
-									strokeWidth={1.5}
+									r={3}
+									fill={s.color}
+									fillOpacity={0.7}
 								/>
 							))}
-					</g>
-				))}
+						</g>
+					) : (
+						<g key={s.id}>
+							<polyline
+								fill="none"
+								stroke={s.color}
+								strokeWidth={2}
+								strokeLinejoin="round"
+								strokeLinecap="round"
+								points={s.points.map((p) => `${toX(p.x)},${toY(p.y)}`).join(" ")}
+							/>
+							{s.points
+								.filter((p) => p.clipped)
+								.map((p) => (
+									<circle
+										key={`${s.id}.${p.x}`}
+										cx={toX(p.x)}
+										cy={toY(p.y)}
+										r={3.5}
+										fill="none"
+										stroke={s.color}
+										strokeWidth={1.5}
+									/>
+								))}
+						</g>
+					),
+				)}
 
 				{hoveredX !== null && hoverEntries.length > 0 && (
 					<line
