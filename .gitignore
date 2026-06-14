@@ -20,3 +20,4 @@ sample-replay/*.png
 recordings/
 archive.sqlite*
 artifacts/archive-test.sqlite*
+.runtime/
