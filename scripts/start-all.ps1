@@ -30,6 +30,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
+$dashboardDir = Join-Path $Root "dashboard"
+
+. (Join-Path $PSScriptRoot "launcher-utils.ps1")
 
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host " f1-dash launcher" -ForegroundColor Cyan
@@ -50,6 +53,16 @@ foreach ($port in $ports) {
     } catch {
         # No listener on this port; nothing to do.
     }
+}
+
+# Next.js uses a project-level development lock. A dashboard instance running
+# on another port (for example :3001) still prevents this launcher from
+# starting its :3000 instance, so stop matching Next processes by project path.
+$dashboardProcesses = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" -ErrorAction SilentlyContinue
+$dashboardProcessIds = @(Get-DashboardDevProcessIds -Processes $dashboardProcesses -DashboardDir $dashboardDir)
+foreach ($processId in $dashboardProcessIds) {
+    Write-Host "  - stopping dashboard PID $processId (alternate port or stale dev instance)" -ForegroundColor DarkGray
+    Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
 }
 
 # --- 2. Build the Rust services once (avoids per-window build-lock contention) ---
@@ -135,7 +148,6 @@ function Resolve-DashboardRuntime() {
     throw "Dashboard requires Node.js >= $minimumNode. Detected: $detected"
 }
 
-$dashboardDir = Join-Path $Root "dashboard"
 $dashboardRuntime = Resolve-DashboardRuntime
 $dashboardPackageJson = Get-Content (Join-Path $dashboardDir "package.json") -Raw | ConvertFrom-Json
 $dashboardPackageManager = [string]$dashboardPackageJson.packageManager
