@@ -15,6 +15,7 @@ use shared::tracing_subscriber;
 
 mod endpoints {
     pub(crate) mod archive;
+    pub(crate) mod f1data;
     pub(crate) mod health;
     pub(crate) mod schedule;
 }
@@ -34,6 +35,21 @@ async fn main() -> Result<(), Error> {
         .route("/api/schedule", get(endpoints::schedule::get))
         .route("/api/schedule/next", get(endpoints::schedule::get_next))
         .route("/api/health", get(endpoints::health::check))
+        .route(
+            "/api/f1/standings/drivers",
+            get(endpoints::f1data::driver_standings),
+        )
+        .route(
+            "/api/f1/standings/constructors",
+            get(endpoints::f1data::constructor_standings),
+        )
+        .route("/api/f1/season", get(endpoints::f1data::season))
+        .route("/api/f1/results", get(endpoints::f1data::results))
+        .route("/api/f1/qualifying", get(endpoints::f1data::qualifying))
+        .route(
+            "/api/f1/driver/{driverId}",
+            get(endpoints::f1data::driver_season),
+        )
         .route("/api/archive/sessions", get(endpoints::archive::sessions))
         .route(
             "/api/archive/sessions/{id}",
