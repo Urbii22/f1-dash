@@ -31,6 +31,17 @@ async fn main() -> Result<(), Error> {
             .unwrap_or_else(|_| "./archive.sqlite".into())
             .into(),
     };
+    let app = build_app(archive_state)?;
+
+    info!(addr, "starting api http server");
+
+    axum::serve(TcpListener::bind(addr).await?, app).await?;
+
+    Ok(())
+}
+
+fn build_app(archive_state: endpoints::archive::ArchiveState) -> Result<Router, Error> {
+    let cors = cors_layer()?;
     let app = Router::new()
         .route("/api/schedule", get(endpoints::schedule::get))
         .route("/api/schedule/next", get(endpoints::schedule::get_next))
@@ -71,13 +82,10 @@ async fn main() -> Result<(), Error> {
             "/api/archive/sessions/{id}/telemetry",
             get(endpoints::archive::telemetry),
         )
-        .with_state(archive_state);
+        .with_state(archive_state)
+        .layer(cors);
 
-    info!(addr, "starting api http server");
-
-    axum::serve(TcpListener::bind(addr).await?, app).await?;
-
-    Ok(())
+    Ok(app)
 }
 
 pub fn cors_layer() -> Result<CorsLayer, anyhow::Error> {
@@ -91,4 +99,40 @@ pub fn cors_layer() -> Result<CorsLayer, anyhow::Error> {
     Ok(CorsLayer::new()
         .allow_origin(origins)
         .allow_methods([Method::GET, Method::CONNECT]))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{
+        body::Body,
+        http::{Request, header},
+    };
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn cors_preflight_allows_configured_origin() {
+        unsafe { env::set_var("ORIGIN", "http://localhost:3000") };
+        let state = endpoints::archive::ArchiveState {
+            db_path: "unused-test.sqlite".into(),
+        };
+        let response = build_app(state)
+            .expect("router")
+            .oneshot(
+                Request::builder()
+                    .method(Method::OPTIONS)
+                    .uri("/api/health")
+                    .header(header::ORIGIN, "http://localhost:3000")
+                    .header(header::ACCESS_CONTROL_REQUEST_METHOD, "GET")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(
+            response.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
+            Some(&HeaderValue::from_static("http://localhost:3000"))
+        );
+    }
 }

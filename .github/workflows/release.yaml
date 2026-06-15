@@ -1,7 +1,5 @@
 name: release
 
-# runs on tag push and develop branch push
-
 on:
   push:
     branches:
@@ -11,53 +9,66 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  USER: slowlydev
 
 jobs:
-  build-and-push:
+  verify:
+    uses: ./.github/workflows/verify.yaml
+
+  publish:
+    needs: verify
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        image: [f1-dash, f1-dash-api, f1-dash-realtime]
-
     permissions:
       contents: read
       packages: write
       attestations: write
       id-token: write
-
+    strategy:
+      matrix:
+        include:
+          - image: f1-dash
+            context: dashboard
+            dockerfile: dashboard/dockerfile
+            target: runtime
+          - image: f1-dash-api
+            context: .
+            dockerfile: dockerfile
+            target: api
+          - image: f1-dash-realtime
+            context: .
+            dockerfile: dockerfile
+            target: realtime
+          - image: f1-dash-archive
+            context: .
+            dockerfile: dockerfile
+            target: archive
     steps:
       - uses: actions/checkout@v4
-
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
       - name: Login to GHCR
-        uses: docker/login-action@v3.4.0
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3.6.0
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3.10.0
-
-      - name: Extract Docker Metadata
+      - name: Extract image metadata
         id: meta
-        uses: docker/metadata-action@v5.7.0
+        uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.USER }}/${{ matrix.image }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
-            type=ref,event=branch,branch=develop,value=dev
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/develop' }}
             type=semver,pattern={{version}}
-
-      - name: Build and push
-        id: push
-        uses: docker/bake-action@v6.6.0
+            type=semver,pattern={{major}}.{{minor}}
+      - name: Build and publish
+        uses: docker/build-push-action@v6
         with:
-          targets: ${{ matrix.image }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          platforms: linux/amd64,linux/arm64
           push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           provenance: true
-          files: |
-            cwd://${{ steps.meta.outputs.bake-file }}
+          sbom: true

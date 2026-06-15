@@ -287,11 +287,7 @@ pub async fn results(Query(q): Query<RoundQuery>) -> ApiResult {
 
 pub async fn qualifying(Query(q): Query<RoundQuery>) -> ApiResult {
     let season = q.season.unwrap_or_else(current_year);
-    proxy(
-        format!("/{season}/{}/qualifying", q.round),
-        norm_qualifying,
-    )
-    .await
+    proxy(format!("/{season}/{}/qualifying", q.round), norm_qualifying).await
 }
 
 pub async fn driver_season(
@@ -313,11 +309,11 @@ mod tests {
     #[test]
     fn normalizes_driver_standings() {
         let raw = json!({"MRData":{"StandingsTable":{"StandingsLists":[{
-            "season":"2026","round":"9","DriverStandings":[
-                {"position":"1","points":"180","wins":"4",
-                 "Driver":{"driverId":"verstappen","code":"VER","givenName":"Max","familyName":"Verstappen"},
-                 "Constructors":[{"constructorId":"red_bull","name":"Red Bull"}]}
-            ]}]}}});
+        "season":"2026","round":"9","DriverStandings":[
+            {"position":"1","points":"180","wins":"4",
+             "Driver":{"driverId":"verstappen","code":"VER","givenName":"Max","familyName":"Verstappen"},
+             "Constructors":[{"constructorId":"red_bull","name":"Red Bull"}]}
+        ]}]}}});
         let out = norm_driver_standings(&raw);
         assert_eq!(out["season"], "2026");
         let row = &out["standings"][0];
@@ -331,10 +327,10 @@ mod tests {
     #[test]
     fn normalizes_constructor_standings() {
         let raw = json!({"MRData":{"StandingsTable":{"StandingsLists":[{
-            "season":"2026","ConstructorStandings":[
-                {"position":"1","points":"300","wins":"5",
-                 "Constructor":{"constructorId":"mclaren","name":"McLaren","nationality":"British"}}
-            ]}]}}});
+        "season":"2026","ConstructorStandings":[
+            {"position":"1","points":"300","wins":"5",
+             "Constructor":{"constructorId":"mclaren","name":"McLaren","nationality":"British"}}
+        ]}]}}});
         let row = &norm_constructor_standings(&raw)["standings"][0];
         assert_eq!(row["name"], "McLaren");
         assert_eq!(row["points"], 300.0);

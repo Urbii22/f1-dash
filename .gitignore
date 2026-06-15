@@ -22,3 +22,7 @@ archive.sqlite*
 artifacts/archive-test.sqlite*
 .runtime/
 .worktrees/
+caddy-data/
+caddy-config/
+*.pem
+*.key

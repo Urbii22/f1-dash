@@ -267,13 +267,18 @@ fn clean_laps(laps: &[LapRecord]) -> Vec<LapRecord> {
     times.sort();
     // median matching lib/lapHistory.ts: average the two middle values on even counts
     let mid = times.len() / 2;
-    let median = if times.len() % 2 == 0 {
+    let median = if times.len().is_multiple_of(2) {
         (times[mid - 1] + times[mid]) as f64 / 2.0
     } else {
         times[mid] as f64
     };
     laps.iter()
-        .filter(|lap| !lap.pitted && lap.lap_time_ms.is_some_and(|t| (t as f64) < median + 5000.0))
+        .filter(|lap| {
+            !lap.pitted
+                && lap
+                    .lap_time_ms
+                    .is_some_and(|t| (t as f64) < median + 5000.0)
+        })
         .cloned()
         .collect()
 }
@@ -321,7 +326,8 @@ mod tests {
     }
 
     fn line(laps: i64, last: &str, extra: Value) -> Value {
-        let mut base = json!({"NumberOfLaps": laps, "LastLapTime": {"Value": last}, "Position": "1"});
+        let mut base =
+            json!({"NumberOfLaps": laps, "LastLapTime": {"Value": last}, "Position": "1"});
         merge_json(&mut base, extra);
         base
     }
@@ -455,7 +461,10 @@ mod tests {
     fn marks_pit_laps_and_rearms() {
         let mut tracker = Tracker::default();
         tracker.ingest(&state(json!({"1": line(4, "", json!({}))})), "t0");
-        tracker.ingest(&state(json!({"1": line(4, "", json!({"InPit": true}))})), "t1");
+        tracker.ingest(
+            &state(json!({"1": line(4, "", json!({"InPit": true}))})),
+            "t1",
+        );
         tracker.ingest(&state(json!({"1": line(5, "1:40.0", json!({}))})), "t2");
         tracker.ingest(&state(json!({"1": line(6, "1:24.0", json!({}))})), "t3");
 
@@ -549,6 +558,9 @@ mod tests {
             lap(6, Some(84_300)),
         ];
         let clean = clean_laps(&laps);
-        assert_eq!(clean.iter().map(|l| l.lap).collect::<Vec<_>>(), vec![1, 2, 6]);
+        assert_eq!(
+            clean.iter().map(|l| l.lap).collect::<Vec<_>>(),
+            vec![1, 2, 6]
+        );
     }
 }
