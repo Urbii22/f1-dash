@@ -71,5 +71,6 @@ describe("UI shell compatibility", () => {
 		expect(src).toContain('"/dashboard/analysis"');
 		expect(src).toContain('"/dashboard/standings"');
 		expect(src).toContain('"/dashboard/weather"');
+		expect(src).toContain('"/dashboard/track-map"');
 	});
 });

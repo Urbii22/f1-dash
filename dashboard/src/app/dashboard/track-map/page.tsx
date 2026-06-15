@@ -17,8 +17,15 @@ import { inEliminationZone } from "@/lib/quali";
 import { useDataStore } from "@/stores/useDataStore";
 import type { Driver, TimingDataDriver } from "@/types/state.type";
 import { useSettingsStore } from "@/stores/useSettingsStore";
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import SimpleTrackMapView from "@/components/new-ui/map/SimpleTrackMapView";
+import DetailedTrackMapView from "@/components/new-ui/map/DetailedTrackMapView";
 
-export default function TrackMap() {
+export default function TrackMapPage() {
+	return <UiModeBoundary legacy={<LegacyTrackMap />} simple={<SimpleTrackMapView />} detailed={<DetailedTrackMapView />} />;
+}
+
+export function LegacyTrackMap() {
 	const drivers = useDataStore((state) => state.state?.DriverList);
 	const driversTiming = useDataStore((state) => state.state?.TimingData);
 

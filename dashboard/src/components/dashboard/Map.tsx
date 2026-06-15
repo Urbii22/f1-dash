@@ -123,15 +123,21 @@ type Props = {
 	variant?: MapVariant;
 	showLabels?: boolean;
 	showTrails?: boolean;
+	showDriverLabels?: boolean;
+	showMarshalSectors?: boolean;
+	showPitStatus?: boolean;
 };
 
-export default function Map({ filter, variant = "legacy", showLabels, showTrails }: Props) {
+export default function Map({ filter, variant = "legacy", showLabels, showTrails, showDriverLabels, showMarshalSectors, showPitStatus }: Props) {
 	const compact = variant === "compact";
 	const cornerSetting = useSettingsStore((state) => state.showCornerNumbers);
 	// In the compact orientation map, suppress corner labels and trails unless a
 	// caller explicitly opts in. Legacy keeps its configured behaviour.
 	const showCornerNumbers = showLabels ?? (compact ? false : cornerSetting);
 	const trailsEnabled = showTrails ?? !compact;
+	const driverLabelsEnabled = showDriverLabels ?? true;
+	const marshalSectorsEnabled = showMarshalSectors ?? true;
+	const pitStatusEnabled = showPitStatus ?? true;
 	const favoriteDrivers = useSettingsStore((state) => state.favoriteDrivers);
 	const selectedDriver = useDriverSelectionStore((state) => state.selectedDriver);
 	const setSelectedDriver = useDriverSelectionStore((state) => state.setSelectedDriver);
@@ -240,15 +246,15 @@ export default function Map({ filter, variant = "legacy", showLabels, showTrails
 			.map((sector) => {
 				const color = getSectorColor(sector, status?.bySector, status?.trackColor, yellowSectors);
 				return {
-					color,
-					pulse: status?.pulse,
+					color: marshalSectorsEnabled ? color : "stroke-white",
+					pulse: marshalSectorsEnabled ? status?.pulse : undefined,
 					number: sector.number,
-					strokeWidth: color === "stroke-white" ? 60 : 120,
+					strokeWidth: !marshalSectorsEnabled || color === "stroke-white" ? 60 : 120,
 					d: `M${sector.points[0].x},${sector.points[0].y} ${sector.points.map((point) => `L${point.x},${point.y}`).join(" ")}`,
 				};
 			})
 			.sort(prioritizeColoredSectors);
-	}, [trackStatus, sectors, yellowSectors]);
+	}, [marshalSectorsEnabled, trackStatus, sectors, yellowSectors]);
 
 	if (!points || !minX || !minY || !widthX || !widthY) {
 		return (
@@ -389,6 +395,8 @@ export default function Map({ filter, variant = "legacy", showLabels, showTrails
 									trackPoints={points}
 									originalTrackPoints={originalTrackPoints ?? []}
 									selected={selectedDriver === driver.RacingNumber}
+									showLabel={driverLabelsEnabled}
+									showPitStatus={pitStatusEnabled}
 									onSelect={() => setSelectedDriver(driver.RacingNumber)}
 									onCompare={() => toggleComparedDriver(driver.RacingNumber)}
 								/>
@@ -428,6 +436,8 @@ type CarDotProps = {
 	trackPoints: TrackPosition[];
 	originalTrackPoints: TrackPosition[];
 	selected: boolean;
+	showLabel: boolean;
+	showPitStatus: boolean;
 	onSelect: () => void;
 	onCompare: () => void;
 };
@@ -444,6 +454,8 @@ const CarDot = ({
 	trackPoints,
 	originalTrackPoints,
 	selected,
+	showLabel,
+	showPitStatus,
 	onSelect,
 	onCompare,
 }: CarDotProps) => {
@@ -539,7 +551,7 @@ const CarDot = ({
 			}}
 			className={clsx(
 				"cursor-pointer fill-cyan-300 drop-shadow-[0_0_12px_rgba(0,229,255,0.85)] outline-none",
-				{ "opacity-30": pit },
+				{ "opacity-30": pit && showPitStatus },
 				{ "opacity-0!": hidden },
 			)}
 			transform={`translate(${initialPoint.x} ${initialPoint.y})`}
@@ -552,7 +564,7 @@ const CarDot = ({
 			)}
 			<circle id={`map.driver.circle`} r={120} />
 			{selected && <circle className="stroke-white" r={260} fill="transparent" strokeWidth={60} />}
-			<text
+			{showLabel && <text
 				id={`map.driver.text`}
 				fontWeight="bold"
 				fontSize={120 * 3}
@@ -561,7 +573,7 @@ const CarDot = ({
 				}}
 			>
 				{name}
-			</text>
+			</text>}
 			{stopped && (
 				<text x={150} y={230} className="fill-red-400" fontSize={145} fontWeight="bold">
 					STOPPED
