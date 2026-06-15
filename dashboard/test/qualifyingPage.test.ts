@@ -10,9 +10,14 @@ describe("qualifying page integration", () => {
 		expect(read("components/Sidebar.tsx")).toContain('href: "/dashboard/qualifying"');
 	});
 
-	it("gates the page and includes every planned qualifying panel", () => {
+	it("preserves Legacy qualifying and wires both New UI densities", () => {
 		const source = read("app/dashboard/qualifying/page.tsx");
 
+		expect(source).toContain("UiModeBoundary");
+		expect(source).toContain("LegacyQualifyingPage");
+		expect(source).toContain("SimpleQualifyingView");
+		expect(source).toContain("DetailedQualifyingView");
+		expect(source).not.toContain("NewUiCompatibilityBoundary");
 		expect(source).toContain("isQualifyingSession");
 		expect(source).toContain("qualifying view unavailable");
 		expect(source).toContain("only available during qualifying sessions");

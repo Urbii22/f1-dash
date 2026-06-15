@@ -10,8 +10,21 @@ import QualiProgression from "@/components/qualifying/QualiProgression";
 import SpeedTrap from "@/components/qualifying/SpeedTrap";
 import { isQualifyingSession } from "@/lib/quali";
 import { useDataStore } from "@/stores/useDataStore";
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import SimpleQualifyingView from "@/components/new-ui/qualifying/SimpleQualifyingView";
+import DetailedQualifyingView from "@/components/new-ui/qualifying/DetailedQualifyingView";
 
 export default function QualifyingPage() {
+	return (
+		<UiModeBoundary
+			legacy={<LegacyQualifyingPage />}
+			simple={<SimpleQualifyingView />}
+			detailed={<DetailedQualifyingView />}
+		/>
+	);
+}
+
+export function LegacyQualifyingPage() {
 	const sessionInfo = useDataStore((state) => state.state?.SessionInfo);
 
 	if (!sessionInfo) {

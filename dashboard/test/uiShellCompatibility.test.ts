@@ -65,7 +65,8 @@ describe("UI shell compatibility", () => {
 	it("bypasses the compatibility notice on the migrated live dashboard", () => {
 		const src = read(dashboardLayout);
 		expect(src).toContain("usePathname");
-		expect(src).toContain('pathname === "/dashboard"');
-		expect(src).toContain("children : <NewUiCompatibilityBoundary");
+		expect(src).toContain("newUiNativeRoutes.has(pathname)");
+		expect(src).toContain('"/dashboard"');
+		expect(src).toContain('"/dashboard/qualifying"');
 	});
 });

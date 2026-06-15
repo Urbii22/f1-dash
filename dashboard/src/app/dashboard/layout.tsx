@@ -33,6 +33,8 @@ type Props = {
 	children: ReactNode;
 };
 
+const newUiNativeRoutes = new Set(["/dashboard", "/dashboard/qualifying"]);
+
 export default function DashboardLayout({ children }: Props) {
 	const pathname = usePathname();
 	const stores = useStores();
@@ -51,7 +53,7 @@ export default function DashboardLayout({ children }: Props) {
 	const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);
 	const ended = useDataStore(({ state }) => state?.SessionStatus?.Status === "Ends");
 	const newUiContent =
-		pathname === "/dashboard" ? children : <NewUiCompatibilityBoundary routeName="Dashboard">{children}</NewUiCompatibilityBoundary>;
+		newUiNativeRoutes.has(pathname) ? children : <NewUiCompatibilityBoundary routeName="Dashboard">{children}</NewUiCompatibilityBoundary>;
 
 	// Live runtime (data engine, socket, wake lock, store setup) stays above the
 	// branch so Legacy and New UI share one connection. Only presentation switches.
