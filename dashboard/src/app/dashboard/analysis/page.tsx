@@ -1,11 +1,12 @@
 "use client";
 
 import clsx from "clsx";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { useDataStore } from "@/stores/useDataStore";
 import { useLapHistoryStore } from "@/stores/useLapHistoryStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
+import { useAnalysisViewStore } from "@/stores/useAnalysisViewStore";
 
 import DriverToggles from "@/components/analysis/DriverToggles";
 import InsightsPanel from "@/components/analysis/InsightsPanel";
@@ -32,17 +33,16 @@ const BASE_TABS = [
 
 const QUALI_TAB = { id: "quali", name: "Quali" } as const;
 
-type TabId = (typeof BASE_TABS)[number]["id"] | typeof QUALI_TAB.id;
-
 function isQualifying(type: string | undefined): boolean {
 	const t = (type ?? "").toLowerCase();
 	return t.includes("qual") || t.includes("shootout");
 }
 
 export default function AnalysisPage() {
-	const [tab, setTab] = useState<TabId>("pace");
-	// null = user has not customized the selection yet, fall back to the default
-	const [userSelected, setUserSelected] = useState<string[] | null>(null);
+	const activeTab = useAnalysisViewStore((state) => state.activeTab);
+	const setActiveTab = useAnalysisViewStore((state) => state.setActiveTab);
+	const userSelected = useAnalysisViewStore((state) => state.selectedDrivers);
+	const setUserSelected = useAnalysisViewStore((state) => state.setSelectedDrivers);
 
 	const drivers = useDataStore((state) => state.state?.DriverList);
 	const timing = useDataStore((state) => state.state?.TimingData?.Lines);
@@ -53,6 +53,7 @@ export default function AnalysisPage() {
 	const favoriteDrivers = useSettingsStore((state) => state.favoriteDrivers);
 
 	const quali = isQualifying(sessionType);
+	const tab = !quali && activeTab === "quali" ? "pace" : activeTab;
 	const tabs = useMemo(() => (quali ? [...BASE_TABS, QUALI_TAB] : [...BASE_TABS]), [quali]);
 
 	// default chart selection: favorite drivers, otherwise the current top 5
@@ -99,7 +100,7 @@ export default function AnalysisPage() {
 									"rounded-md px-3 py-1.5 font-mono text-xs transition",
 									tab === item.id ? "bg-cyan-300 text-black" : "data-chip text-cyan-200 hover:text-white",
 								)}
-								onClick={() => setTab(item.id)}
+								onClick={() => setActiveTab(item.id)}
 							>
 								{item.name}
 							</button>
