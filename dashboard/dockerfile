@@ -1,36 +1,39 @@
 FROM node:24-alpine AS dependencies
 
 WORKDIR /app
-COPY package*.json yarn.lock .yarnrc.yml ./
-
-RUN corepack enable
-
-RUN yarn install --immutable
+COPY package.json yarn.lock .yarnrc.yml ./
+RUN corepack enable && yarn install --immutable
 
 FROM dependencies AS builder
 
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV SKIP_ENV_VALIDATION=1
-ENV NEXT_STANDALONE=1
-ENV NEXT_NO_COMPRESS=1
+ARG NEXT_PUBLIC_LIVE_URL=http://localhost:4000
+ARG NEXT_NO_COMPRESS=0
+
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    SKIP_ENV_VALIDATION=1 \
+    NEXT_STANDALONE=1 \
+    NEXT_PUBLIC_LIVE_URL=${NEXT_PUBLIC_LIVE_URL} \
+    NEXT_NO_COMPRESS=${NEXT_NO_COMPRESS}
 
 COPY . .
-
 RUN yarn build
 
 FROM node:24-alpine AS runtime
 
 WORKDIR /app
+RUN apk add --no-cache wget
 
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/public ./public
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NODE_ENV=production \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
 
-ENV NODE_ENV=production
-ENV HOSTNAME="0.0.0.0"
-
+USER node
 EXPOSE 3000
-
-ENTRYPOINT [ "node", "server.js" ]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1
+ENTRYPOINT ["node", "server.js"]
