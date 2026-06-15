@@ -16,11 +16,9 @@ import SelectMultiple from "@/components/ui/SelectMultiple";
 
 export default function FavoriteDrivers() {
 	const [drivers, setDrivers] = useState<Driver[] | null>(null);
-
-	// TODO handle loading state
-	// TODO handle error state
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [error, setError] = useState<string | null>(null);
+
+	const loading = drivers === null && error === null;
 
 	const { favoriteDrivers, setFavoriteDrivers, removeFavoriteDriver } = useSettingsStore();
 
@@ -28,6 +26,7 @@ export default function FavoriteDrivers() {
 		(async () => {
 			try {
 				const res = await fetch(`${env.NEXT_PUBLIC_LIVE_URL}/api/drivers`);
+				if (!res.ok) throw new Error(`request failed (${res.status})`);
 				const data = await res.json();
 				setDrivers(data);
 			} catch {
@@ -38,6 +37,10 @@ export default function FavoriteDrivers() {
 
 	return (
 		<div className="flex flex-col gap-2">
+			{loading && <p className="text-sm text-zinc-500">Loading drivers…</p>}
+
+			{error && <p className="text-sm text-red-400">{error}</p>}
+
 			<div className="flex gap-2">
 				{favoriteDrivers.map((driverNumber) => {
 					const driver = drivers?.find((d) => d.RacingNumber === driverNumber);
