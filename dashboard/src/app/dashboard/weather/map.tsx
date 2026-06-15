@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import maplibregl, { Map, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -14,7 +14,7 @@ import PlayControls from "@/components/ui/PlayControls";
 
 import Timeline from "./map-timeline";
 
-export function WeatherMap() {
+export function WeatherMap({ variant = "legacy", onRadarAvailabilityChange }: { variant?: "legacy" | "new"; onRadarAvailabilityChange?: (available: boolean) => void } = {}) {
 	const meeting = useDataStore((state) => state.state?.SessionInfo?.Meeting);
 
 	const [loading, setLoading] = useState<boolean>(true);
@@ -25,15 +25,25 @@ export function WeatherMap() {
 	const [playing, setPlaying] = useState<boolean>(false);
 
 	const [frames, setFrames] = useState<{ id: number; time: number }[]>([]);
+	const [radarUnavailable, setRadarUnavailable] = useState(false);
 	const currentFrameRef = useRef<number>(0);
 
-	const handleMapLoad = async () => {
+	const handleMapLoad = useCallback(async () => {
 		if (!mapRef.current) return;
 
 		const rainviewer = await getRainviewer();
-		if (!rainviewer) return;
+		if (!rainviewer) {
+			setRadarUnavailable(true);
+			onRadarAvailabilityChange?.(false);
+			return;
+		}
 
 		const pathFrames = [...rainviewer.radar.past, ...rainviewer.radar.nowcast];
+		if (pathFrames.length === 0) {
+			setRadarUnavailable(true);
+			onRadarAvailabilityChange?.(false);
+			return;
+		}
 
 		for (let i = 0; i < pathFrames.length; i++) {
 			const frame = pathFrames[i];
@@ -58,7 +68,9 @@ export function WeatherMap() {
 		}
 
 		setFrames(pathFrames.map((frame, i) => ({ time: frame.time, id: i })));
-	};
+		setRadarUnavailable(false);
+		onRadarAvailabilityChange?.(true);
+	}, [onRadarAvailabilityChange]);
 
 	useEffect(() => {
 		(async () => {
@@ -95,7 +107,7 @@ export function WeatherMap() {
 
 			mapRef.current = libMap;
 		})();
-	}, [meeting]);
+	}, [handleMapLoad, meeting]);
 
 	const setFrame = (idx: number) => {
 		mapRef.current?.setPaintProperty(`rainviewer-frame-${currentFrameRef.current}`, "raster-opacity", 0);
@@ -104,16 +116,18 @@ export function WeatherMap() {
 	};
 
 	return (
-		<div className="relative h-full w-full">
+		<div className={variant === "new" ? "relative h-full w-full overflow-hidden rounded-lg border border-[var(--ui-border)]" : "relative h-full w-full"}>
 			<div ref={mapContainerRef} className="absolute h-full w-full" />
 
 			{!loading && frames.length > 0 && (
-				<div className="absolute right-0 bottom-0 left-0 z-20 m-2 flex gap-4 rounded-lg bg-black/80 p-4 backdrop-blur-xs md:right-auto md:w-lg">
+				<div className={variant === "new" ? "absolute right-0 bottom-0 left-0 z-20 m-2 flex gap-4 rounded-lg border border-[var(--ui-border)] bg-[var(--ui-surface)]/95 p-4 backdrop-blur-xs md:right-auto md:w-lg" : "absolute right-0 bottom-0 left-0 z-20 m-2 flex gap-4 rounded-lg bg-black/80 p-4 backdrop-blur-xs md:right-auto md:w-lg"}>
 					<PlayControls playing={playing} onClick={() => setPlaying((v) => !v)} />
 
-					<Timeline frames={frames} setFrame={setFrame} playing={playing} />
+					<Timeline frames={frames} setFrame={setFrame} playing={playing} variant={variant} />
 				</div>
 			)}
+
+			{!loading && radarUnavailable ? <div role="status" className="absolute inset-x-4 bottom-4 z-20 rounded-md border border-[var(--ui-border)] bg-[var(--ui-surface)]/95 p-3 text-sm text-[var(--ui-muted)]">Radar unavailable. Current circuit conditions remain visible above the map.</div> : null}
 
 			{loading && <div className="h-full w-full animate-pulse rounded-lg bg-zinc-800" />}
 		</div>

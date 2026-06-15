@@ -33,7 +33,7 @@ type Props = {
 	children: ReactNode;
 };
 
-const newUiNativeRoutes = new Set(["/dashboard", "/dashboard/qualifying", "/dashboard/analysis", "/dashboard/standings"]);
+const newUiNativeRoutes = new Set(["/dashboard", "/dashboard/qualifying", "/dashboard/analysis", "/dashboard/standings", "/dashboard/weather"]);
 
 export default function DashboardLayout({ children }: Props) {
 	const pathname = usePathname();
