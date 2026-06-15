@@ -14,6 +14,8 @@ import { classifyRound, findArchiveSession, latestCompletedRound } from "@/lib/s
 import { getSchedule } from "@/lib/schedule";
 import { matchMeetingToRound, selectHubMeeting } from "@/lib/weekendHub";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
 	const season = new Date().getFullYear();
 	const now = new Date();

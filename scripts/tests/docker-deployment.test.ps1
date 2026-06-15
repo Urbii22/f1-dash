@@ -21,6 +21,7 @@ $production = Read-RepoFile "compose.production.yaml"
 $dockerfile = Read-RepoFile "dockerfile"
 $dashboardDockerfile = Read-RepoFile "dashboard\dockerfile"
 $nextConfig = Read-RepoFile "dashboard\next.config.ts"
+$homePage = Read-RepoFile "dashboard\src\app\(nav)\page.tsx"
 $caddy = Read-RepoFile "Caddyfile"
 $apiMain = Read-RepoFile "api\src\main.rs"
 
@@ -62,6 +63,7 @@ Assert-Contains $dockerfile "USER f1dash" "Rust runtime images must run as a non
 Assert-Contains $dashboardDockerfile "yarn install --immutable" "Dashboard image must use immutable Yarn installs."
 Assert-Contains $dashboardDockerfile "ARG NEXT_PUBLIC_LIVE_URL" "Dashboard public URL must be a build argument."
 Assert-Contains $nextConfig 'process\.env\.NEXT_NO_COMPRESS !== "1"' "NEXT_NO_COMPRESS=1 must disable Next.js compression."
+Assert-Contains $homePage 'export const dynamic = "force-dynamic"' "The API-backed home page must render at request time instead of during the image build."
 Assert-Contains $apiMain "\.layer\(cors\)" "The API router must install its CORS layer."
 
 $verifyWorkflow = Read-RepoFile ".github\workflows\verify.yaml"
