@@ -1,6 +1,29 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import NewUiCompatibilityBoundary from "@/components/new-ui/NewUiCompatibilityBoundary";
+import NewUiPublicShell from "@/components/new-ui/shell/NewUiPublicShell";
+
 export default function ArchiveLayout({ children }: { children: ReactNode }) {
+	return (
+		<UiModeBoundary
+			legacy={<LegacyArchiveShell>{children}</LegacyArchiveShell>}
+			simple={
+				<NewUiPublicShell>
+					<NewUiCompatibilityBoundary routeName="Archive">{children}</NewUiCompatibilityBoundary>
+				</NewUiPublicShell>
+			}
+			detailed={
+				<NewUiPublicShell>
+					<NewUiCompatibilityBoundary routeName="Archive">{children}</NewUiCompatibilityBoundary>
+				</NewUiPublicShell>
+			}
+		/>
+	);
+}
+
+function LegacyArchiveShell({ children }: { children: ReactNode }) {
 	return (
 		<main className="min-h-screen bg-black p-3 text-white">
 			<div className="mx-auto max-w-7xl">

@@ -1,7 +1,29 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import NewUiCompatibilityBoundary from "@/components/new-ui/NewUiCompatibilityBoundary";
+import NewUiPublicShell from "@/components/new-ui/shell/NewUiPublicShell";
+
 export default function ResultsLayout({ children }: { children: ReactNode }) {
+	return (
+		<UiModeBoundary
+			legacy={<LegacyResultsShell>{children}</LegacyResultsShell>}
+			simple={
+				<NewUiPublicShell>
+					<NewUiCompatibilityBoundary routeName="Results">{children}</NewUiCompatibilityBoundary>
+				</NewUiPublicShell>
+			}
+			detailed={
+				<NewUiPublicShell>
+					<NewUiCompatibilityBoundary routeName="Results">{children}</NewUiCompatibilityBoundary>
+				</NewUiPublicShell>
+			}
+		/>
+	);
+}
+
+function LegacyResultsShell({ children }: { children: ReactNode }) {
 	return (
 		<main className="min-h-screen p-3 text-white">
 			<div className="mx-auto max-w-7xl">

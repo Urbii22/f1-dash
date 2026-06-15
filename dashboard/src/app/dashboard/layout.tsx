@@ -24,6 +24,10 @@ import ConnectionStatus from "@/components/ConnectionStatus";
 import ReplayControlBar from "@/components/dashboard/ReplayControlBar";
 import AlertToasts from "@/components/dashboard/AlertToasts";
 
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import NewUiCompatibilityBoundary from "@/components/new-ui/NewUiCompatibilityBoundary";
+import NewUiDashboardShell from "@/components/new-ui/shell/NewUiDashboardShell";
+
 type Props = {
 	children: ReactNode;
 };
@@ -45,6 +49,53 @@ export default function DashboardLayout({ children }: Props) {
 	const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);
 	const ended = useDataStore(({ state }) => state?.SessionStatus?.Status === "Ends");
 
+	// Live runtime (data engine, socket, wake lock, store setup) stays above the
+	// branch so Legacy and New UI share one connection. Only presentation switches.
+	return (
+		<UiModeBoundary
+			legacy={
+				<LegacyDashboardShell
+					connected={connected}
+					syncing={syncing}
+					ended={ended}
+					hasSession={hasSession}
+					delay={delay}
+					maxDelay={maxDelay}
+				>
+					{children}
+				</LegacyDashboardShell>
+			}
+			simple={
+				<NewUiDashboardShell>
+					<NewUiCompatibilityBoundary routeName="Dashboard">{children}</NewUiCompatibilityBoundary>
+				</NewUiDashboardShell>
+			}
+			detailed={
+				<NewUiDashboardShell>
+					<NewUiCompatibilityBoundary routeName="Dashboard">{children}</NewUiCompatibilityBoundary>
+				</NewUiDashboardShell>
+			}
+		/>
+	);
+}
+
+function LegacyDashboardShell({
+	children,
+	connected,
+	syncing,
+	ended,
+	hasSession,
+	delay,
+	maxDelay,
+}: {
+	children: ReactNode;
+	connected: boolean;
+	syncing: boolean;
+	ended: boolean;
+	hasSession: boolean;
+	delay: number;
+	maxDelay: number;
+}) {
 	return (
 		<div className="relative flex h-screen w-full overflow-hidden p-2 md:gap-2">
 			<div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_16%,transparent_84%,rgba(0,229,255,0.06))]" />
