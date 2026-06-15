@@ -68,5 +68,6 @@ describe("UI shell compatibility", () => {
 		expect(src).toContain("newUiNativeRoutes.has(pathname)");
 		expect(src).toContain('"/dashboard"');
 		expect(src).toContain('"/dashboard/qualifying"');
+		expect(src).toContain('"/dashboard/analysis"');
 	});
 });

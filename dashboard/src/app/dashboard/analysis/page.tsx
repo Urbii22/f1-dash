@@ -21,6 +21,9 @@ import {
 	buildPotentialLaps,
 	buildTopSpeeds,
 } from "@/lib/sessionInsights";
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import SimpleAnalysisView from "@/components/new-ui/analysis/SimpleAnalysisView";
+import DetailedAnalysisView from "@/components/new-ui/analysis/DetailedAnalysisView";
 
 const BASE_TABS = [
 	{ id: "pace", name: "Race Pace" },
@@ -39,6 +42,16 @@ function isQualifying(type: string | undefined): boolean {
 }
 
 export default function AnalysisPage() {
+	return (
+		<UiModeBoundary
+			legacy={<LegacyAnalysisPage />}
+			simple={<SimpleAnalysisView />}
+			detailed={<DetailedAnalysisView />}
+		/>
+	);
+}
+
+export function LegacyAnalysisPage() {
 	const activeTab = useAnalysisViewStore((state) => state.activeTab);
 	const setActiveTab = useAnalysisViewStore((state) => state.setActiveTab);
 	const userSelected = useAnalysisViewStore((state) => state.selectedDrivers);
