@@ -15,6 +15,7 @@ compose.env
 *.log
 .playwright-cli/
 .superpowers/
+.understand-anything/
 output/
 sample-replay/*.png
 recordings/

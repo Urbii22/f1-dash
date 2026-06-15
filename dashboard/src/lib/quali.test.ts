@@ -37,8 +37,8 @@ const makeDriver = (overrides: Partial<TimingDataDriver> = {}): TimingDataDriver
 	Speeds: {
 		I1: { Value: "", Status: 0, OverallFastest: false, PersonalFastest: false },
 		I2: { Value: "", Status: 0, OverallFastest: false, PersonalFastest: false },
-		Fl: { Value: "", Status: 0, OverallFastest: false, PersonalFastest: false },
-		St: { Value: "", Status: 0, OverallFastest: false, PersonalFastest: false },
+		FL: { Value: "", Status: 0, OverallFastest: false, PersonalFastest: false },
+		ST: { Value: "", Status: 0, OverallFastest: false, PersonalFastest: false },
 	},
 	BestLapTime: { Value: "", Position: 0 },
 	LastLapTime: { Value: "", Status: 0, OverallFastest: false, PersonalFastest: false },
