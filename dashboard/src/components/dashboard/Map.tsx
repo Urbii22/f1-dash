@@ -114,12 +114,24 @@ type Corner = {
 	labelPos: TrackPosition;
 };
 
+type MapVariant = "legacy" | "compact" | "technical";
+
 type Props = {
 	filter?: string[];
+	// New UI adapter props. Defaults preserve the existing Legacy behaviour so
+	// untouched Legacy call sites stay visually identical.
+	variant?: MapVariant;
+	showLabels?: boolean;
+	showTrails?: boolean;
 };
 
-export default function Map({ filter }: Props) {
-	const showCornerNumbers = useSettingsStore((state) => state.showCornerNumbers);
+export default function Map({ filter, variant = "legacy", showLabels, showTrails }: Props) {
+	const compact = variant === "compact";
+	const cornerSetting = useSettingsStore((state) => state.showCornerNumbers);
+	// In the compact orientation map, suppress corner labels and trails unless a
+	// caller explicitly opts in. Legacy keeps its configured behaviour.
+	const showCornerNumbers = showLabels ?? (compact ? false : cornerSetting);
+	const trailsEnabled = showTrails ?? !compact;
 	const favoriteDrivers = useSettingsStore((state) => state.favoriteDrivers);
 	const selectedDriver = useDriverSelectionStore((state) => state.selectedDriver);
 	const setSelectedDriver = useDriverSelectionStore((state) => state.setSelectedDriver);
@@ -327,7 +339,8 @@ export default function Map({ filter }: Props) {
 					/>
 				))}
 
-			{centerX &&
+			{trailsEnabled &&
+				centerX &&
 				centerY &&
 				Object.entries(driverTrails).map(([driver, trail]) => (
 					<polyline
