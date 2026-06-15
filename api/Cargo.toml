@@ -21,3 +21,6 @@ chrono = { version = "0.4", features = ["serde"] }
 cached = { version = "0.56.0", features = ["disk_store", "async"] }
 regex = "1.12.2"
 rusqlite = { version = "0.32", features = ["bundled"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
