@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
  * Navigates to ?season=YYYY (server component re-fetches). Years run from the
  * current season back to 1950 (Ergast/Jolpica coverage).
  */
-export default function SeasonSelect({ selected }: { selected: number }) {
+export default function SeasonSelect({ selected, variant = "legacy" }: { selected: number; variant?: "legacy" | "new" }) {
 	const router = useRouter();
 	const pathname = usePathname();
 	const params = useSearchParams();
@@ -29,7 +29,7 @@ export default function SeasonSelect({ selected }: { selected: number }) {
 			<select
 				value={selected}
 				onChange={(e) => onChange(Number(e.target.value))}
-				className="data-chip rounded px-2 py-1 text-cyan-200"
+				className={variant === "legacy" ? "data-chip rounded px-2 py-1 text-cyan-200" : "rounded-md border border-[var(--ui-border)] bg-[var(--ui-surface)] px-2 py-1 text-[var(--ui-text)]"}
 			>
 				{years.map((y) => (
 					<option key={y} value={y}>
