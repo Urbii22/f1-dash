@@ -1,0 +1,36 @@
+{
+	email {$CADDY_EMAIL}
+}
+
+{$F1_DASH_DOMAIN} {
+	encode zstd gzip
+
+	handle /api/realtime/health {
+		rewrite * /api/health
+		reverse_proxy realtime:4000
+	}
+
+	handle /api/realtime* {
+		reverse_proxy realtime:4000
+	}
+
+	handle /api/current* {
+		reverse_proxy realtime:4000
+	}
+
+	handle /api/drivers* {
+		reverse_proxy realtime:4000
+	}
+
+	handle /api/connections* {
+		reverse_proxy realtime:4000
+	}
+
+	handle /api/* {
+		reverse_proxy api:4001
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

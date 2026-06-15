@@ -23,8 +23,6 @@ $dashboardDockerfile = Read-RepoFile "dashboard\dockerfile"
 $nextConfig = Read-RepoFile "dashboard\next.config.ts"
 $caddy = Read-RepoFile "Caddyfile"
 $apiMain = Read-RepoFile "api\src\main.rs"
-$verifyWorkflow = Read-RepoFile ".github\workflows\verify.yaml"
-$releaseWorkflow = Read-RepoFile ".github\workflows\release.yaml"
 
 foreach ($service in @("web", "api", "realtime", "archive")) {
     Assert-Contains $compose "(?m)^  ${service}:\s*$" "compose.yaml must define $service."
@@ -65,6 +63,9 @@ Assert-Contains $dashboardDockerfile "yarn install --immutable" "Dashboard image
 Assert-Contains $dashboardDockerfile "ARG NEXT_PUBLIC_LIVE_URL" "Dashboard public URL must be a build argument."
 Assert-Contains $nextConfig 'process\.env\.NEXT_NO_COMPRESS !== "1"' "NEXT_NO_COMPRESS=1 must disable Next.js compression."
 Assert-Contains $apiMain "\.layer\(cors\)" "The API router must install its CORS layer."
+
+$verifyWorkflow = Read-RepoFile ".github\workflows\verify.yaml"
+$releaseWorkflow = Read-RepoFile ".github\workflows\release.yaml"
 
 foreach ($check in @("cargo fmt", "cargo clippy", "cargo test --workspace", "yarn test", "yarn lint", "yarn npm audit", "yarn build", "docker-deployment.test.ps1")) {
     Assert-Contains $verifyWorkflow ([regex]::Escape($check)) "Verification workflow must run '$check'."
