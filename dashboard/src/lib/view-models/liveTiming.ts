@@ -1,4 +1,4 @@
-import type { DriverList, Stint, TimingAppData, TimingData, TimingDataDriver } from "@/types/state.type";
+import type { CarsData, DriverList, Stint, TimingAppData, TimingData, TimingDataDriver } from "@/types/state.type";
 import { sortPos } from "@/lib/sorting";
 
 export type CompactTimingRowModel = {
@@ -17,6 +17,19 @@ export type CompactTimingRowModel = {
 	status: "running" | "pit" | "pit-out" | "retired" | "stopped";
 	lastLap: string | null;
 	bestLap: string | null;
+};
+
+export type TechnicalTimingRowModel = CompactTimingRowModel & {
+	stops: number;
+	interval: string;
+	sectors: [string, string, string];
+	speedTrap: string;
+	telemetry: {
+		speed: number;
+		gear: number;
+		throttle: number;
+		brake: boolean;
+	} | null;
 };
 
 // Reserved neutral identity color when the feed omits a driver's team colour.
@@ -108,4 +121,39 @@ export function buildCompactTimingRows(input: {
 		});
 
 	return rows;
+}
+
+export function buildTechnicalTimingRows(input: {
+	drivers: DriverList | undefined;
+	timing: TimingData | undefined;
+	appTiming: TimingAppData | undefined;
+	carsData: CarsData | undefined;
+	previousPositions?: Record<string, number>;
+}): TechnicalTimingRowModel[] {
+	const compactRows = buildCompactTimingRows(input);
+	const lines = input.timing?.Lines;
+	if (!lines) return [];
+
+	return compactRows.map((row) => {
+		const line = lines[row.driverNumber];
+		const stints = input.appTiming?.Lines?.[row.driverNumber]?.Stints;
+		const channels = input.carsData?.[row.driverNumber]?.Channels;
+		const sectors = [0, 1, 2].map((index) => gapLabel(line?.Sectors?.[index]?.Value)) as [string, string, string];
+
+		return {
+			...row,
+			stops: stints ? Math.max(0, stints.length - 1) : 0,
+			interval: gapLabel(line?.IntervalToPositionAhead?.Value),
+			sectors,
+			speedTrap: gapLabel(line?.Speeds?.ST?.Value),
+			telemetry: channels
+				? {
+						speed: channels["2"],
+						gear: channels["3"],
+						throttle: channels["4"],
+						brake: channels["5"] > 0,
+					}
+				: null,
+		};
+	});
 }

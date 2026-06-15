@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
-import { buildCompactTimingRows } from "@/lib/view-models/liveTiming";
-import type { DriverList, TimingAppData, TimingDataDriver } from "@/types/state.type";
+import { buildCompactTimingRows, buildTechnicalTimingRows } from "@/lib/view-models/liveTiming";
+import type { CarsData, DriverList, TimingAppData, TimingDataDriver } from "@/types/state.type";
 
 const driverList: DriverList = {
 	"1": {
@@ -247,4 +247,114 @@ test("returns an empty array without timing data", () => {
 	expect(
 		buildCompactTimingRows({ drivers: driverList, timing: undefined, appTiming: undefined }),
 	).toEqual([]);
+});
+
+function buildTech(
+	lines: Record<string, TimingDataDriver>,
+	options: { app?: TimingAppData; cars?: CarsData; previousPositions?: Record<string, number> } = {},
+) {
+	return buildTechnicalTimingRows({
+		drivers: driverList,
+		timing: { Lines: lines, Withheld: false },
+		appTiming: options.app,
+		carsData: options.cars,
+		previousPositions: options.previousPositions,
+	});
+}
+
+test("technical rows expose the full timing column set", () => {
+	const rows = buildTech({
+		"1": timingLine({
+			RacingNumber: "1",
+			Position: "1",
+			LastLapTime: { Value: "1:20.500", Status: 0, OverallFastest: false, PersonalFastest: false },
+			BestLapTime: { Value: "1:20.100", Position: 1 },
+			Sectors: [
+				{ Stopped: false, Value: "25.100", Status: 0, OverallFastest: false, PersonalFastest: false, Segments: [] },
+				{ Stopped: false, Value: "30.200", Status: 0, OverallFastest: false, PersonalFastest: false, Segments: [] },
+				{ Stopped: false, Value: "24.800", Status: 0, OverallFastest: false, PersonalFastest: false, Segments: [] },
+			],
+			Speeds: {
+				I1: { Value: "300", Status: 0, OverallFastest: false, PersonalFastest: false },
+				I2: { Value: "280", Status: 0, OverallFastest: false, PersonalFastest: false },
+				FL: { Value: "310", Status: 0, OverallFastest: false, PersonalFastest: false },
+				ST: { Value: "330", Status: 0, OverallFastest: false, PersonalFastest: false },
+			},
+		}),
+	});
+	const row = rows[0];
+	expect(row.position).toBe(1);
+	expect(row.lastLap).toBe("1:20.500");
+	expect(row.bestLap).toBe("1:20.100");
+	expect(row.sectors).toEqual(["25.100", "30.200", "24.800"]);
+	expect(row.speedTrap).toBe("330");
+});
+
+test("technical sectors and speed trap fall back to dash when absent", () => {
+	const rows = buildTech({ "1": timingLine({ RacingNumber: "1", Position: "1" }) });
+	const row = rows[0];
+	expect(row.sectors).toEqual(["-", "-", "-"]);
+	expect(row.speedTrap).toBe("-");
+});
+
+test("technical telemetry is present only when car data exists for the driver", () => {
+	const cars: CarsData = {
+		"1": { Channels: { "0": 11000, "2": 305, "3": 7, "4": 100, "5": 0, "45": 0 } },
+	};
+	const rows = buildTech(
+		{
+			"1": timingLine({ RacingNumber: "1", Position: "1" }),
+			"4": timingLine({ RacingNumber: "4", Position: "2" }),
+		},
+		{ cars },
+	);
+	const ver = rows.find((r) => r.driverNumber === "1")!;
+	const nor = rows.find((r) => r.driverNumber === "4")!;
+	expect(ver.telemetry).not.toBeNull();
+	expect(ver.telemetry?.speed).toBe(305);
+	expect(ver.telemetry?.gear).toBe(7);
+	expect(nor.telemetry).toBeNull();
+});
+
+test("technical rows carry stops and interval alongside leader gap", () => {
+	const app: TimingAppData = {
+		Lines: {
+			"4": {
+				RacingNumber: "4",
+				Line: 2,
+				GridPos: "2",
+				Stints: [
+					{ Compound: "MEDIUM", TotalLaps: 12 },
+					{ Compound: "SOFT", TotalLaps: 5 },
+				],
+			},
+		},
+	};
+	const rows = buildTech(
+		{
+			"1": timingLine({ RacingNumber: "1", Position: "1" }),
+			"4": timingLine({
+				RacingNumber: "4",
+				Position: "2",
+				GapToLeader: "+5.231",
+				IntervalToPositionAhead: { Value: "+1.100", Catching: true },
+			}),
+		},
+		{ app },
+	);
+	const nor = rows.find((r) => r.driverNumber === "4")!;
+	expect(nor.primaryGap).toBe("+5.231");
+	expect(nor.interval).toBe("+1.100");
+	expect(nor.stops).toBe(1);
+	expect(nor.compound).toBe("SOFT");
+	expect(nor.tyreAge).toBe(5);
+});
+
+test("technical rows are sorted by position", () => {
+	const rows = buildTech({
+		"81": timingLine({ RacingNumber: "81", Position: "3" }),
+		"1": timingLine({ RacingNumber: "1", Position: "1" }),
+		"4": timingLine({ RacingNumber: "4", Position: "2" }),
+	});
+	expect(rows.map((r) => r.driverNumber)).toEqual(["1", "4", "81"]);
 });
