@@ -16,7 +16,7 @@ RUN cargo build --release --locked -p api -p realtime -p archive
 
 FROM alpine:3 AS runtime
 
-RUN apk add --no-cache ca-certificates libgcc wget \
+RUN apk add --no-cache ca-certificates libgcc openssl wget \
     && addgroup -S f1dash \
     && adduser -S -G f1dash -h /home/f1dash f1dash \
     && mkdir -p /data/archive /data/cache /data/recordings \

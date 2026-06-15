@@ -22,6 +22,15 @@ services:
   caddy:
     image: caddy:2-alpine
     profiles: [production]
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      if [ -n "$$CADDY_EMAIL" ]; then
+        printf '{\n\temail %s\n}\n\n' "$$CADDY_EMAIL" > /tmp/Caddyfile
+      else
+        : > /tmp/Caddyfile
+      fi
+      cat /etc/caddy/Caddyfile >> /tmp/Caddyfile
+      exec caddy run --config /tmp/Caddyfile --adapter caddyfile
     depends_on:
       api:
         condition: service_healthy
