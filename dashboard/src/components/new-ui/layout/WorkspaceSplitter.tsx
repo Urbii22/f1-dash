@@ -96,7 +96,7 @@ export default function WorkspaceSplitter({
 			onPointerUp={handlePointerUp}
 			className={clsx(
 				"group relative z-10 flex shrink-0 touch-none items-center justify-center",
-				"outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-accent)]",
+				"outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-focus)]",
 				isVertical ? "w-3 cursor-col-resize" : "h-3 cursor-row-resize",
 				className,
 			)}
@@ -105,7 +105,7 @@ export default function WorkspaceSplitter({
 				aria-hidden
 				className={clsx(
 					"rounded-full bg-[var(--ui-border)] transition-colors",
-					"group-hover:bg-[var(--ui-accent)] group-focus-visible:bg-[var(--ui-accent)]",
+					"group-hover:bg-[var(--ui-focus)] group-focus-visible:bg-[var(--ui-focus)]",
 					isVertical ? "h-full w-0.5" : "h-0.5 w-full",
 				)}
 			/>

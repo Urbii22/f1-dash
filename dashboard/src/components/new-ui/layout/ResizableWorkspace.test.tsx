@@ -1,7 +1,11 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
 import WorkspaceSplitter from "@/components/new-ui/layout/WorkspaceSplitter";
+import ResizableWorkspace from "@/components/new-ui/layout/ResizableWorkspace";
+import PresetSelector from "@/components/new-ui/layout/PresetSelector";
+import { useDetailedLayoutStore } from "@/stores/useDetailedLayoutStore";
+import { dashboardPresetDefaults } from "@/lib/detailedLayout";
 
 function renderSplitter(overrides: Partial<React.ComponentProps<typeof WorkspaceSplitter>> = {}) {
 	const onChange = vi.fn();
@@ -93,5 +97,79 @@ describe("WorkspaceSplitter accessibility", () => {
 		// vertical splitter: 600px / 1000px width => 60%, clamped within [32,62]
 		fireEvent.pointerMove(separator, { pointerId: 1, clientX: 600 });
 		expect(onChange).toHaveBeenLastCalledWith(60);
+	});
+});
+
+const slots = {
+	primary: <div data-testid="slot-primary">PRIMARY</div>,
+	secondaryTop: <div data-testid="slot-secondary-top">SECONDARY TOP</div>,
+	secondaryBottom: <div data-testid="slot-secondary-bottom">SECONDARY BOTTOM</div>,
+	bottomLeft: <div data-testid="slot-bottom-left">BOTTOM LEFT</div>,
+	bottomRight: <div data-testid="slot-bottom-right">BOTTOM RIGHT</div>,
+};
+
+describe("ResizableWorkspace composition", () => {
+	beforeEach(() => {
+		localStorage.clear();
+		useDetailedLayoutStore.setState({ activePresetByRoute: {}, layouts: {} });
+	});
+
+	test("renders every named slot", () => {
+		render(<ResizableWorkspace route="dashboard" preset="race" {...slots} />);
+		expect(screen.getByTestId("slot-primary")).toBeInTheDocument();
+		expect(screen.getByTestId("slot-secondary-top")).toBeInTheDocument();
+		expect(screen.getByTestId("slot-secondary-bottom")).toBeInTheDocument();
+		expect(screen.getByTestId("slot-bottom-left")).toBeInTheDocument();
+		expect(screen.getByTestId("slot-bottom-right")).toBeInTheDocument();
+	});
+
+	test("grid templates reflect the stored layout percentages", () => {
+		useDetailedLayoutStore.getState().setLayoutValue("dashboard", "race", "primary", 50);
+		render(<ResizableWorkspace route="dashboard" preset="race" {...slots} />);
+		const topRow = screen.getByTestId("workspace-top-row");
+		expect(topRow).toHaveStyle({ gridTemplateColumns: expect.stringContaining("50") });
+	});
+
+	test("dragging a splitter updates the store for the active route and preset", () => {
+		render(<ResizableWorkspace route="dashboard" preset="race" {...slots} />);
+		const separator = screen.getByRole("separator", { name: /classification/i });
+		fireEvent.keyDown(separator, { key: "ArrowRight" });
+		const expected = dashboardPresetDefaults.race.primary + 1;
+		expect(useDetailedLayoutStore.getState().getLayout("dashboard", "race").primary).toBe(expected);
+	});
+});
+
+describe("PresetSelector", () => {
+	beforeEach(() => {
+		localStorage.clear();
+		useDetailedLayoutStore.setState({ activePresetByRoute: {}, layouts: {} });
+	});
+
+	test("renders a radiogroup with the three presets", () => {
+		render(<PresetSelector route="dashboard" preset="race" />);
+		const group = screen.getByRole("radiogroup", { name: /workspace preset/i });
+		expect(group).toBeInTheDocument();
+		expect(screen.getByRole("radio", { name: /race/i })).toHaveAttribute("aria-checked", "true");
+		expect(screen.getByRole("radio", { name: /strategy/i })).toBeInTheDocument();
+		expect(screen.getByRole("radio", { name: /driver/i })).toBeInTheDocument();
+	});
+
+	test("selecting a preset updates the store without clearing other layouts", () => {
+		useDetailedLayoutStore.getState().setLayoutValue("dashboard", "strategy", "primary", 40);
+		render(<PresetSelector route="dashboard" preset="race" />);
+		fireEvent.click(screen.getByRole("radio", { name: /strategy/i }));
+		expect(useDetailedLayoutStore.getState().activePresetByRoute.dashboard).toBe("strategy");
+		expect(useDetailedLayoutStore.getState().getLayout("dashboard", "strategy").primary).toBe(40);
+	});
+
+	test("reset restores defaults only for the active route and preset", () => {
+		useDetailedLayoutStore.getState().setLayoutValue("dashboard", "race", "primary", 60);
+		useDetailedLayoutStore.getState().setLayoutValue("dashboard", "strategy", "primary", 40);
+		render(<PresetSelector route="dashboard" preset="race" />);
+		fireEvent.click(screen.getByRole("button", { name: /reset layout/i }));
+		expect(useDetailedLayoutStore.getState().getLayout("dashboard", "race")).toEqual(
+			dashboardPresetDefaults.race,
+		);
+		expect(useDetailedLayoutStore.getState().getLayout("dashboard", "strategy").primary).toBe(40);
 	});
 });
