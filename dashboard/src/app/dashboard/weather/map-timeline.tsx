@@ -200,9 +200,8 @@ export default function Timeline({ frames, setFrame, playing }: Props) {
 
 						<AnimatePresence>
 							{dragging && (
-								// TODO add background blur so you can always see the time
 								<motion.p
-									className="absolute text-sm font-medium tracking-wide tabular-nums"
+									className="absolute rounded-md bg-zinc-900/70 px-2 py-0.5 text-sm font-medium tracking-wide tabular-nums shadow-sm backdrop-blur-sm"
 									initial={{ y: 12, opacity: 0 }}
 									animate={{ y: 20, opacity: 1 }}
 									exit={{ y: [20, 12], opacity: 0 }}
