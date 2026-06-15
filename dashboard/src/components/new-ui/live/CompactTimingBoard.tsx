@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 
 import { useDataStore } from "@/stores/useDataStore";
 import { useDriverSelectionStore } from "@/stores/useDriverSelectionStore";
@@ -18,29 +18,10 @@ export default function CompactTimingBoard() {
 	const selectedDriver = useDriverSelectionStore((store) => store.selectedDriver);
 	const setSelectedDriver = useDriverSelectionStore((store) => store.setSelectedDriver);
 
-	// Remember the previous classification order so we can show position deltas
-	// without a dedicated store. Updated after each derivation.
-	const previousPositionsRef = useRef<Record<string, number>>({});
-
 	const rows = useMemo(
-		() =>
-			buildCompactTimingRows({
-				drivers,
-				timing,
-				appTiming,
-				previousPositions: previousPositionsRef.current,
-			}),
+		() => buildCompactTimingRows({ drivers, timing, appTiming }),
 		[drivers, timing, appTiming],
 	);
-
-	const nextPositions = useMemo(() => {
-		const map: Record<string, number> = {};
-		for (const row of rows) {
-			if (row.position !== null) map[row.driverNumber] = row.position;
-		}
-		return map;
-	}, [rows]);
-	previousPositionsRef.current = nextPositions;
 
 	const hasTiming = Boolean(timing?.Lines && Object.keys(timing.Lines).length > 0);
 	const loading = !drivers || !timing;

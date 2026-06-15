@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
 import { buildCompactTimingRows } from "@/lib/view-models/liveTiming";
-import type { DriverList, TimingAppData, TimingData, TimingDataDriver } from "@/types/state.type";
+import type { DriverList, TimingAppData, TimingDataDriver } from "@/types/state.type";
 
 const driverList: DriverList = {
 	"1": {

@@ -19,7 +19,25 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { dashboardSplitBounds, dashboardSplitFromPointer } from "@/lib/dashboardSplit";
 
-export default function Page() {
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import NewUiCompatibilityBoundary from "@/components/new-ui/NewUiCompatibilityBoundary";
+import LiveDashboardState from "@/components/new-ui/live/LiveDashboardState";
+
+export default function DashboardPage() {
+	return (
+		<UiModeBoundary
+			legacy={<LegacyDashboardPage />}
+			simple={<LiveDashboardState density="simple" />}
+			detailed={
+				<NewUiCompatibilityBoundary routeName="Detailed dashboard">
+					<LegacyDashboardPage />
+				</NewUiCompatibilityBoundary>
+			}
+		/>
+	);
+}
+
+export function LegacyDashboardPage() {
 	const presentationMode = usePresentationModeStore((state) => state.enabled);
 	const setPresentationMode = usePresentationModeStore((state) => state.setEnabled);
 	const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);
