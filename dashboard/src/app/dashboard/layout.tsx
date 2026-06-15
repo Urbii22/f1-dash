@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { usePathname } from "next/navigation";
 
 import { useDataEngine } from "@/hooks/useDataEngine";
 import { useWakeLock } from "@/hooks/useWakeLock";
@@ -33,6 +34,7 @@ type Props = {
 };
 
 export default function DashboardLayout({ children }: Props) {
+	const pathname = usePathname();
 	const stores = useStores();
 	const { handleInitial, handleUpdate, maxDelay } = useDataEngine(stores);
 	const { connected } = useSocket({ handleInitial, handleUpdate });
@@ -48,6 +50,8 @@ export default function DashboardLayout({ children }: Props) {
 
 	const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);
 	const ended = useDataStore(({ state }) => state?.SessionStatus?.Status === "Ends");
+	const newUiContent =
+		pathname === "/dashboard" ? children : <NewUiCompatibilityBoundary routeName="Dashboard">{children}</NewUiCompatibilityBoundary>;
 
 	// Live runtime (data engine, socket, wake lock, store setup) stays above the
 	// branch so Legacy and New UI share one connection. Only presentation switches.
@@ -67,12 +71,12 @@ export default function DashboardLayout({ children }: Props) {
 			}
 			simple={
 				<NewUiDashboardShell>
-					<NewUiCompatibilityBoundary routeName="Dashboard">{children}</NewUiCompatibilityBoundary>
+					{newUiContent}
 				</NewUiDashboardShell>
 			}
 			detailed={
 				<NewUiDashboardShell>
-					<NewUiCompatibilityBoundary routeName="Dashboard">{children}</NewUiCompatibilityBoundary>
+					{newUiContent}
 				</NewUiDashboardShell>
 			}
 		/>

@@ -69,7 +69,7 @@ export default function CompactTimingRow({ row, selected, onSelect }: CompactTim
 			role="button"
 			tabIndex={0}
 			data-driver-row={row.driverNumber}
-			aria-selected={selected}
+			aria-pressed={selected}
 			aria-label={accessibleName}
 			onClick={() => onSelect(row.driverNumber)}
 			onKeyDown={(event) => {

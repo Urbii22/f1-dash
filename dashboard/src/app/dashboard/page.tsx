@@ -20,7 +20,6 @@ import { useSettingsStore } from "@/stores/useSettingsStore";
 import { dashboardSplitBounds, dashboardSplitFromPointer } from "@/lib/dashboardSplit";
 
 import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
-import NewUiCompatibilityBoundary from "@/components/new-ui/NewUiCompatibilityBoundary";
 import LiveDashboardState from "@/components/new-ui/live/LiveDashboardState";
 
 export default function DashboardPage() {
@@ -28,11 +27,7 @@ export default function DashboardPage() {
 		<UiModeBoundary
 			legacy={<LegacyDashboardPage />}
 			simple={<LiveDashboardState density="simple" />}
-			detailed={
-				<NewUiCompatibilityBoundary routeName="Detailed dashboard">
-					<LegacyDashboardPage />
-				</NewUiCompatibilityBoundary>
-			}
+			detailed={<LiveDashboardState density="detailed" />}
 		/>
 	);
 }

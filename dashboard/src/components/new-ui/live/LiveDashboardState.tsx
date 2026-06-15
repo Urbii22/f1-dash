@@ -10,6 +10,7 @@ import type { UiDensity } from "@/lib/uiPreferences";
 import Panel from "@/components/new-ui/primitives/Panel";
 import ViewState from "@/components/new-ui/primitives/ViewState";
 import SimpleDashboardView from "@/components/new-ui/live/SimpleDashboardView";
+import DetailedDashboardView from "@/components/new-ui/live/DetailedDashboardView";
 
 export type LiveDashboardMode = "connecting" | "no-session" | "live" | "replay" | "ended" | "error";
 
@@ -89,8 +90,7 @@ function NewUiNoSession() {
 	);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function LiveDashboardState({ density: _density = "simple" as UiDensity }: { density?: UiDensity }) {
+export default function LiveDashboardState({ density = "simple" as UiDensity }: { density?: UiDensity }) {
 	const connected = useConnectionStore((store) => store.connected);
 	const hasData = useDataStore((store) => store.state != null);
 	const hasSessionInfo = useDataStore((store) => store.state?.SessionInfo != null);
@@ -101,8 +101,7 @@ export default function LiveDashboardState({ density: _density = "simple" as UiD
 	switch (mode) {
 		case "live":
 		case "replay":
-			// Phase 3 introduces the Detailed composition; Simple covers both densities for now.
-			return <SimpleDashboardView />;
+			return density === "detailed" ? <DetailedDashboardView /> : <SimpleDashboardView />;
 		case "ended":
 			return (
 				<div className="grid h-full place-items-center p-6">

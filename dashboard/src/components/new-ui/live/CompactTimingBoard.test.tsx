@@ -60,7 +60,7 @@ test("compact row omits sectors and car telemetry channels", () => {
 	expect(container.querySelector("[data-car-channels]")).toBeNull();
 });
 
-test("selected row exposes aria-selected", () => {
+test("selected row exposes its pressed state", () => {
 	render(<CompactTimingRow row={row()} selected onSelect={() => {}} />);
-	expect(screen.getByRole("button")).toHaveAttribute("aria-selected", "true");
+	expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "true");
 });

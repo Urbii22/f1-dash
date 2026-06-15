@@ -79,7 +79,7 @@ function TechnicalTimingRow({ row, selected, onSelect }: {
 			data-testid={`technical-row-${row.driverNumber}`}
 			role="button"
 			tabIndex={0}
-			aria-selected={selected}
+			aria-pressed={selected}
 			aria-label={`Position ${row.position ?? "unknown"}, ${row.code}, ${STATUS_LABEL[row.status]}`}
 			onClick={() => onSelect(row.driverNumber)}
 			onKeyDown={(event) => {

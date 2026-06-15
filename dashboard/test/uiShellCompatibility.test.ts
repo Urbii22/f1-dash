@@ -61,4 +61,11 @@ describe("UI shell compatibility", () => {
 			expect(src, `${file} must name the route "${routeName}"`).toContain(`routeName="${routeName}"`);
 		}
 	});
+
+	it("bypasses the compatibility notice on the migrated live dashboard", () => {
+		const src = read(dashboardLayout);
+		expect(src).toContain("usePathname");
+		expect(src).toContain('pathname === "/dashboard"');
+		expect(src).toContain("children : <NewUiCompatibilityBoundary");
+	});
 });

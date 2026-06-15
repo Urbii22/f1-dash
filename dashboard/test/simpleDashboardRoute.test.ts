@@ -15,12 +15,9 @@ describe("dashboard route boundary", () => {
 		expect(source).toContain('simple={<LiveDashboardState density="simple" />}');
 	});
 
-	it("keeps the Detailed branch as an explicit compatibility fallback", () => {
-		const detailedIndex = source.indexOf("detailed={");
-		expect(detailedIndex).toBeGreaterThan(-1);
-		const detailedBranch = source.slice(detailedIndex, detailedIndex + 200);
-		expect(detailedBranch).toContain('NewUiCompatibilityBoundary routeName="Detailed dashboard"');
-		expect(detailedBranch).toContain("<LegacyDashboardPage />");
+	it("renders the Detailed New UI dashboard in the detailed branch", () => {
+		expect(source).toContain('detailed={<LiveDashboardState density="detailed" />}');
+		expect(source).not.toContain("NewUiCompatibilityBoundary");
 	});
 
 	it("keeps the Legacy dashboard components inside LegacyDashboardPage", () => {

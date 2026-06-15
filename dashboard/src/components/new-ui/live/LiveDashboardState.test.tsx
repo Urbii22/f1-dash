@@ -66,6 +66,16 @@ test("renders the Simple dashboard when live", () => {
 	expect(screen.getByTestId("simple-dashboard")).toBeVisible();
 });
 
+test("renders the Detailed dashboard when live", () => {
+	useConnectionStore.setState({ connected: true });
+	useDataStore.setState({
+		state: { SessionInfo: { Name: "Race" } } as unknown as State,
+		carsData: null,
+	});
+	render(<LiveDashboardState density="detailed" />);
+	expect(screen.getByTestId("detailed-dashboard")).toBeVisible();
+});
+
 test("renders ended state when the session has finished", () => {
 	useConnectionStore.setState({ connected: true });
 	useDataStore.setState({

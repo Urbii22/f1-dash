@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, expect, test } from "vitest";
 
 import TechnicalTimingBoard from "@/components/new-ui/live/TechnicalTimingBoard";
@@ -110,6 +110,7 @@ test("missing telemetry renders a dash, never a synthesized zero", () => {
 test("selecting a row updates the shared driver selection", () => {
 	seed();
 	render(<TechnicalTimingBoard />);
-	screen.getByTestId("technical-row-1").click();
+	fireEvent.click(screen.getByTestId("technical-row-1"));
 	expect(useDriverSelectionStore.getState().selectedDriver).toBe("1");
+	expect(screen.getByTestId("technical-row-1")).toHaveAttribute("aria-pressed", "true");
 });
