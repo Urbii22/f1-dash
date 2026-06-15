@@ -87,9 +87,8 @@
 **Files:**
 - Verify all modified files.
 
-- [ ] Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, and `cargo test --workspace`.
-- [ ] Run dashboard immutable install, tests, lint, audit, and production build with local Docker environment values.
-- [ ] Run `pwsh -NoProfile -File scripts/tests/docker-deployment.test.ps1`.
-- [ ] Run `docker compose config`, image builds, stack health probes, persistence restart, and `docker compose down` when Docker is available; otherwise record that limitation explicitly.
-- [ ] Review `git diff --check`, repository status, and the design requirement checklist before completion.
-
+- [x] Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, and `cargo test --workspace`.
+- [x] Run dashboard immutable install, tests, lint, audit, and production build with local Docker environment values.
+- [x] Run `pwsh -NoProfile -File scripts/tests/docker-deployment.test.ps1`.
+- [ ] Run `docker compose config`, image builds, stack health probes, persistence restart, and `docker compose down` when Docker is available; Docker is not installed in the current environment.
+- [x] Review `git diff --check`, repository status, and the design requirement checklist before completion.
