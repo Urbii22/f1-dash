@@ -4,6 +4,7 @@ type DriverSelectionStore = {
 	selectedDriver: string | null;
 	comparedDrivers: string[];
 	setSelectedDriver: (driver: string | null) => void;
+	clearSelectedDriver: () => void;
 	toggleComparedDriver: (driver: string) => void;
 	clearComparedDrivers: () => void;
 };
@@ -12,6 +13,8 @@ export const useDriverSelectionStore = create<DriverSelectionStore>((set) => ({
 	selectedDriver: null,
 	comparedDrivers: [],
 	setSelectedDriver: (selectedDriver) => set({ selectedDriver }),
+	// Clears only the drawer selection; comparisons stay untouched.
+	clearSelectedDriver: () => set({ selectedDriver: null }),
 	toggleComparedDriver: (driver) =>
 		set((state) => {
 			if (state.comparedDrivers.includes(driver)) {
