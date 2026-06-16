@@ -10,7 +10,7 @@ import type { DriverStandingRow, ConstructorStandingRow } from "@/lib/f1data";
 
 const baseProps = {
 	season: 2026,
-	hubMeeting: { meeting: { name: "British Grand Prix", countryName: "Great Britain", start: "", end: "", over: false, sessions: [] }, live: false },
+	hubMeeting: { meeting: { name: "British Grand Prix", countryName: "Great Britain", countryKey: null, start: "", end: "", over: false, sessions: [] }, live: false },
 	nextSession: { kind: "Race", start: new Date(Date.now() + 86400000).toISOString() },
 	drivers: {
 		standings: [

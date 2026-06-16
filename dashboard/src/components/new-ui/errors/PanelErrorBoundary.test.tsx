@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import PanelErrorBoundary from "./PanelErrorBoundary";
 
-function ThrowOnMount() {
+function ThrowOnMount(): never {
 	throw new Error("panel crash");
 }
 

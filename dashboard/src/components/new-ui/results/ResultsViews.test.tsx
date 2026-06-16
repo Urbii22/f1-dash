@@ -72,8 +72,8 @@ const mockRace: RaceResult = {
 };
 
 const mockItems = [
-	{ round: { round: 10, raceName: "British Grand Prix", date: "2026-07-05", circuitName: "Silverstone", country: "Great Britain" }, result: mockRace },
-	{ round: { round: 11, raceName: "Hungarian Grand Prix", date: "2026-07-19", circuitName: "Hungaroring", country: "Hungary" }, result: null },
+	{ round: { season: "2026", round: 10, raceName: "British Grand Prix", date: "2026-07-05", time: null, circuitName: "Silverstone", country: "Great Britain", locality: "Silverstone" }, result: mockRace },
+	{ round: { season: "2026", round: 11, raceName: "Hungarian Grand Prix", date: "2026-07-19", time: null, circuitName: "Hungaroring", country: "Hungary", locality: "Budapest" }, result: null },
 ];
 
 test("SimpleResultsListView shows route header and rounds", () => {

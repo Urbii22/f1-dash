@@ -15,6 +15,7 @@ const pastDate = new Date(Date.now() - 86400000).toISOString();
 const mockNext: Round = {
 	name: "British Grand Prix",
 	countryName: "Great Britain",
+	countryKey: null,
 	start: futureDate,
 	end: new Date(Date.now() + 86400000 * 12).toISOString(),
 	over: false,
@@ -26,7 +27,7 @@ const mockNext: Round = {
 
 const mockSchedule: Round[] = [
 	{ ...mockNext },
-	{ name: "Bahrain Grand Prix", countryName: "Bahrain", start: pastDate, end: pastDate, over: true, sessions: [] },
+	{ name: "Bahrain Grand Prix", countryName: "Bahrain", countryKey: null, start: pastDate, end: pastDate, over: true, sessions: [] },
 ];
 
 test("Simple shows Schedule route header and next event", () => {

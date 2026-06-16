@@ -12,7 +12,6 @@ import {
 	type StandingsResponse,
 	type DriverStandingRow,
 	type ConstructorStandingRow,
-	type RaceResult,
 	type ResultRow,
 } from "@/lib/f1data";
 import { classifyRound, findArchiveSession, latestCompletedRound, type RoundWithResult } from "@/lib/seasonResults";
