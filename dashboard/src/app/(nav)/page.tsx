@@ -9,10 +9,19 @@ import {
 	getRoundResults,
 	getSeason,
 	podium,
+	type StandingsResponse,
+	type DriverStandingRow,
+	type ConstructorStandingRow,
+	type RaceResult,
+	type ResultRow,
 } from "@/lib/f1data";
-import { classifyRound, findArchiveSession, latestCompletedRound } from "@/lib/seasonResults";
+import { classifyRound, findArchiveSession, latestCompletedRound, type RoundWithResult } from "@/lib/seasonResults";
 import { getSchedule } from "@/lib/schedule";
-import { matchMeetingToRound, selectHubMeeting } from "@/lib/weekendHub";
+import { matchMeetingToRound, selectHubMeeting, type HubMeeting } from "@/lib/weekendHub";
+import type { ArchiveSession } from "@/types/archive.type";
+import type { Session } from "@/types/schedule.type";
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import { SimpleHomeView, DetailedHomeView } from "@/components/new-ui/home/HomeViews";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +49,94 @@ export default async function Home() {
 		.filter((session) => Date.parse(session.start) > now.getTime())
 		.sort((a, b) => Date.parse(a.start) - Date.parse(b.start))[0];
 
+	const homeProps = {
+		season,
+		hubMeeting,
+		nextSession: nextSession ?? null,
+		drivers,
+		constructors,
+		roundResults,
+		latest: latest ?? null,
+		meetingRecordings,
+		liveRound: liveRound ?? null,
+	};
+
+	return (
+		<UiModeBoundary
+			legacy={<LegacyHome {...homeProps} now={now} />}
+			simple={<SimpleHomeView {...homeProps} />}
+			detailed={<DetailedHomeView {...homeProps} />}
+		/>
+	);
+}
+
+function HubLink({ href, label, primary = false }: { href: string; label: string; primary?: boolean }) {
+	return (
+		<Link
+			href={href}
+			className={
+				primary
+					? "rounded-md bg-cyan-300 px-4 py-2 font-bold text-black"
+					: "data-chip rounded-md px-4 py-2 font-bold text-cyan-200"
+			}
+		>
+			{label}
+		</Link>
+	);
+}
+
+function LeaderList({
+	title,
+	rows,
+}: {
+	title: string;
+	rows: Array<{ key: string; name: string; points: number | null; href?: string }>;
+}) {
+	return (
+		<div className="mt-3">
+			<p className="mb-1 font-mono text-[0.65rem] text-zinc-500 uppercase">{title}</p>
+			{rows.map((row, index) => (
+				<div key={row.key} className="flex items-center justify-between border-t border-cyan-300/10 py-2">
+					<span>
+						<span className="mr-2 font-mono text-cyan-300">{index + 1}</span>
+						{row.href ? (
+							<Link href={row.href} className="hover:text-cyan-200">
+								{row.name}
+							</Link>
+						) : (
+							row.name
+						)}
+					</span>
+					<span className="font-mono text-sm">{row.points ?? 0} pts</span>
+				</div>
+			))}
+		</div>
+	);
+}
+
+function LegacyHome({
+	season,
+	hubMeeting,
+	nextSession,
+	drivers,
+	constructors,
+	roundResults,
+	latest,
+	meetingRecordings,
+	liveRound,
+	now,
+}: {
+	season: number;
+	hubMeeting: HubMeeting;
+	nextSession: Session | null;
+	drivers: StandingsResponse<DriverStandingRow> | null;
+	constructors: StandingsResponse<ConstructorStandingRow> | null;
+	roundResults: Array<{ round: { round: number; raceName: string; date: string }; result: RaceResult | null }>;
+	latest: RoundWithResult | null;
+	meetingRecordings: ArchiveSession[];
+	liveRound: number | null;
+	now: Date;
+}) {
 	return (
 		<div className="flex flex-col gap-4 py-4">
 			{hubMeeting.live && (
@@ -140,7 +237,7 @@ export default async function Home() {
 						</div>
 						<LeaderList
 							title="Drivers"
-							rows={(drivers?.standings ?? []).slice(0, 3).map((row) => ({
+							rows={(drivers?.standings ?? []).slice(0, 3).map((row: DriverStandingRow) => ({
 								key: row.driver.driverId ?? String(row.position),
 								name: driverFullName(row.driver),
 								points: row.points,
@@ -149,7 +246,7 @@ export default async function Home() {
 						/>
 						<LeaderList
 							title="Constructors"
-							rows={(constructors?.standings ?? []).slice(0, 3).map((row) => ({
+							rows={(constructors?.standings ?? []).slice(0, 3).map((row: ConstructorStandingRow) => ({
 								key: row.constructorId ?? String(row.position),
 								name: row.name ?? "-",
 								points: row.points,
@@ -161,7 +258,7 @@ export default async function Home() {
 						<h2 className="text-xl font-black">{latest?.round.raceName ?? "No completed race"}</h2>
 						{latest?.result && (
 							<ol className="mt-3 flex flex-col gap-2">
-								{podium(latest.result.results).map((row) => (
+								{podium(latest.result.results).map((row: ResultRow) => (
 									<li
 										key={row.driver.driverId ?? row.position}
 										className="data-chip flex items-center justify-between rounded-md p-2"
@@ -213,50 +310,6 @@ export default async function Home() {
 					</p>
 				)}
 			</section>
-		</div>
-	);
-}
-
-function HubLink({ href, label, primary = false }: { href: string; label: string; primary?: boolean }) {
-	return (
-		<Link
-			href={href}
-			className={
-				primary
-					? "rounded-md bg-cyan-300 px-4 py-2 font-bold text-black"
-					: "data-chip rounded-md px-4 py-2 font-bold text-cyan-200"
-			}
-		>
-			{label}
-		</Link>
-	);
-}
-
-function LeaderList({
-	title,
-	rows,
-}: {
-	title: string;
-	rows: Array<{ key: string; name: string; points: number | null; href?: string }>;
-}) {
-	return (
-		<div className="mt-3">
-			<p className="mb-1 font-mono text-[0.65rem] text-zinc-500 uppercase">{title}</p>
-			{rows.map((row, index) => (
-				<div key={row.key} className="flex items-center justify-between border-t border-cyan-300/10 py-2">
-					<span>
-						<span className="mr-2 font-mono text-cyan-300">{index + 1}</span>
-						{row.href ? (
-							<Link href={row.href} className="hover:text-cyan-200">
-								{row.name}
-							</Link>
-						) : (
-							row.name
-						)}
-					</span>
-					<span className="font-mono text-sm">{row.points ?? 0} pts</span>
-				</div>
-			))}
 		</div>
 	);
 }
