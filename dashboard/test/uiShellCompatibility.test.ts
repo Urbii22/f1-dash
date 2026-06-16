@@ -54,12 +54,10 @@ describe("UI shell compatibility", () => {
 		}
 	});
 
-	it("wraps unmigrated route content in the compatibility boundary", () => {
-		for (const { file, routeName } of migratedLayouts) {
-			const src = read(file);
-			expect(src, `${file} must use NewUiCompatibilityBoundary`).toContain("NewUiCompatibilityBoundary");
-			expect(src, `${file} must name the route "${routeName}"`).toContain(`routeName="${routeName}"`);
-		}
+	it("routes inside the dashboard layout still use the compatibility boundary for unmigrated paths", () => {
+		const src = read(dashboardLayout);
+		expect(src, "dashboard layout must use NewUiCompatibilityBoundary for unlisted routes").toContain("NewUiCompatibilityBoundary");
+		expect(src, "dashboard layout must check against newUiNativeRoutes").toContain("newUiNativeRoutes.has(pathname)");
 	});
 
 	it("bypasses the compatibility notice on the migrated live dashboard", () => {
@@ -72,5 +70,6 @@ describe("UI shell compatibility", () => {
 		expect(src).toContain('"/dashboard/standings"');
 		expect(src).toContain('"/dashboard/weather"');
 		expect(src).toContain('"/dashboard/track-map"');
+		expect(src).toContain('"/dashboard/settings"');
 	});
 });

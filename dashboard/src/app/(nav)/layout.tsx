@@ -8,7 +8,6 @@ import coffeeIcon from "public/icons/bmc-logo.svg";
 import Footer from "@/components/Footer";
 
 import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
-import NewUiCompatibilityBoundary from "@/components/new-ui/NewUiCompatibilityBoundary";
 import NewUiPublicShell from "@/components/new-ui/shell/NewUiPublicShell";
 
 type Props = {
@@ -19,16 +18,8 @@ export default function Layout({ children }: Props) {
 	return (
 		<UiModeBoundary
 			legacy={<LegacyNavShell>{children}</LegacyNavShell>}
-			simple={
-				<NewUiPublicShell>
-					<NewUiCompatibilityBoundary routeName="Pages">{children}</NewUiCompatibilityBoundary>
-				</NewUiPublicShell>
-			}
-			detailed={
-				<NewUiPublicShell>
-					<NewUiCompatibilityBoundary routeName="Pages">{children}</NewUiCompatibilityBoundary>
-				</NewUiPublicShell>
-			}
+			simple={<NewUiPublicShell>{children}</NewUiPublicShell>}
+			detailed={<NewUiPublicShell>{children}</NewUiPublicShell>}
 		/>
 	);
 }

@@ -36,13 +36,13 @@ describe("qualifying page integration", () => {
 
 	it("provides qualifying-specific display settings", () => {
 		const store = read("stores/useSettingsStore.ts");
-		const page = read("app/dashboard/settings/page.tsx");
+		const legacySettings = read("components/settings/LegacySettingsPage.tsx");
 		const toggle = read("components/ui/Toggle.tsx");
 
 		expect(store).toContain("qualiShowTheoreticalBest: false");
 		expect(store).toContain("qualiShowSpeedTrap: true");
-		expect(page).toContain("Show Theoretical Best Lap in Qualifying");
-		expect(page).toContain("Show Speed Trap in Qualifying");
+		expect(legacySettings).toContain("Show Theoretical Best Lap in Qualifying");
+		expect(legacySettings).toContain("Show Speed Trap in Qualifying");
 		expect(toggle).toContain("aria-label={label}");
 	});
 

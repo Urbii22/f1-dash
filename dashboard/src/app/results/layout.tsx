@@ -2,23 +2,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
-import NewUiCompatibilityBoundary from "@/components/new-ui/NewUiCompatibilityBoundary";
 import NewUiPublicShell from "@/components/new-ui/shell/NewUiPublicShell";
 
 export default function ResultsLayout({ children }: { children: ReactNode }) {
 	return (
 		<UiModeBoundary
 			legacy={<LegacyResultsShell>{children}</LegacyResultsShell>}
-			simple={
-				<NewUiPublicShell>
-					<NewUiCompatibilityBoundary routeName="Results">{children}</NewUiCompatibilityBoundary>
-				</NewUiPublicShell>
-			}
-			detailed={
-				<NewUiPublicShell>
-					<NewUiCompatibilityBoundary routeName="Results">{children}</NewUiCompatibilityBoundary>
-				</NewUiPublicShell>
-			}
+			simple={<NewUiPublicShell>{children}</NewUiPublicShell>}
+			detailed={<NewUiPublicShell>{children}</NewUiPublicShell>}
 		/>
 	);
 }

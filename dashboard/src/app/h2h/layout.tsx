@@ -2,23 +2,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
-import NewUiCompatibilityBoundary from "@/components/new-ui/NewUiCompatibilityBoundary";
 import NewUiPublicShell from "@/components/new-ui/shell/NewUiPublicShell";
 
 export default function H2HLayout({ children }: { children: ReactNode }) {
 	return (
 		<UiModeBoundary
 			legacy={<LegacyH2HShell>{children}</LegacyH2HShell>}
-			simple={
-				<NewUiPublicShell>
-					<NewUiCompatibilityBoundary routeName="Head to Head">{children}</NewUiCompatibilityBoundary>
-				</NewUiPublicShell>
-			}
-			detailed={
-				<NewUiPublicShell>
-					<NewUiCompatibilityBoundary routeName="Head to Head">{children}</NewUiCompatibilityBoundary>
-				</NewUiPublicShell>
-			}
+			simple={<NewUiPublicShell>{children}</NewUiPublicShell>}
+			detailed={<NewUiPublicShell>{children}</NewUiPublicShell>}
 		/>
 	);
 }

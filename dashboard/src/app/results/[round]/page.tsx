@@ -6,6 +6,8 @@ import RaceResultTable from "@/components/results/RaceResultTable";
 import { getArchiveSessions } from "@/lib/archive";
 import { driverFullName, getQualifying, getResults } from "@/lib/f1data";
 import { findArchiveSession } from "@/lib/seasonResults";
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import { SimpleRoundResultView, DetailedRoundResultView } from "@/components/new-ui/results/ResultsViews";
 
 export default async function RoundPage({
 	params,
@@ -22,7 +24,8 @@ export default async function RoundPage({
 		getQualifying(round, season),
 		getArchiveSessions(season),
 	]);
-	if (!race)
+
+	if (!race) {
 		return (
 			<div className="telemetry-panel rounded-lg p-8 text-center">
 				<h1 className="text-2xl font-black">Result unavailable</h1>
@@ -31,8 +34,33 @@ export default async function RoundPage({
 				</Link>
 			</div>
 		);
+	}
+
 	const recording = findArchiveSession(race, sessions);
 	const fastest = race.results.find((row) => row.fastestLapRank === "1");
+
+	return (
+		<UiModeBoundary
+			legacy={<LegacyRoundContent race={race} qualifying={qualifying} season={season} recording={recording ?? null} fastest={fastest} />}
+			simple={<SimpleRoundResultView race={race} qualifying={qualifying ?? null} season={season} recording={recording ?? null} />}
+			detailed={<DetailedRoundResultView race={race} qualifying={qualifying ?? null} season={season} recording={recording ?? null} />}
+		/>
+	);
+}
+
+function LegacyRoundContent({
+	race,
+	qualifying,
+	season,
+	recording,
+	fastest,
+}: {
+	race: NonNullable<Awaited<ReturnType<typeof getResults>>>;
+	qualifying: Awaited<ReturnType<typeof getQualifying>>;
+	season: number;
+	recording: Awaited<ReturnType<typeof getArchiveSessions>>[number] | null;
+	fastest: NonNullable<Awaited<ReturnType<typeof getResults>>>["results"][number] | undefined;
+}) {
 	return (
 		<div className="flex flex-col gap-4">
 			<section className="telemetry-panel rounded-lg p-5">
@@ -63,28 +91,22 @@ export default async function RoundPage({
 					</div>
 				)}
 			</section>
-			<Section title="Race result">
+			<section className="telemetry-panel rounded-lg p-4">
+				<h2 className="mb-3 text-xl font-black">Race result</h2>
 				<RaceResultTable rows={race.results} season={season} />
-			</Section>
-			<Section title="Starting grid">
+			</section>
+			<section className="telemetry-panel rounded-lg p-4">
+				<h2 className="mb-3 text-xl font-black">Starting grid</h2>
 				<GridList rows={race.results} />
-			</Section>
-			<Section title="Qualifying">
+			</section>
+			<section className="telemetry-panel rounded-lg p-4">
+				<h2 className="mb-3 text-xl font-black">Qualifying</h2>
 				{qualifying?.results.length ? (
 					<QualiResultTable rows={qualifying.results} />
 				) : (
 					<p className="text-zinc-500">Qualifying result unavailable.</p>
 				)}
-			</Section>
+			</section>
 		</div>
-	);
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-	return (
-		<section className="telemetry-panel rounded-lg p-4">
-			<h2 className="mb-3 text-xl font-black">{title}</h2>
-			{children}
-		</section>
 	);
 }

@@ -2,23 +2,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
-import NewUiCompatibilityBoundary from "@/components/new-ui/NewUiCompatibilityBoundary";
 import NewUiPublicShell from "@/components/new-ui/shell/NewUiPublicShell";
 
 export default function DriverLayout({ children }: { children: ReactNode }) {
 	return (
 		<UiModeBoundary
 			legacy={<LegacyDriverShell>{children}</LegacyDriverShell>}
-			simple={
-				<NewUiPublicShell>
-					<NewUiCompatibilityBoundary routeName="Driver">{children}</NewUiCompatibilityBoundary>
-				</NewUiPublicShell>
-			}
-			detailed={
-				<NewUiPublicShell>
-					<NewUiCompatibilityBoundary routeName="Driver">{children}</NewUiCompatibilityBoundary>
-				</NewUiPublicShell>
-			}
+			simple={<NewUiPublicShell>{children}</NewUiPublicShell>}
+			detailed={<NewUiPublicShell>{children}</NewUiPublicShell>}
 		/>
 	);
 }
