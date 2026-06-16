@@ -29,6 +29,15 @@ docker compose down
 
 Production HTTPS is an optional overlay once you own a domain. See [SETUP.md](SETUP.md#production-with-caddy) for the Caddy configuration and required environment values.
 
+## Interface
+
+The dashboard supports two interface modes switchable from the global control in the top-right corner:
+
+- **Legacy** — original interface (default).
+- **New UI** — redesigned interface with two density levels: **Simple** (broadcast-oriented) and **Detailed** (pit-wall workstation with resizable panels and presets).
+
+The choice persists across reloads. See [docs/ui-redesign-qa.md](docs/ui-redesign-qa.md) for the full QA guide and keyboard controls.
+
 ## Contributing
 
 I really appreciate your interest in contributing to this project. I recommend checking out the GitHub issues marked as "Good First Issue" to get started. Also, please read [`CONTRIBUTING.md`](CONTRIBUTING.md) to learn how to contribute and set up f1-dash on your local machine for development.
