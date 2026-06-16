@@ -11,6 +11,7 @@ type Option<T> = {
 
 type Props<T> = {
 	placeholder?: string;
+	label?: string;
 
 	options: Option<T>[];
 
@@ -18,8 +19,9 @@ type Props<T> = {
 	setSelected: (value: T[]) => void;
 };
 
-export default function SelectMultiple<T>({ placeholder, options, selected, setSelected }: Props<T>) {
+export default function SelectMultiple<T>({ placeholder, label, options, selected, setSelected }: Props<T>) {
 	const [query, setQuery] = useState("");
+	const accessibleLabel = label ?? placeholder ?? "Select options";
 
 	const filteredOptions =
 		query === "" ? options : options.filter((option) => option.label.toLowerCase().includes(query.toLowerCase()));
@@ -28,6 +30,7 @@ export default function SelectMultiple<T>({ placeholder, options, selected, setS
 		<Combobox value={selected} onChange={(value) => setSelected(value)} onClose={() => setQuery("")} multiple>
 			<div className="relative">
 				<ComboboxInput
+					aria-label={accessibleLabel}
 					placeholder={placeholder}
 					className={clsx(
 						"w-full rounded-lg border-none bg-zinc-900 py-1.5 pr-8 pl-3 text-sm/6 text-white",
@@ -36,7 +39,7 @@ export default function SelectMultiple<T>({ placeholder, options, selected, setS
 					displayValue={(option: Option<T> | null) => option?.label ?? ""}
 					onChange={(event) => setQuery(event.target.value)}
 				/>
-				<ComboboxButton className="group absolute inset-y-0 right-0 px-2.5">
+				<ComboboxButton aria-label={accessibleLabel} className="group absolute inset-y-0 right-0 px-2.5">
 					{/* <ChevronDownIcon className="size-4 fill-white/60 group-data-hover:fill-white" /> */}
 				</ComboboxButton>
 			</div>

@@ -131,7 +131,7 @@ function LegacyHome({
 	nextSession: Session | null;
 	drivers: StandingsResponse<DriverStandingRow> | null;
 	constructors: StandingsResponse<ConstructorStandingRow> | null;
-	roundResults: Array<{ round: { round: number; raceName: string; date: string }; result: RaceResult | null }>;
+	roundResults: RoundWithResult[];
 	latest: RoundWithResult | null;
 	meetingRecordings: ArchiveSession[];
 	liveRound: number | null;

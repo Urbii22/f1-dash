@@ -66,7 +66,7 @@ function buildDriverList(): State["DriverList"] {
 }
 
 function buildTimingData(): State["TimingData"] {
-	const lines: State["TimingData"]["Lines"] = {};
+	const lines: NonNullable<State["TimingData"]>["Lines"] = {};
 	for (let i = 0; i < DRIVERS.length; i++) {
 		const d = DRIVERS[i];
 		const pos = i + 1;
@@ -89,7 +89,7 @@ function buildTimingData(): State["TimingData"] {
 				FL: { Value: "295", Status: 0, OverallFastest: false, PersonalFastest: false },
 				ST: { Value: "320", Status: 0, OverallFastest: false, PersonalFastest: false },
 			},
-			BestLapTime: { Value: `1:2${(7 + i * 0.1).toFixed(3)}`, Position: pos, Lap: 20, Stats: [] },
+			BestLapTime: { Value: `1:2${(7 + i * 0.1).toFixed(3)}`, Position: pos },
 			LastLapTime: {
 				Value: `1:2${(8 + i * 0.1).toFixed(3)}`,
 				Status: 2048,
@@ -106,7 +106,7 @@ function buildTimingData(): State["TimingData"] {
 }
 
 function buildTimingAppData(): State["TimingAppData"] {
-	const lines: State["TimingAppData"]["Lines"] = {};
+	const lines: NonNullable<State["TimingAppData"]>["Lines"] = {};
 	const compounds = ["SOFT", "MEDIUM", "HARD"] as const;
 	for (let i = 0; i < DRIVERS.length; i++) {
 		const d = DRIVERS[i];

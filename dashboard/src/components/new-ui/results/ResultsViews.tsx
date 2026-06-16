@@ -11,18 +11,10 @@ import RaceResultTable from "@/components/results/RaceResultTable";
 import QualiResultTable from "@/components/results/QualiResultTable";
 import GridList from "@/components/results/GridList";
 import type { RaceResult, QualiResult, DriverRef } from "@/lib/f1data";
+import type { RoundWithResult } from "@/lib/seasonResults";
 import type { ArchiveSession } from "@/types/archive.type";
 
-type RoundResultItem = {
-	round: {
-		round: number | null;
-		raceName: string | null;
-		date: string | null;
-		circuitName: string | null;
-		country: string | null;
-	};
-	result: RaceResult | null;
-};
+type RoundResultItem = RoundWithResult;
 
 function driverName(driver: DriverRef): string {
 	return [driver.givenName, driver.familyName].filter(Boolean).join(" ") || driver.code || "Unknown";

@@ -8,9 +8,9 @@ export default defineConfig({
 		baseURL: "http://127.0.0.1:3100",
 		trace: "retain-on-failure",
 		screenshot: "only-on-failure",
+		...devices["Desktop Chrome"],
 		viewport: { width: 1920, height: 1080 },
 		colorScheme: "dark",
-		...devices["Desktop Chrome"],
 	},
 	webServer: {
 		command: "corepack yarn dev --port 3100",

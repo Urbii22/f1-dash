@@ -32,31 +32,31 @@ function AppearancePanel() {
 	return (
 		<Panel title="Appearance" eyebrow="Visual options" level="primary">
 			<SettingRow label="Car metrics" description="RPM, gear, and speed in the timing board">
-				<Toggle enabled={settings.carMetrics} setEnabled={(v) => settings.setCarMetrics(v)} />
+				<Toggle label="Car metrics" enabled={settings.carMetrics} setEnabled={(v) => settings.setCarMetrics(v)} />
 			</SettingRow>
 			<SettingRow label="Corner numbers" description="Annotate corners on the track map">
-				<Toggle enabled={settings.showCornerNumbers} setEnabled={(v) => settings.setShowCornerNumbers(v)} />
+				<Toggle label="Corner numbers" enabled={settings.showCornerNumbers} setEnabled={(v) => settings.setShowCornerNumbers(v)} />
 			</SettingRow>
 			<SettingRow label="Driver table header">
-				<Toggle enabled={settings.tableHeaders} setEnabled={(v) => settings.setTableHeaders(v)} />
+				<Toggle label="Driver table header" enabled={settings.tableHeaders} setEnabled={(v) => settings.setTableHeaders(v)} />
 			</SettingRow>
 			<SettingRow label="Best sectors" description="Show each driver's best sector times">
-				<Toggle enabled={settings.showBestSectors} setEnabled={(v) => settings.setShowBestSectors(v)} />
+				<Toggle label="Best sectors" enabled={settings.showBestSectors} setEnabled={(v) => settings.setShowBestSectors(v)} />
 			</SettingRow>
 			<SettingRow label="Mini sectors">
-				<Toggle enabled={settings.showMiniSectors} setEnabled={(v) => settings.setShowMiniSectors(v)} />
+				<Toggle label="Mini sectors" enabled={settings.showMiniSectors} setEnabled={(v) => settings.setShowMiniSectors(v)} />
 			</SettingRow>
 			<SettingRow label="Theoretical best in qualifying">
-				<Toggle enabled={settings.qualiShowTheoreticalBest} setEnabled={(v) => settings.setQualiShowTheoreticalBest(v)} />
+				<Toggle label="Theoretical best in qualifying" enabled={settings.qualiShowTheoreticalBest} setEnabled={(v) => settings.setQualiShowTheoreticalBest(v)} />
 			</SettingRow>
 			<SettingRow label="Speed trap in qualifying">
-				<Toggle enabled={settings.qualiShowSpeedTrap} setEnabled={(v) => settings.setQualiShowSpeedTrap(v)} />
+				<Toggle label="Speed trap in qualifying" enabled={settings.qualiShowSpeedTrap} setEnabled={(v) => settings.setQualiShowSpeedTrap(v)} />
 			</SettingRow>
 			<SettingRow label="OLED mode" description="Pure black background">
-				<Toggle enabled={settings.oledMode} setEnabled={(v) => settings.setOledMode(v)} />
+				<Toggle label="OLED mode" enabled={settings.oledMode} setEnabled={(v) => settings.setOledMode(v)} />
 			</SettingRow>
 			<SettingRow label="Safety car colors">
-				<Toggle enabled={settings.useSafetyCarColors} setEnabled={(v) => settings.setUseSafetyCarColors(v)} />
+				<Toggle label="Safety car colors" enabled={settings.useSafetyCarColors} setEnabled={(v) => settings.setUseSafetyCarColors(v)} />
 			</SettingRow>
 		</Panel>
 	);
@@ -67,7 +67,7 @@ function RaceControlPanel() {
 	return (
 		<Panel title="Race control" eyebrow="Audio and alerts">
 			<SettingRow label="Chime on Race Control message">
-				<Toggle enabled={settings.raceControlChime} setEnabled={(v) => settings.setRaceControlChime(v)} />
+				<Toggle label="Chime on Race Control message" enabled={settings.raceControlChime} setEnabled={(v) => settings.setRaceControlChime(v)} />
 			</SettingRow>
 			{settings.raceControlChime && (
 				<div className="flex items-center gap-3 py-3">

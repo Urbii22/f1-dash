@@ -11,25 +11,25 @@ async function runAxe(page: Parameters<typeof AxeBuilder>[0]["page"]) {
 test.describe("Axe WCAG A/AA: New UI fixture states", () => {
 	test("simple-race: zero violations", async ({ page }) => {
 		await page.goto("/ui-fixtures/simple-race");
-		await page.waitForLoadState("networkidle");
+		await page.locator("[data-ui-ready='true']").waitFor({ state: "attached" });
 		expect(await runAxe(page)).toEqual([]);
 	});
 
 	test("detailed-race: zero violations", async ({ page }) => {
 		await page.goto("/ui-fixtures/detailed-race");
-		await page.waitForLoadState("networkidle");
+		await page.locator("[data-ui-ready='true']").waitFor({ state: "attached" });
 		expect(await runAxe(page)).toEqual([]);
 	});
 
 	test("no-session: zero violations", async ({ page }) => {
 		await page.goto("/ui-fixtures/no-session");
-		await page.waitForLoadState("networkidle");
+		await page.locator("[data-ui-ready='true']").waitFor({ state: "attached" });
 		expect(await runAxe(page)).toEqual([]);
 	});
 
 	test("qualifying fixture: zero violations", async ({ page }) => {
 		await page.goto("/ui-fixtures/qualifying");
-		await page.waitForLoadState("networkidle");
+		await page.locator("[data-ui-ready='true']").waitFor({ state: "attached" });
 		expect(await runAxe(page)).toEqual([]);
 	});
 
@@ -49,7 +49,7 @@ test.describe("Axe WCAG A/AA: New UI fixture states", () => {
 test.describe("Keyboard traversal", () => {
 	test("Tab reaches generation toggle", async ({ page }) => {
 		await page.goto("/ui-fixtures/simple-race");
-		await page.waitForLoadState("networkidle");
+		await page.locator("[data-ui-ready='true']").waitFor({ state: "attached" });
 		// Tab through until we find a focused element matching generation control
 		for (let i = 0; i < 20; i++) {
 			await page.keyboard.press("Tab");

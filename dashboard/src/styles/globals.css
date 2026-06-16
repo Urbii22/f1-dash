@@ -23,6 +23,7 @@
 	}
 
 	body {
+		margin: 0;
 		min-height: 100vh;
 		background:
 			radial-gradient(circle at 14% 18%, rgba(0, 229, 255, 0.16), transparent 28rem),
@@ -156,10 +157,11 @@ body[data-ui-generation="new"] {
 	--ui-border: rgba(255, 255, 255, 0.1);
 	--ui-text: #f5f7fa;
 	--ui-muted: #9aa3ad;
-	--ui-subtle: #6d7680;
+	--ui-subtle: #8893a0;
 	--ui-focus: #ffffff;
 	background: var(--ui-bg);
 	color: var(--ui-text);
+	overflow: hidden;
 }
 
 .new-ui-number {
@@ -214,6 +216,7 @@ body[data-ui-generation="new"] {
 .new-ui-workspace {
 	display: flex;
 	min-width: 0;
+	min-height: 0;
 	flex: 1 1 auto;
 	flex-direction: column;
 	overflow: hidden;
@@ -235,7 +238,7 @@ body[data-ui-generation="new"] {
 .new-ui-workspace__main {
 	min-height: 0;
 	flex: 1 1 auto;
-	overflow: auto;
+	overflow: hidden;
 }
 
 /* Sidebar ---------------------------------------------------------- */

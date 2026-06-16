@@ -65,6 +65,7 @@ export default function FavoriteDrivers() {
 
 			<div className="w-80">
 				<SelectMultiple
+					label="Favorite drivers"
 					placeholder="Select favorite drivers"
 					options={drivers ? drivers.map((d) => ({ label: d.FullName, value: d.RacingNumber })) : []}
 					selected={favoriteDrivers}

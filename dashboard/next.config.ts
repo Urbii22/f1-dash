@@ -28,6 +28,7 @@ const frameDisableHeaders = [
 const config: NextConfig = {
 	output,
 	compress,
+	allowedDevOrigins: ["127.0.0.1"],
 	env: {
 		version: pack.version,
 	},

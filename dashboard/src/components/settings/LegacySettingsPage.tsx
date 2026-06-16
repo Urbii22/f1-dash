@@ -24,27 +24,27 @@ export default function LegacySettingsPage() {
 			<h2 className="my-4 text-2xl">Visual</h2>
 
 			<div className="flex gap-2">
-				<Toggle enabled={settings.carMetrics} setEnabled={(v) => settings.setCarMetrics(v)} />
+				<Toggle label="Show Car Metrics" enabled={settings.carMetrics} setEnabled={(v) => settings.setCarMetrics(v)} />
 				<p className="text-zinc-500">Show Car Metrics (RPM, Gear, Speed)</p>
 			</div>
 
 			<div className="flex gap-2">
-				<Toggle enabled={settings.showCornerNumbers} setEnabled={(v) => settings.setShowCornerNumbers(v)} />
+				<Toggle label="Show Corner Numbers on Track Map" enabled={settings.showCornerNumbers} setEnabled={(v) => settings.setShowCornerNumbers(v)} />
 				<p className="text-zinc-500">Show Corner Numbers on Track Map</p>
 			</div>
 
 			<div className="flex gap-2">
-				<Toggle enabled={settings.tableHeaders} setEnabled={(v) => settings.setTableHeaders(v)} />
+				<Toggle label="Show Driver Table Header" enabled={settings.tableHeaders} setEnabled={(v) => settings.setTableHeaders(v)} />
 				<p className="text-zinc-500">Show Driver Table Header</p>
 			</div>
 
 			<div className="flex gap-2">
-				<Toggle enabled={settings.showBestSectors} setEnabled={(v) => settings.setShowBestSectors(v)} />
+				<Toggle label="Show Drivers Best Sectors" enabled={settings.showBestSectors} setEnabled={(v) => settings.setShowBestSectors(v)} />
 				<p className="text-zinc-500">Show Drivers Best Sectors</p>
 			</div>
 
 			<div className="flex gap-2">
-				<Toggle enabled={settings.showMiniSectors} setEnabled={(v) => settings.setShowMiniSectors(v)} />
+				<Toggle label="Show Drivers Mini Sectors" enabled={settings.showMiniSectors} setEnabled={(v) => settings.setShowMiniSectors(v)} />
 				<p className="text-zinc-500">Show Drivers Mini Sectors</p>
 			</div>
 
@@ -67,19 +67,19 @@ export default function LegacySettingsPage() {
 			</div>
 
 			<div className="flex gap-2">
-				<Toggle enabled={settings.oledMode} setEnabled={(v) => settings.setOledMode(v)} />
+				<Toggle label="OLED Mode" enabled={settings.oledMode} setEnabled={(v) => settings.setOledMode(v)} />
 				<p className="text-zinc-500">OLED Mode (Pure Black Background)</p>
 			</div>
 
 			<div className="flex gap-2">
-				<Toggle enabled={settings.useSafetyCarColors} setEnabled={(v) => settings.setUseSafetyCarColors(v)} />
+				<Toggle label="Use Safety Car Colors" enabled={settings.useSafetyCarColors} setEnabled={(v) => settings.setUseSafetyCarColors(v)} />
 				<p className="text-zinc-500">Use Safety Car Colors</p>
 			</div>
 
 			<h2 className="my-4 text-2xl">Race Control</h2>
 
 			<div className="flex gap-2">
-				<Toggle enabled={settings.raceControlChime} setEnabled={(v) => settings.setRaceControlChime(v)} />
+				<Toggle label="Play Chime on new Race Control Message" enabled={settings.raceControlChime} setEnabled={(v) => settings.setRaceControlChime(v)} />
 				<p className="text-zinc-500">Play Chime on new Race Control Message</p>
 			</div>
 

@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import UiFixtureHarness from "@/components/new-ui/fixtures/UiFixtureHarness";
 import { buildUiFixture, type UiFixtureScenario } from "@/lib/fixtures/uiFixtures";
-import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
 import LiveDashboardState from "@/components/new-ui/live/LiveDashboardState";
 
 const VALID_SCENARIOS: Set<string> = new Set([
@@ -31,11 +30,13 @@ export default async function UiFixturePage({ params }: { params: Promise<{ scen
 	return (
 		<UiFixtureHarness fixture={fixture}>
 			<div data-ui-generation={fixture.generation} data-ui-density={fixture.density}>
-				<UiModeBoundary
-					legacy={<div data-testid="legacy-shell">Legacy shell (fixture)</div>}
-					simple={<LiveDashboardState density="simple" />}
-					detailed={<LiveDashboardState density="detailed" />}
-				/>
+				{fixture.generation === "legacy" ? (
+					<div data-testid="legacy-shell">Legacy shell (fixture)</div>
+				) : fixture.density === "detailed" ? (
+					<LiveDashboardState density="detailed" />
+				) : (
+					<LiveDashboardState density="simple" />
+				)}
 			</div>
 		</UiFixtureHarness>
 	);
