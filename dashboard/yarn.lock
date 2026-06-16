@@ -59,6 +59,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@axe-core/playwright@npm:^4.11.3":
+  version: 4.11.3
+  resolution: "@axe-core/playwright@npm:4.11.3"
+  dependencies:
+    axe-core: "npm:~4.11.4"
+  peerDependencies:
+    playwright-core: ">= 1.0.0"
+  checksum: 10c0/da1854726dbc461a71ac25e0435f5dd9b7d143dc9142f53b1aeb4a8d7edcb4533eddb59949e8a07c4f4e3dce85ae43b7f249b3801e8b255f605fc974b94616fe
+  languageName: node
+  linkType: hard
+
 "@babel/code-frame@npm:^7.10.4, @babel/code-frame@npm:^7.29.7":
   version: 7.29.7
   resolution: "@babel/code-frame@npm:7.29.7"
@@ -1069,6 +1080,17 @@ __metadata:
   version: 0.133.0
   resolution: "@oxc-project/types@npm:0.133.0"
   checksum: 10c0/70c57ba58644f7ec217b670c301801f4d06995f4ccdba6b2bd106ea3e5ee49d616573e6ef8d55530b87571a960696543687f3850e87ad173d3f88965c30cdd63
+  languageName: node
+  linkType: hard
+
+"@playwright/test@npm:^1.61.0":
+  version: 1.61.0
+  resolution: "@playwright/test@npm:1.61.0"
+  dependencies:
+    playwright: "npm:1.61.0"
+  bin:
+    playwright: cli.js
+  checksum: 10c0/993f5e30878f50c92c058f7a37f15bca456b794f2818a8c0b75bf09bc947657d56fee836ff4ebee83a869a3471663f0d61ca4eaaae31dd1bcf8bf4342344be35
   languageName: node
   linkType: hard
 
@@ -2211,6 +2233,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"axe-core@npm:~4.11.4":
+  version: 4.11.4
+  resolution: "axe-core@npm:4.11.4"
+  checksum: 10c0/c4aa83fc3eac5f7a0d0cb1a28f9d073acf0c06ce8daacc38608faa278c57ce084c028c850746b98817ae4c101c30c1a32e95ea34748c4b4c7419b9b81221ef84
+  languageName: node
+  linkType: hard
+
 "axobject-query@npm:^4.1.0":
   version: 4.1.0
   resolution: "axobject-query@npm:4.1.0"
@@ -3132,7 +3161,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "f1-dash@workspace:."
   dependencies:
+    "@axe-core/playwright": "npm:^4.11.3"
     "@headlessui/react": "npm:2.2.10"
+    "@playwright/test": "npm:^1.61.0"
     "@tailwindcss/postcss": "npm:4.3.0"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.9.1"
@@ -3298,12 +3329,31 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fsevents@npm:2.3.2":
+  version: 2.3.2
+  resolution: "fsevents@npm:2.3.2"
+  dependencies:
+    node-gyp: "npm:latest"
+  checksum: 10c0/be78a3efa3e181cda3cf7a4637cb527bcebb0bd0ea0440105a3bb45b86f9245b307dc10a2507e8f4498a7d4ec349d1910f4d73e4d4495b16103106e07eee735b
+  conditions: os=darwin
+  languageName: node
+  linkType: hard
+
 "fsevents@npm:~2.3.3":
   version: 2.3.3
   resolution: "fsevents@npm:2.3.3"
   dependencies:
     node-gyp: "npm:latest"
   checksum: 10c0/a1f0c44595123ed717febbc478aa952e47adfc28e2092be66b8ab1635147254ca6cfe1df792a8997f22716d4cbafc73309899ff7bfac2ac3ad8cf2e4ecc3ec60
+  conditions: os=darwin
+  languageName: node
+  linkType: hard
+
+"fsevents@patch:fsevents@npm%3A2.3.2#optional!builtin<compat/fsevents>":
+  version: 2.3.2
+  resolution: "fsevents@patch:fsevents@npm%3A2.3.2#optional!builtin<compat/fsevents>::version=2.3.2&hash=df0bf1"
+  dependencies:
+    node-gyp: "npm:latest"
   conditions: os=darwin
   languageName: node
   linkType: hard
@@ -4783,6 +4833,30 @@ __metadata:
   version: 4.0.4
   resolution: "picomatch@npm:4.0.4"
   checksum: 10c0/e2c6023372cc7b5764719a5ffb9da0f8e781212fa7ca4bd0562db929df8e117460f00dff3cb7509dacfc06b86de924b247f504d0ce1806a37fac4633081466b0
+  languageName: node
+  linkType: hard
+
+"playwright-core@npm:1.61.0":
+  version: 1.61.0
+  resolution: "playwright-core@npm:1.61.0"
+  bin:
+    playwright-core: cli.js
+  checksum: 10c0/64cbf5e9f4ad81cbb005d59417e96435e324a6e3801f1c79b36850ad99f6bb90853c4b569a32c49b9eca1e07925bbb2a5a864babdba2178c3c395e0c589d5941
+  languageName: node
+  linkType: hard
+
+"playwright@npm:1.61.0":
+  version: 1.61.0
+  resolution: "playwright@npm:1.61.0"
+  dependencies:
+    fsevents: "npm:2.3.2"
+    playwright-core: "npm:1.61.0"
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  bin:
+    playwright: cli.js
+  checksum: 10c0/079dceebe8b745fa6062a3af928024d0c508177fbf15d61dba09ba173f277465ad3746fdc1b31788ade65428f4d3f92fc8083b44c07381b088721eaa2ea06513
   languageName: node
   linkType: hard
 
