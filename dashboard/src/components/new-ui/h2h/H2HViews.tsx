@@ -4,7 +4,6 @@ import RouteHeader from "@/components/new-ui/routes/RouteHeader";
 import Panel from "@/components/new-ui/primitives/Panel";
 import Kpi from "@/components/new-ui/primitives/Kpi";
 import ViewState from "@/components/new-ui/primitives/ViewState";
-import SeasonH2HView from "@/components/h2h/SeasonH2HView";
 import type { DriverStandingRow } from "@/lib/f1data";
 import type { SeasonH2H } from "@/lib/seasonH2H";
 
@@ -31,6 +30,10 @@ function ScoreBar({ a, b, aLabel, bLabel }: { a: number; b: number; aLabel: stri
 			</div>
 		</div>
 	);
+}
+
+function formatFinish(position: number | null): string {
+	return position ? `P${position}` : "-";
 }
 
 export function SimpleH2HView({
@@ -144,7 +147,63 @@ export function DetailedH2HView({
 				description={`${labelA} vs. ${labelB} · complete race and qualifying breakdown.`}
 			/>
 			{comparison ? (
-				<SeasonH2HView driverA={driverA} driverB={driverB} comparison={comparison} season={season} />
+				<>
+					<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+						<Kpi label={`${driverA.driver.code ?? labelA} points`} value={comparison.a.points} unit="pts" context={`${comparison.a.starts} starts`} />
+						<Kpi label={`${driverB.driver.code ?? labelB} points`} value={comparison.b.points} unit="pts" context={`${comparison.b.starts} starts`} />
+						<Kpi label="Race score" value={`${comparison.race.a} - ${comparison.race.b}`} context={`${comparison.race.ties} ties`} />
+						<Kpi label="Qualifying score" value={`${comparison.qualifying.a} - ${comparison.qualifying.b}`} context={`${comparison.qualifying.ties} ties`} />
+					</div>
+
+					<Panel title="Head-to-head score" eyebrow="Race and qualifying" level="primary">
+						<div className="mt-3 grid gap-5 xl:grid-cols-2">
+							<div>
+								<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ui-subtle)]">Race result comparison</p>
+								<ScoreBar a={comparison.race.a} b={comparison.race.b} aLabel={driverA.driver.code ?? labelA} bLabel={driverB.driver.code ?? labelB} />
+							</div>
+							<div>
+								<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ui-subtle)]">Qualifying comparison</p>
+								<ScoreBar a={comparison.qualifying.a} b={comparison.qualifying.b} aLabel={driverA.driver.code ?? labelA} bLabel={driverB.driver.code ?? labelB} />
+							</div>
+						</div>
+					</Panel>
+
+					<Panel title="Season classification" eyebrow="Official race results">
+						<div className="mt-2 overflow-x-auto">
+							<table className="w-full min-w-[42rem] text-left text-sm">
+								<thead className="text-xs uppercase tracking-wide text-[var(--ui-subtle)]">
+									<tr className="border-b border-[var(--ui-border)]">
+										<th className="py-2 pr-3">Driver</th>
+										<th className="py-2 pr-3">Team</th>
+										<th className="py-2 pr-3 text-right">Points</th>
+										<th className="py-2 pr-3 text-right">Wins</th>
+										<th className="py-2 pr-3 text-right">Podiums</th>
+										<th className="py-2 text-right">Range</th>
+									</tr>
+								</thead>
+								<tbody>
+									{[
+										{ row: driverA, summary: comparison.a, label: labelA },
+										{ row: driverB, summary: comparison.b, label: labelB },
+									].map(({ row, summary, label }) => (
+										<tr key={row.driver.driverId ?? label} className="border-b border-[var(--ui-border)] last:border-b-0">
+											<td className="py-3 pr-3 font-semibold text-[var(--ui-text)]">
+												<span className="font-mono text-xs text-[var(--ui-accent)]">{row.driver.code ?? "--"}</span> {label}
+											</td>
+											<td className="py-3 pr-3 text-[var(--ui-muted)]">{row.constructor ?? "-"}</td>
+											<td className="new-ui-number py-3 pr-3 text-right font-bold">{summary.points}</td>
+											<td className="new-ui-number py-3 pr-3 text-right font-bold">{summary.wins}</td>
+											<td className="new-ui-number py-3 pr-3 text-right font-bold">{summary.podiums}</td>
+											<td className="py-3 text-right text-[var(--ui-muted)]">
+												{formatFinish(summary.best)} best / {formatFinish(summary.worst)} worst
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</Panel>
+				</>
 			) : (
 				<ViewState state="unavailable" title="Comparison unavailable" />
 			)}

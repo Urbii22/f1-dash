@@ -1,9 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { expect, test, vi } from "vitest";
-
-vi.mock("@/components/h2h/SeasonH2HView", () => ({
-	default: () => <div data-testid="season-h2h-view">H2H view mock</div>,
-}));
+import { expect, test } from "vitest";
 
 import { SimpleH2HView, DetailedH2HView } from "@/components/new-ui/h2h/H2HViews";
 import type { DriverStandingRow } from "@/lib/f1data";
@@ -51,7 +47,9 @@ test("Simple shows unavailable state when drivers are null", () => {
 	expect(screen.getByText(/Driver data unavailable/i)).toBeVisible();
 });
 
-test("Detailed renders SeasonH2HView when comparison exists", () => {
+test("Detailed renders new UI comparison panels when comparison exists", () => {
 	render(<DetailedH2HView driverA={driverA} driverB={driverB} comparison={comparison} season={2026} standings={[driverA, driverB]} />);
-	expect(screen.getByTestId("season-h2h-view")).toBeVisible();
+	expect(screen.getByRole("heading", { name: "Head-to-head score" })).toBeVisible();
+	expect(screen.getByRole("heading", { name: "Season classification" })).toBeVisible();
+	expect(screen.getByText("Race score")).toBeVisible();
 });

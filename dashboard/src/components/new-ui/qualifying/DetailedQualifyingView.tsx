@@ -13,9 +13,19 @@ export default function DetailedQualifyingView() {
 	const state = useDataStore((store) => store.state);
 	const model = buildQualifyingSummary(state);
 
-	if (!state?.SessionInfo) return <ViewState state="loading" title="Loading qualifying" />;
+	if (!state?.SessionInfo) {
+		return (
+			<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+				<ViewState state="loading" title="Loading qualifying" />
+			</div>
+		);
+	}
 	if (!model) {
-		return <ViewState state="unavailable" title="Qualifying unavailable" description="This view is available during qualifying sessions." />;
+		return (
+			<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+				<ViewState state="unavailable" title="Qualifying unavailable" description="This view is available during qualifying sessions." />
+			</div>
+		);
 	}
 
 	const rows = Object.values(state.TimingData?.Lines ?? {}).sort((a, b) => Number(a.Position) - Number(b.Position));

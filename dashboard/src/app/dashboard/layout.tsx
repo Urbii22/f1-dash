@@ -35,6 +35,10 @@ type Props = {
 
 const newUiNativeRoutes = new Set(["/dashboard", "/dashboard/qualifying", "/dashboard/analysis", "/dashboard/standings", "/dashboard/weather", "/dashboard/track-map", "/dashboard/settings"]);
 
+function isNewUiNativeRoute(pathname: string): boolean {
+	return newUiNativeRoutes.has(pathname) || pathname.startsWith("/dashboard/driver/");
+}
+
 export default function DashboardLayout({ children }: Props) {
 	const pathname = usePathname();
 	const stores = useStores();
@@ -53,7 +57,7 @@ export default function DashboardLayout({ children }: Props) {
 	const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);
 	const ended = useDataStore(({ state }) => state?.SessionStatus?.Status === "Ends");
 	const newUiContent =
-		newUiNativeRoutes.has(pathname) ? children : <NewUiCompatibilityBoundary routeName="Dashboard">{children}</NewUiCompatibilityBoundary>;
+		isNewUiNativeRoute(pathname) ? children : <NewUiCompatibilityBoundary routeName="Dashboard">{children}</NewUiCompatibilityBoundary>;
 
 	// Live runtime (data engine, socket, wake lock, store setup) stays above the
 	// branch so Legacy and New UI share one connection. Only presentation switches.

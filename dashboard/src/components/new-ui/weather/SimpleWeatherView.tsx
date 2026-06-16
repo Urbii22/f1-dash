@@ -14,7 +14,13 @@ export default function SimpleWeatherView() {
 	const meeting = useDataStore((state) => state.state?.SessionInfo?.Meeting?.Name);
 	const observedAt = useDataStore((state) => state.state?.Heartbeat?.Utc);
 	const speedUnit = useSettingsStore((state) => state.speedUnit);
-	if (!weather) return <ViewState state="unavailable" title="Weather unavailable" description="The live feed has not provided measurements." />;
+	if (!weather) {
+		return (
+			<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+				<ViewState state="unavailable" title="Weather unavailable" description="The live feed has not provided measurements." />
+			</div>
+		);
+	}
 	const model = buildWeatherImpact({ current: weather, radarFrames: null, speedUnit });
 
 	return <div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">

@@ -79,7 +79,7 @@ export function SimpleHomeView({
 					{nextSession ? (
 						<div className="mt-3">
 							<p className="text-sm text-[var(--ui-muted)] mb-2">Next: <strong className="text-[var(--ui-text)]">{nextSession.kind}</strong></p>
-							<HubCountdown target={nextSession.start} />
+							<HubCountdown target={nextSession.start} variant="new" />
 						</div>
 					) : (
 						<p className="mt-2 text-sm text-[var(--ui-muted)]">No upcoming session in this meeting.</p>
@@ -190,7 +190,7 @@ export function DetailedHomeView({
 					{nextSession ? (
 						<div className="mt-3">
 							<p className="text-sm text-[var(--ui-muted)] mb-2">Next: <strong className="text-[var(--ui-text)]">{nextSession.kind}</strong></p>
-							<HubCountdown target={nextSession.start} />
+							<HubCountdown target={nextSession.start} variant="new" />
 						</div>
 					) : (
 						<p className="mt-2 text-sm text-[var(--ui-muted)]">No upcoming session.</p>

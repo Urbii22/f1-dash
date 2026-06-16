@@ -1,18 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { expect, test, vi } from "vitest";
-
-vi.mock("@/components/results/SeasonResultsList", () => ({
-	default: ({ season }: { season: number }) => <div data-testid="season-results-list">Season {season}</div>,
-}));
-vi.mock("@/components/results/RaceResultTable", () => ({
-	default: () => <div data-testid="race-result-table">Race result table</div>,
-}));
-vi.mock("@/components/results/QualiResultTable", () => ({
-	default: () => <div data-testid="quali-result-table">Quali result table</div>,
-}));
-vi.mock("@/components/results/GridList", () => ({
-	default: () => <div data-testid="grid-list">Grid list</div>,
-}));
+import { expect, test } from "vitest";
 
 import {
 	SimpleResultsListView,
@@ -89,9 +76,13 @@ test("SimpleResultsListView shows latest result podium", () => {
 	expect(screen.getByText("Lando Norris")).toBeVisible();
 });
 
-test("DetailedResultsListView renders SeasonResultsList component", () => {
+test("DetailedResultsListView renders new UI round cards", () => {
 	render(<DetailedResultsListView items={mockItems} season={2026} />);
-	expect(screen.getByTestId("season-results-list")).toBeVisible();
+	expect(screen.getByRole("heading", { name: "All rounds" })).toBeVisible();
+	expect(screen.getAllByText("British Grand Prix").length).toBeGreaterThan(0);
+	expect(screen.getByText("Hungarian Grand Prix")).toBeVisible();
+	expect(screen.getByText("Done")).toBeVisible();
+	expect(screen.getByText("Upcoming")).toBeVisible();
 });
 
 test("SimpleRoundResultView shows round header and podium", () => {
@@ -103,8 +94,9 @@ test("SimpleRoundResultView shows round header and podium", () => {
 
 test("DetailedRoundResultView renders full classification table", () => {
 	render(<DetailedRoundResultView race={mockRace} qualifying={null} season={2026} recording={null} />);
-	expect(screen.getByTestId("race-result-table")).toBeVisible();
-	expect(screen.getByTestId("grid-list")).toBeVisible();
+	expect(screen.getByRole("heading", { name: "Race classification" })).toBeVisible();
+	expect(screen.getByRole("heading", { name: "Starting grid" })).toBeVisible();
+	expect(screen.getAllByText("Max Verstappen").length).toBeGreaterThan(0);
 });
 
 test("DetailedRoundResultView shows unavailable state when no qualifying", () => {

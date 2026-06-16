@@ -17,7 +17,13 @@ export default function DetailedWeatherView() {
 	const meeting = useDataStore((state) => state.state?.SessionInfo?.Meeting?.Name);
 	const speedUnit = useSettingsStore((state) => state.speedUnit);
 	const [radarAvailable, setRadarAvailable] = useState<boolean | null>(null);
-	if (!weather) return <ViewState state="unavailable" title="Weather unavailable" description="The live feed has not provided measurements." />;
+	if (!weather) {
+		return (
+			<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+				<ViewState state="unavailable" title="Weather unavailable" description="The live feed has not provided measurements." />
+			</div>
+		);
+	}
 	const model = buildWeatherImpact({ current: weather, radarFrames: radarAvailable === null ? undefined : radarAvailable ? { past: 1, nowcast: 1 } : null, speedUnit });
 
 	return <div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
