@@ -19,7 +19,7 @@ export default function DetailedTrackMapView() {
 	const selectedDriver = useDriverSelectionStore((state) => state.selectedDriver);
 	const selected = selectedDriver ? drivers?.[selectedDriver] : undefined;
 
-	return <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+	return <div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 		<RouteHeader eyebrow="Live circuit" title="Detailed track map" description="Configurable driver, FIA sector, trail, and pit overlays." actions={<MapOverlayControls value={overlays} onChange={setOverlays} />} />
 		<div className="grid min-h-[42rem] gap-3 2xl:grid-cols-[1.5fr_.5fr]">
 			<Panel title="Circuit overlays" eyebrow="Technical map" level="primary"><div className="h-[38rem]"><Map variant="technical" showDriverLabels={overlays.labels} showTrails={overlays.trails} showMarshalSectors={overlays.marshalSectors} showPitStatus={overlays.pitStatus} /></div></Panel>

@@ -63,7 +63,7 @@ function SessionCardDetailed({ session }: { session: ArchiveSession }) {
 
 export function SimpleArchiveListView({ sessions }: { sessions: ArchiveSession[] }) {
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow="Session archive"
 				title="Recorded history"
@@ -96,7 +96,7 @@ export function DetailedArchiveListView({ sessions }: { sessions: ArchiveSession
 	const partial = sessions.length - complete;
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow="Session archive"
 				title="Recorded history"
@@ -144,7 +144,7 @@ export function SimpleArchiveSessionView({
 	const weather = session.weatherSummary;
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow={`${session.kind} · ${session.country ?? session.meeting}`}
 				title={session.name}
@@ -205,7 +205,7 @@ export function DetailedArchiveSessionView({
 	events: ArchiveEvent[];
 }) {
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow={`${session.kind} · ${session.country ?? session.meeting}`}
 				title={session.name}

@@ -47,7 +47,7 @@ export function SimpleHomeView({
 	const topConstructors = (constructors?.standings ?? []).slice(0, 3);
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow="Always-on race companion"
 				title="The season, live and between races."
@@ -160,7 +160,7 @@ export function DetailedHomeView({
 	liveRound,
 }: HomeViewProps) {
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow="Always-on race companion"
 				title="The season, live and between races."

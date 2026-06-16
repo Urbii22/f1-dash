@@ -20,7 +20,7 @@ export default function DetailedWeatherView() {
 	if (!weather) return <ViewState state="unavailable" title="Weather unavailable" description="The live feed has not provided measurements." />;
 	const model = buildWeatherImpact({ current: weather, radarFrames: radarAvailable === null ? undefined : radarAvailable ? { past: 1, nowcast: 1 } : null, speedUnit });
 
-	return <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+	return <div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 		<RouteHeader eyebrow={meeting ?? "Current session"} title="Detailed weather" description="Live measurements, session impact, and radar frame context." status={<span>Confidence: {model.confidence}</span>} />
 		<InsightSummary insights={model.insights} />
 		<div className="grid gap-3 2xl:grid-cols-[1.35fr_.65fr]">

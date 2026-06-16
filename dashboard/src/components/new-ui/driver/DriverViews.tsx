@@ -31,7 +31,7 @@ export function SimpleDriverView({
 	const recentRounds = rounds.slice(-5).reverse();
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow={`${season} driver profile`}
 				title={name}
@@ -93,7 +93,7 @@ export function DetailedDriverView({
 	const name = standing ? fullName(standing) : "Unknown driver";
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow={`${season} driver profile`}
 				title={name}

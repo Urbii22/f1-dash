@@ -2,8 +2,6 @@
 
 import type { ReactNode } from "react";
 
-import DensityToggle from "@/components/new-ui/DensityToggle";
-
 export type RouteHeaderProps = {
 	eyebrow?: string;
 	title: string;
@@ -24,7 +22,6 @@ export default function RouteHeader({ eyebrow, title, description, status, actio
 
 			<div className="flex flex-wrap items-center justify-end gap-3">
 				{actions}
-				<DensityToggle />
 			</div>
 		</header>
 	);

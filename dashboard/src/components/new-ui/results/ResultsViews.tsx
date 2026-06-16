@@ -25,7 +25,7 @@ export function SimpleResultsListView({ items, season }: { items: RoundResultIte
 	const latest = completed[completed.length - 1];
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow="Official history"
 				title={`${season} Grand Prix results`}
@@ -82,7 +82,7 @@ export function SimpleResultsListView({ items, season }: { items: RoundResultIte
 
 export function DetailedResultsListView({ items, season }: { items: RoundResultItem[]; season: number }) {
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow="Official history"
 				title={`${season} Grand Prix results`}
@@ -109,7 +109,7 @@ export function SimpleRoundResultView({
 	const fastest = race.results.find((r) => r.fastestLapRank === "1");
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow={`Round ${race.round} · ${season}`}
 				title={race.raceName ?? "Race result"}
@@ -163,7 +163,7 @@ export function DetailedRoundResultView({
 	recording: ArchiveSession | null;
 }) {
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow={`Round ${race.round} · ${season}`}
 				title={race.raceName ?? "Race result"}

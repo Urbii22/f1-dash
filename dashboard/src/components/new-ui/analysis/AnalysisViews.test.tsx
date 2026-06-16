@@ -4,6 +4,7 @@ import { beforeEach, expect, test } from "vitest";
 import DetailedAnalysisView from "@/components/new-ui/analysis/DetailedAnalysisView";
 import SimpleAnalysisView from "@/components/new-ui/analysis/SimpleAnalysisView";
 import ChartFrame from "@/components/new-ui/charts/ChartFrame";
+import DensityToggle from "@/components/new-ui/DensityToggle";
 import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
 import { useAnalysisViewStore } from "@/stores/useAnalysisViewStore";
 import { useDataStore } from "@/stores/useDataStore";
@@ -70,7 +71,10 @@ test("Detailed preserves active tab and driver filters in the shared store", () 
 test("switching density keeps analysis tab and driver selection", () => {
 	useAnalysisViewStore.setState({ activeTab: "positions", selectedDrivers: ["4"] });
 	render(
-		<UiModeBoundary legacy={<div>Legacy</div>} simple={<SimpleAnalysisView />} detailed={<DetailedAnalysisView />} />,
+		<>
+			<DensityToggle />
+			<UiModeBoundary legacy={<div>Legacy</div>} simple={<SimpleAnalysisView />} detailed={<DetailedAnalysisView />} />
+		</>,
 	);
 
 	fireEvent.click(screen.getByRole("radio", { name: "Detailed" }));

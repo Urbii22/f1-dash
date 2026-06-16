@@ -17,7 +17,7 @@ export default function SimpleQualifyingView() {
 	}
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow={state.SessionInfo.Meeting?.Name ?? "Live session"}
 				title="Qualifying"

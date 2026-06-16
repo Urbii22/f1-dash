@@ -9,7 +9,7 @@ beforeEach(() => {
 	useUiPreferencesStore.setState({ generation: "new", density: "simple", hydrated: true });
 });
 
-test("route header renders context, status, actions, and density control", () => {
+test("route header renders context, status, and actions", () => {
 	render(
 		<RouteHeader
 			eyebrow="Session analysis"
@@ -25,7 +25,6 @@ test("route header renders context, status, actions, and density control", () =>
 	expect(screen.getByText("Clean-lap comparison across the field.")).toBeVisible();
 	expect(screen.getByText("Live data")).toBeVisible();
 	expect(screen.getByRole("button", { name: "Export" })).toBeVisible();
-	expect(screen.getByRole("radiogroup", { name: "UI density" })).toBeVisible();
 });
 
 test("insight summary renders at most four conclusions in input order", () => {

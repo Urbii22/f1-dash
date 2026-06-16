@@ -13,7 +13,7 @@ export default function SimpleAnalysisView() {
 	const insights = data.conclusions.map((item) => ({ ...item, value: `${item.value} | ${item.metric}` }));
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader eyebrow={data.meetingName ?? "Current session"} title="Session analysis" description="The clearest pace, tyre, and position conclusions from the recorded sample." />
 			<InsightSummary insights={insights} />
 			<div className="grid gap-3 2xl:grid-cols-2">

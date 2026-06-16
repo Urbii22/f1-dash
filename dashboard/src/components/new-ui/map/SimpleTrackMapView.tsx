@@ -18,7 +18,7 @@ export default function SimpleTrackMapView() {
 	const rivalTiming = selectedIndex >= 0 ? ordered[selectedIndex + 1] ?? ordered[selectedIndex - 1] : ordered[1];
 	const rival = rivalTiming ? drivers?.[rivalTiming.RacingNumber] : undefined;
 
-	return <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+	return <div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 		<RouteHeader eyebrow="Live circuit" title="Track orientation" description="Driver position and nearby battle context without making the map the whole dashboard." />
 		<div className="grid min-h-[38rem] gap-3 2xl:grid-cols-[1.35fr_.65fr]">
 			<Panel title="Circuit" eyebrow="Orientation" level="primary"><div className="h-[34rem]"><Map variant="compact" showLabels={false} showDriverLabels={false} showTrails={false} /></div></Panel>

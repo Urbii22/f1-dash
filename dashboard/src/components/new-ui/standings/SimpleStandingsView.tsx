@@ -13,7 +13,7 @@ export default function SimpleStandingsView(props: { drivers: DriverStandingRow[
 	const model = buildStandingsStory(drivers, prediction);
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader eyebrow={`${season} season`} title="Championship standings" description="The leaders, closest fight, and live predicted movement." actions={<SeasonSelect selected={season} variant="new" />} />
 			<div data-testid="standings-podium" className="grid gap-3 md:grid-cols-3">
 				{model.topThree.map((row) => <Panel key={row.code} title={row.code} eyebrow={`P${row.position ?? "-"}`} level="primary"><p className="text-sm text-[var(--ui-muted)]">{row.name}</p><p className="new-ui-number mt-2 text-3xl font-bold">{row.points ?? "-"} pts</p><p className="mt-1 text-xs text-[var(--ui-subtle)]">{row.constructor ?? "Team unavailable"}</p></Panel>)}

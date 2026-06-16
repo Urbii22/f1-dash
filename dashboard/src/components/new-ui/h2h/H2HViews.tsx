@@ -46,7 +46,7 @@ export function SimpleH2HView({
 }) {
 	if (!driverA || !driverB) {
 		return (
-			<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+			<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 				<RouteHeader eyebrow={`${season} season`} title="Driver head-to-head" description="Official race and qualifying results." />
 				<ViewState state="unavailable" title="Driver data unavailable" description="No official data for the selected season." />
 			</div>
@@ -57,7 +57,7 @@ export function SimpleH2HView({
 	const labelB = driverLabel(driverB);
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow={`${season} season comparison`}
 				title="Driver head-to-head"
@@ -126,7 +126,7 @@ export function DetailedH2HView({
 }) {
 	if (!driverA || !driverB) {
 		return (
-			<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+			<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 				<RouteHeader eyebrow={`${season} season`} title="Driver head-to-head" description="Official race and qualifying results." />
 				<ViewState state="unavailable" title="Driver data unavailable" description="No official data for the selected season." />
 			</div>
@@ -137,7 +137,7 @@ export function DetailedH2HView({
 	const labelB = driverLabel(driverB);
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow={`${season} season comparison`}
 				title="Driver head-to-head"

@@ -17,7 +17,7 @@ export default function SimpleWeatherView() {
 	if (!weather) return <ViewState state="unavailable" title="Weather unavailable" description="The live feed has not provided measurements." />;
 	const model = buildWeatherImpact({ current: weather, radarFrames: null, speedUnit });
 
-	return <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+	return <div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 		<RouteHeader eyebrow={meeting ?? "Current session"} title="Weather impact" description="Observed conditions translated into likely session effects." status={<span>{model.rainRiskLabel}</span>} />
 		<InsightSummary insights={model.insights} />
 		<div className="grid grid-cols-2 gap-3 xl:grid-cols-4"><Kpi label="Air" value={model.metrics.air} /><Kpi label="Track" value={model.metrics.track} /><Kpi label="Humidity" value={model.metrics.humidity} /><Kpi label="Wind" value={model.metrics.wind} /></div>

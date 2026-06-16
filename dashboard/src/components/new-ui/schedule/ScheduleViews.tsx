@@ -56,7 +56,7 @@ export function SimpleScheduleView({ next, schedule }: { next: Round | null; sch
 	const nextRound = schedule?.find((r) => !r.over) ?? null;
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow="Season calendar"
 				title="Schedule"
@@ -103,7 +103,7 @@ export function DetailedScheduleView({ next, schedule }: { next: Round | null; s
 	const nextRound = schedule?.find((r) => !r.over) ?? null;
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
 				eyebrow="Season calendar"
 				title="Schedule"

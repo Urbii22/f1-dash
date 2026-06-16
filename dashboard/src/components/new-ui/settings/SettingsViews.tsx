@@ -123,7 +123,7 @@ function InterfacePanel() {
 export function SimpleSettingsView() {
 	const settings = useSettingsStore();
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader eyebrow="Preferences" title="Settings" description="Appearance, alerts, favorite drivers, speed unit, and stream delay." />
 
 			<div className="grid gap-4 xl:grid-cols-2">
@@ -159,7 +159,7 @@ export function SimpleSettingsView() {
 export function DetailedSettingsView() {
 	const settings = useSettingsStore();
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader eyebrow="Preferences" title="Settings" description="All options across appearance, race control, alerts, drivers, speed unit, and stream delay." />
 
 			<div className="grid gap-4 xl:grid-cols-[1fr_1fr_1fr]">

@@ -39,6 +39,8 @@ export default function ConnectedNewUiSessionBar() {
 	const delay = useSettingsStore((store) => store.delay);
 	const replayPaused = useReplayControlStore((store) => store.isPaused);
 
+	if (!state?.SessionInfo) return null;
+
 	const model = buildSessionBarModel({
 		state,
 		connected,

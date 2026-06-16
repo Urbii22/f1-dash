@@ -17,7 +17,7 @@ export default function DetailedStandingsView({ drivers, constructors, season }:
 	const rows = sortStandingsRows(model.rows, sortKey);
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
+		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader eyebrow={`${season} season`} title="Detailed championship standings" description="Official classification with optional live-race prediction columns." actions={<SeasonSelect selected={season} variant="new" />} />
 			<Panel title="Drivers" eyebrow="Official and predicted" level="primary">
 				<div className="overflow-x-auto">
