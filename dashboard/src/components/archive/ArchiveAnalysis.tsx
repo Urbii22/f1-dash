@@ -67,13 +67,6 @@ export default function ArchiveAnalysis({
 	}, [laps, stints, minStint]);
 	const toggle = (nr: string) =>
 		setSelected(selected.includes(nr) ? selected.filter((x) => x !== nr) : [...selected, nr]);
-	const lapNumbers = Array.from(
-		new Set(
-			Object.values(laps)
-				.flat()
-				.map((l) => l.lap),
-		),
-	).sort((a, b) => a - b);
 	return (
 		<div className="telemetry-panel rounded-lg p-3">
 			<div className="flex flex-wrap justify-between gap-3 border-b border-cyan-300/10 pb-3">
@@ -135,7 +128,7 @@ export default function ArchiveAnalysis({
 				{tab === "speed" && <SpeedScatter laps={laps} selected={selected} drivers={drivers} />}{" "}
 				{tab === "quali" && <QualiReport laps={laps} drivers={drivers} />}{" "}
 				{tab === "events" && <EventsLog events={events} />}{" "}
-				{tab === "telemetry" && <TelemetryCompare sessionId={session.id} drivers={drivers} laps={lapNumbers} />}
+				{tab === "telemetry" && <TelemetryCompare sessionId={session.id} drivers={drivers} laps={laps} />}
 			</div>
 		</div>
 	);
