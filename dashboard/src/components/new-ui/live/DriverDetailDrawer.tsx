@@ -3,8 +3,11 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
+import { useShallow } from "zustand/react/shallow";
+
 import type { DriverDrawerModel } from "@/lib/view-models/driverDrawer";
 import { buildDriverDrawerModel } from "@/lib/view-models/driverDrawer";
+import type { CarsData, State } from "@/types/state.type";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDriverSelectionStore } from "@/stores/useDriverSelectionStore";
 import { useLapHistoryStore } from "@/stores/useLapHistoryStore";
@@ -162,10 +165,35 @@ export function DriverDetailDrawerView({
 export default function DriverDetailDrawer() {
 	const selectedDriver = useDriverSelectionStore((store) => store.selectedDriver);
 	const clearSelectedDriver = useDriverSelectionStore((store) => store.clearSelectedDriver);
-	const state = useDataStore((store) => store.state ?? null);
-	const carsData = useDataStore((store) => store.carsData);
+	// Subscribe only to the selected driver's slices (plus session info) instead of
+	// the whole state object. A closed drawer no longer re-renders on every telemetry
+	// tick, and an open one ignores updates for other drivers.
+	const slice = useDataStore(
+		useShallow((store) => ({
+			driver: selectedDriver ? store.state?.DriverList?.[selectedDriver] : undefined,
+			line: selectedDriver ? store.state?.TimingData?.Lines?.[selectedDriver] : undefined,
+			app: selectedDriver ? store.state?.TimingAppData?.Lines?.[selectedDriver] : undefined,
+			sessionInfo: store.state?.SessionInfo,
+			channels: selectedDriver ? store.carsData?.[selectedDriver]?.Channels : undefined,
+		})),
+	);
 	const laps = useLapHistoryStore((store) => (selectedDriver ? store.laps[selectedDriver] : undefined));
 	const story = useConnectedRaceStory();
+
+	// Rebuild the minimal state/carsData shapes the model reads, scoped to the
+	// selected driver. Runs only when the subscribed slices actually change.
+	const state: State | null = selectedDriver
+		? ({
+				DriverList: slice.driver ? { [selectedDriver]: slice.driver } : {},
+				TimingData: { Lines: slice.line ? { [selectedDriver]: slice.line } : {} },
+				TimingAppData: { Lines: slice.app ? { [selectedDriver]: slice.app } : {} },
+				SessionInfo: slice.sessionInfo,
+			} as unknown as State)
+		: null;
+	const carsData: CarsData | null =
+		selectedDriver && slice.channels
+			? ({ [selectedDriver]: { Channels: slice.channels } } as unknown as CarsData)
+			: null;
 
 	const model = buildDriverDrawerModel({
 		driverNumber: selectedDriver,
