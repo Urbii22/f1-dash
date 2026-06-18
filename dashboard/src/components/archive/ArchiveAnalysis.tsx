@@ -7,7 +7,7 @@ import PositionChart from "@/components/analysis/PositionChart";
 import RacePaceChart from "@/components/analysis/RacePaceChart";
 import SpeedScatter from "@/components/analysis/SpeedScatter";
 import StintTimeline from "@/components/analysis/StintTimeline";
-import EventsLog from "@/components/archive/EventsLog";
+import RaceControlTimeline from "@/components/archive/RaceControlTimeline";
 import QualiReport from "@/components/archive/QualiReport";
 import TelemetryCompare from "@/components/archive/TelemetryCompare";
 import type { AnalysisDrivers } from "@/lib/analysisSeries";
@@ -127,7 +127,7 @@ export default function ArchiveAnalysis({
 				)}{" "}
 				{tab === "speed" && <SpeedScatter laps={laps} selected={selected} drivers={drivers} />}{" "}
 				{tab === "quali" && <QualiReport laps={laps} drivers={drivers} />}{" "}
-				{tab === "events" && <EventsLog events={events} />}{" "}
+				{tab === "events" && <RaceControlTimeline events={events} />}{" "}
 				{tab === "telemetry" && <TelemetryCompare sessionId={session.id} drivers={drivers} laps={laps} />}
 			</div>
 		</div>
