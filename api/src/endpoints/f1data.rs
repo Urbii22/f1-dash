@@ -209,6 +209,42 @@ fn norm_results(root: &Value) -> Value {
     meta
 }
 
+/// Sprint race results. Same row shape as a Grand Prix, but Ergast keys the list
+/// `SprintResults`. Returns null when the round had no sprint.
+fn norm_sprint(root: &Value) -> Value {
+    let races = first_list(root, "RaceTable", "Races");
+    let Some(race) = races.first() else {
+        return json!(null);
+    };
+    let results: Vec<Value> = race
+        .get("SprintResults")
+        .and_then(Value::as_array)
+        .map(|arr| {
+            arr.iter()
+                .map(|r| {
+                    let driver = r.get("Driver").cloned().unwrap_or(Value::Null);
+                    let fl = r.get("FastestLap");
+                    json!({
+                        "position": int(r, "position"),
+                        "points": num(r, "points"),
+                        "grid": int(r, "grid"),
+                        "laps": int(r, "laps"),
+                        "status": s(r, "status"),
+                        "time": r.pointer("/Time/time").and_then(Value::as_str),
+                        "driver": driver_name(&driver),
+                        "constructor": r.pointer("/Constructor/name").and_then(Value::as_str),
+                        "fastestLapRank": fl.and_then(|f| s(f, "rank")),
+                        "fastestLapTime": fl.and_then(|f| f.pointer("/Time/time")).and_then(Value::as_str),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let mut meta = race_meta(race);
+    meta["results"] = Value::Array(results);
+    meta
+}
+
 fn norm_qualifying(root: &Value) -> Value {
     let races = first_list(root, "RaceTable", "Races");
     let Some(race) = races.first() else {
@@ -318,6 +354,11 @@ pub async fn qualifying(Query(q): Query<RoundQuery>) -> ApiResult {
     proxy(format!("/{season}/{}/qualifying", q.round), norm_qualifying).await
 }
 
+pub async fn sprint(Query(q): Query<RoundQuery>) -> ApiResult {
+    let season = q.season.unwrap_or_else(current_year);
+    proxy(format!("/{season}/{}/sprint", q.round), norm_sprint).await
+}
+
 pub async fn pit_stops(Query(q): Query<RoundQuery>) -> ApiResult {
     let season = q.season.unwrap_or_else(current_year);
     proxy(format!("/{season}/{}/pitstops", q.round), norm_pitstops).await
@@ -408,6 +449,31 @@ mod tests {
         let r = &norm_qualifying(&raw)["results"][0];
         assert_eq!(r["q3"], "1:15.1");
         assert_eq!(r["driver"]["code"], "PIA");
+    }
+
+    #[test]
+    fn normalizes_sprint() {
+        let raw = json!({"MRData":{"RaceTable":{"Races":[{
+            "season":"2026","round":"5","raceName":"Miami Grand Prix",
+            "Circuit":{"circuitName":"Miami","Location":{"country":"USA","locality":"Miami"}},
+            "SprintResults":[{"position":"1","points":"8","grid":"1","laps":"19","status":"Finished",
+                "Time":{"time":"32:10.1"},
+                "Driver":{"driverId":"verstappen","code":"VER","familyName":"Verstappen"},
+                "Constructor":{"name":"Red Bull"},
+                "FastestLap":{"rank":"1","Time":{"time":"1:28.4"}}}]}]}}});
+        let out = norm_sprint(&raw);
+        assert_eq!(out["raceName"], "Miami Grand Prix");
+        let r = &out["results"][0];
+        assert_eq!(r["position"], 1);
+        assert_eq!(r["points"], 8.0);
+        assert_eq!(r["driver"]["code"], "VER");
+        assert_eq!(r["fastestLapTime"], "1:28.4");
+    }
+
+    #[test]
+    fn sprint_with_no_race_is_null() {
+        let raw = json!({"MRData":{"RaceTable":{"Races":[]}}});
+        assert!(norm_sprint(&raw).is_null());
     }
 
     #[test]

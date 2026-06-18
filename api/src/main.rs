@@ -58,6 +58,7 @@ fn build_app(archive_state: endpoints::archive::ArchiveState) -> Result<Router, 
         .route("/api/f1/results", get(endpoints::f1data::results))
         .route("/api/f1/qualifying", get(endpoints::f1data::qualifying))
         .route("/api/f1/pitstops", get(endpoints::f1data::pit_stops))
+        .route("/api/f1/sprint", get(endpoints::f1data::sprint))
         .route(
             "/api/f1/driver/{driverId}",
             get(endpoints::f1data::driver_season),
