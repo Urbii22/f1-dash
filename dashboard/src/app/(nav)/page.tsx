@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import CountryFlag from "@/components/CountryFlag";
 import HubCountdown from "@/components/hub/HubCountdown";
 import { getArchiveSessions } from "@/lib/archive";
 import {
@@ -206,11 +207,14 @@ function LegacyHome({
 									aria-disabled={state === "upcoming"}
 									className="data-chip flex items-center justify-between rounded-md p-3"
 								>
-									<div className="min-w-0">
-										<p className="font-mono text-[0.65rem] text-cyan-300">
-											R{round.round} · {round.date}
-										</p>
-										<p className="truncate font-bold">{round.raceName}</p>
+									<div className="flex min-w-0 items-center gap-2">
+										<CountryFlag country={round.country} className="h-4 w-6 shrink-0 rounded-sm" />
+										<div className="min-w-0">
+											<p className="font-mono text-[0.65rem] text-cyan-300">
+												R{round.round} · {round.date}
+											</p>
+											<p className="truncate font-bold">{round.raceName}</p>
+										</div>
 									</div>
 									<span
 										className={state === "live" ? "font-mono text-xs text-rose-300" : "font-mono text-xs text-zinc-500"}

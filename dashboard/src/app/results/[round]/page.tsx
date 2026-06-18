@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import CountryFlag from "@/components/CountryFlag";
 import GridList from "@/components/results/GridList";
 import PitStopsPanel from "@/components/results/PitStopsPanel";
 import QualiResultTable from "@/components/results/QualiResultTable";
@@ -117,7 +118,10 @@ function LegacyRoundContent({
 				</p>
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div>
-						<h1 className="text-3xl font-black">{race.raceName}</h1>
+						<h1 className="flex items-center gap-3 text-3xl font-black">
+							<CountryFlag country={race.country} className="h-6 w-8 rounded" />
+							{race.raceName}
+						</h1>
 						<p className="text-zinc-400">
 							{race.circuitName} · {race.locality}, {race.country}
 						</p>
