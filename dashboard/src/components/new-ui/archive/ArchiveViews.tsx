@@ -7,6 +7,7 @@ import Panel from "@/components/new-ui/primitives/Panel";
 import Kpi from "@/components/new-ui/primitives/Kpi";
 import ViewState from "@/components/new-ui/primitives/ViewState";
 import ArchiveAnalysis from "@/components/archive/ArchiveAnalysis";
+import RaceControlTimeline from "@/components/archive/RaceControlTimeline";
 import type { ArchiveSession, ArchiveSessionDetail, ArchiveEvent, ArchiveLaps, ArchiveStints } from "@/types/archive.type";
 
 function KindBadge({ kind }: { kind: string }) {
@@ -135,6 +136,7 @@ export function DetailedArchiveListView({ sessions }: { sessions: ArchiveSession
 
 export function SimpleArchiveSessionView({
 	session,
+	events,
 }: {
 	session: ArchiveSessionDetail;
 	laps: ArchiveLaps;
@@ -184,9 +186,15 @@ export function SimpleArchiveSessionView({
 				</div>
 			</Panel>
 
+			{events.length > 0 && (
+				<Panel title="Race control" eyebrow="Session timeline">
+					<RaceControlTimeline events={events} />
+				</Panel>
+			)}
+
 			<Panel title="Analysis" eyebrow="Full post-session data">
 				<p className="mt-1 text-sm text-[var(--ui-muted)]">
-					Switch to Detailed mode for full race pace, stint timeline, telemetry comparison, and events log.
+					Switch to Detailed mode for full race pace, stint timeline, and telemetry comparison.
 				</p>
 			</Panel>
 		</div>
