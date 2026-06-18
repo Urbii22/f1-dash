@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import PitStopsPanel from "@/components/results/PitStopsPanel";
+import RaceLapChart from "@/components/results/RaceLapChart";
 import RouteHeader from "@/components/new-ui/routes/RouteHeader";
 import Panel from "@/components/new-ui/primitives/Panel";
 import Kpi from "@/components/new-ui/primitives/Kpi";
@@ -316,6 +317,8 @@ export function DetailedRoundResultView({
 	sprint,
 	pitStops,
 	labels,
+	laps,
+	lapDrivers,
 }: {
 	race: RaceResult;
 	qualifying: QualiResult | null;
@@ -346,6 +349,8 @@ export function DetailedRoundResultView({
 					<RaceClassificationTable rows={sprint.results} season={season} />
 				</Panel>
 			) : null}
+
+			<RaceLapChart laps={laps ?? []} drivers={lapDrivers ?? []} />
 
 			<PitStopsPanel pitStops={pitStops ?? []} labels={labels ?? {}} />
 
