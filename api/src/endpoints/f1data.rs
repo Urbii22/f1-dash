@@ -102,12 +102,19 @@ fn merge_lap_pages(pages: &[Value]) -> Value {
         if meta.is_none() {
             meta = Some(race.clone());
         }
-        for lap in race.get("Laps").and_then(Value::as_array).unwrap_or(&Vec::new()) {
+        for lap in race
+            .get("Laps")
+            .and_then(Value::as_array)
+            .unwrap_or(&Vec::new())
+        {
             let Some(number) = int(lap, "number") else {
                 continue;
             };
             if let Some(timings) = lap.get("Timings").and_then(Value::as_array) {
-                by_lap.entry(number).or_default().extend(timings.iter().cloned());
+                by_lap
+                    .entry(number)
+                    .or_default()
+                    .extend(timings.iter().cloned());
             }
         }
     }
@@ -581,19 +588,19 @@ mod tests {
     fn merges_lap_pages_across_split_lap() {
         // lap 2 is split: page 1 ends mid-lap (norris only), page 2 starts with the rest.
         let page1 = json!({"MRData":{"total":"4","RaceTable":{"Races":[{
-            "season":"2026","round":"9","raceName":"Spanish Grand Prix",
-            "Circuit":{"circuitName":"Catalunya","Location":{"country":"Spain","locality":"Barcelona"}},
-            "Laps":[
-                {"number":"1","Timings":[{"driverId":"norris","position":"1","time":"1:20.0"},{"driverId":"piastri","position":"2","time":"1:20.5"}]},
-                {"number":"2","Timings":[{"driverId":"norris","position":"1","time":"1:19.8"}]}
-            ]}]}}});
+        "season":"2026","round":"9","raceName":"Spanish Grand Prix",
+        "Circuit":{"circuitName":"Catalunya","Location":{"country":"Spain","locality":"Barcelona"}},
+        "Laps":[
+            {"number":"1","Timings":[{"driverId":"norris","position":"1","time":"1:20.0"},{"driverId":"piastri","position":"2","time":"1:20.5"}]},
+            {"number":"2","Timings":[{"driverId":"norris","position":"1","time":"1:19.8"}]}
+        ]}]}}});
         let page2 = json!({"MRData":{"total":"4","RaceTable":{"Races":[{
-            "season":"2026","round":"9","raceName":"Spanish Grand Prix",
-            "Circuit":{"circuitName":"Catalunya","Location":{"country":"Spain","locality":"Barcelona"}},
-            "Laps":[
-                {"number":"2","Timings":[{"driverId":"piastri","position":"2","time":"1:20.1"}]},
-                {"number":"3","Timings":[{"driverId":"norris","position":"1","time":"1:19.9"}]}
-            ]}]}}});
+        "season":"2026","round":"9","raceName":"Spanish Grand Prix",
+        "Circuit":{"circuitName":"Catalunya","Location":{"country":"Spain","locality":"Barcelona"}},
+        "Laps":[
+            {"number":"2","Timings":[{"driverId":"piastri","position":"2","time":"1:20.1"}]},
+            {"number":"3","Timings":[{"driverId":"norris","position":"1","time":"1:19.9"}]}
+        ]}]}}});
         let merged = merge_lap_pages(&[page1, page2]);
         let out = norm_laps(&merged);
         assert_eq!(out["raceName"], "Spanish Grand Prix");
@@ -641,12 +648,12 @@ mod tests {
     #[test]
     fn normalizes_pitstops() {
         let raw = json!({"MRData":{"RaceTable":{"Races":[{
-            "season":"2026","round":"9","raceName":"Spanish Grand Prix",
-            "Circuit":{"circuitName":"Catalunya","Location":{"country":"Spain","locality":"Barcelona"}},
-            "PitStops":[
-                {"driverId":"norris","lap":"24","stop":"1","time":"14:32:10","duration":"22.343"},
-                {"driverId":"piastri","lap":"26","stop":"1","time":"14:35:01","duration":"21.980"}
-            ]}]}}});
+        "season":"2026","round":"9","raceName":"Spanish Grand Prix",
+        "Circuit":{"circuitName":"Catalunya","Location":{"country":"Spain","locality":"Barcelona"}},
+        "PitStops":[
+            {"driverId":"norris","lap":"24","stop":"1","time":"14:32:10","duration":"22.343"},
+            {"driverId":"piastri","lap":"26","stop":"1","time":"14:35:01","duration":"21.980"}
+        ]}]}}});
         let out = norm_pitstops(&raw);
         assert_eq!(out["raceName"], "Spanish Grand Prix");
         assert_eq!(out["country"], "Spain");
