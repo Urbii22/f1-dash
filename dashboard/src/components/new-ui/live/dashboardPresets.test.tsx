@@ -1,6 +1,8 @@
 import { expect, test } from "vitest";
 
 import { getDashboardPresetSlots } from "@/components/new-ui/live/dashboardPresets";
+import TechnicalBattlesPanel from "@/components/new-ui/live/TechnicalBattlesPanel";
+import TechnicalChampionshipPanel from "@/components/new-ui/live/TechnicalChampionshipPanel";
 import TechnicalComparisonPanel from "@/components/new-ui/live/TechnicalComparisonPanel";
 import TechnicalEventsPanel from "@/components/new-ui/live/TechnicalEventsPanel";
 import TechnicalMapPanel from "@/components/new-ui/live/TechnicalMapPanel";
@@ -16,14 +18,14 @@ function component(slot: React.ReactNode) {
 	return (slot as ReactElement).type;
 }
 
-test("Race preset prioritizes timing, events, map, strategy and comparison", () => {
+test("Race preset prioritizes timing, events, map, battles and championship", () => {
 	const slots = getDashboardPresetSlots("race");
 	expect(slots).toMatchObject({ route: "dashboard", preset: "race" });
 	expect(component(slots.primary)).toBe(TechnicalTimingBoard);
 	expect(component(slots.secondaryTop)).toBe(TechnicalEventsPanel);
 	expect(component(slots.secondaryBottom)).toBe(TechnicalMapPanel);
-	expect(component(slots.bottomLeft)).toBe(TechnicalStrategyPanel);
-	expect(component(slots.bottomRight)).toBe(TechnicalComparisonPanel);
+	expect(component(slots.bottomLeft)).toBe(TechnicalBattlesPanel);
+	expect(component(slots.bottomRight)).toBe(TechnicalChampionshipPanel);
 });
 
 test("Strategy preset mounts strategy, weather, pace and map panels", () => {

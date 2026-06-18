@@ -1,5 +1,7 @@
 import type { ResizableWorkspaceProps } from "@/components/new-ui/layout/ResizableWorkspace";
 import RecentLapsPanel from "@/components/new-ui/live/RecentLapsPanel";
+import TechnicalBattlesPanel from "@/components/new-ui/live/TechnicalBattlesPanel";
+import TechnicalChampionshipPanel from "@/components/new-ui/live/TechnicalChampionshipPanel";
 import SimpleStrategySummary from "@/components/new-ui/live/SimpleStrategySummary";
 import TechnicalComparisonPanel from "@/components/new-ui/live/TechnicalComparisonPanel";
 import TechnicalEventsPanel from "@/components/new-ui/live/TechnicalEventsPanel";
@@ -35,13 +37,15 @@ export function getDashboardPresetSlots(preset: DetailedPreset): ResizableWorksp
 		};
 	}
 
+	// Race-watching layout: classification + events + map up top, the live fights and
+	// predicted championship below. Strategy/comparison live in their own presets.
 	return {
 		route: "dashboard",
 		preset: "race",
 		primary: <TechnicalTimingBoard />,
 		secondaryTop: <TechnicalEventsPanel />,
 		secondaryBottom: <TechnicalMapPanel />,
-		bottomLeft: <TechnicalStrategyPanel />,
-		bottomRight: <TechnicalComparisonPanel />,
+		bottomLeft: <TechnicalBattlesPanel />,
+		bottomRight: <TechnicalChampionshipPanel />,
 	};
 }
