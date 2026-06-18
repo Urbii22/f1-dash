@@ -6,6 +6,7 @@ import "@/styles/globals.css";
 import { env } from "@/env";
 import EnvScript from "@/env-script";
 import OledModeProvider from "@/components/OledModeProvider";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import UiPreferenceSync from "@/components/new-ui/UiPreferenceSync";
 import InterfaceGenerationToggle from "@/components/new-ui/InterfaceGenerationToggle";
 
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: Props) {
 			</head>
 
 			<body>
+				<ServiceWorkerRegister />
 				<UiPreferenceSync />
 				<OledModeProvider>{children}</OledModeProvider>
 				<InterfaceGenerationToggle />
