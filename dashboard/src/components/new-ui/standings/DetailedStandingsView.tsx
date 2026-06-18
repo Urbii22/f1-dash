@@ -3,14 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 
+import ChampionshipPicture from "@/components/standings/ChampionshipPicture";
 import SeasonSelect from "@/components/standings/SeasonSelect";
 import Panel from "@/components/new-ui/primitives/Panel";
 import RouteHeader from "@/components/new-ui/routes/RouteHeader";
 import { buildStandingsStory, sortStandingsRows, type StandingsSortKey } from "@/lib/view-models/standings";
 import type { ConstructorStandingRow, DriverStandingRow } from "@/lib/f1data";
+import type { ChampionshipPictureVM } from "@/lib/view-models/championshipPicture";
 import { useDataStore } from "@/stores/useDataStore";
 
-export default function DetailedStandingsView({ drivers, constructors, season }: { drivers: DriverStandingRow[]; constructors: ConstructorStandingRow[]; season: number }) {
+export default function DetailedStandingsView({ drivers, constructors, season, picture }: { drivers: DriverStandingRow[]; constructors: ConstructorStandingRow[]; season: number; picture?: ChampionshipPictureVM | null }) {
 	const prediction = useDataStore((state) => state.state?.ChampionshipPrediction);
 	const [sortKey, setSortKey] = useState<StandingsSortKey>("position");
 	const model = buildStandingsStory(drivers, prediction);
@@ -19,6 +21,7 @@ export default function DetailedStandingsView({ drivers, constructors, season }:
 	return (
 		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader eyebrow={`${season} season`} title="Detailed championship standings" description="Official classification with optional live-race prediction columns." actions={<SeasonSelect selected={season} variant="new" />} />
+			<ChampionshipPicture picture={picture ?? null} />
 			<Panel title="Drivers" eyebrow="Official and predicted" level="primary">
 				<div className="overflow-x-auto">
 					<table className="w-full min-w-[52rem] text-left text-sm">

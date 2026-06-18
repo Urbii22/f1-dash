@@ -1,20 +1,23 @@
 "use client";
 
+import ChampionshipPicture from "@/components/standings/ChampionshipPicture";
 import SeasonSelect from "@/components/standings/SeasonSelect";
 import Panel from "@/components/new-ui/primitives/Panel";
 import RouteHeader from "@/components/new-ui/routes/RouteHeader";
 import { buildStandingsStory } from "@/lib/view-models/standings";
 import type { ConstructorStandingRow, DriverStandingRow } from "@/lib/f1data";
+import type { ChampionshipPictureVM } from "@/lib/view-models/championshipPicture";
 import { useDataStore } from "@/stores/useDataStore";
 
-export default function SimpleStandingsView(props: { drivers: DriverStandingRow[]; constructors: ConstructorStandingRow[]; season: number }) {
-	const { drivers, season } = props;
+export default function SimpleStandingsView(props: { drivers: DriverStandingRow[]; constructors: ConstructorStandingRow[]; season: number; picture?: ChampionshipPictureVM | null }) {
+	const { drivers, season, picture } = props;
 	const prediction = useDataStore((state) => state.state?.ChampionshipPrediction);
 	const model = buildStandingsStory(drivers, prediction);
 
 	return (
 		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader eyebrow={`${season} season`} title="Championship standings" description="The leaders, closest fight, and live predicted movement." actions={<SeasonSelect selected={season} variant="new" />} />
+			<ChampionshipPicture picture={picture ?? null} />
 			<div data-testid="standings-podium" className="grid gap-3 md:grid-cols-3">
 				{model.topThree.map((row) => <Panel key={row.code} title={row.code} eyebrow={`P${row.position ?? "-"}`} level="primary"><p className="text-sm text-[var(--ui-muted)]">{row.name}</p><p className="new-ui-number mt-2 text-3xl font-bold">{row.points ?? "-"} pts</p><p className="mt-1 text-xs text-[var(--ui-subtle)]">{row.constructor ?? "Team unavailable"}</p></Panel>)}
 			</div>
