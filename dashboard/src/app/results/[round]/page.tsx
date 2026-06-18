@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import GridList from "@/components/results/GridList";
+import PitStopsPanel from "@/components/results/PitStopsPanel";
 import QualiResultTable from "@/components/results/QualiResultTable";
 import RaceResultTable from "@/components/results/RaceResultTable";
 import { getArchiveSessions } from "@/lib/archive";
@@ -96,6 +97,8 @@ function LegacyRoundContent({
 	recording,
 	fastest,
 	sprint,
+	pitStops,
+	labels,
 }: {
 	race: NonNullable<Awaited<ReturnType<typeof getResults>>>;
 	qualifying: Awaited<ReturnType<typeof getQualifying>>;
@@ -143,6 +146,7 @@ function LegacyRoundContent({
 					<RaceResultTable rows={sprint.results} season={season} />
 				</section>
 			) : null}
+			<PitStopsPanel pitStops={pitStops} labels={labels} />
 			<section className="telemetry-panel rounded-lg p-4">
 				<h2 className="mb-3 text-xl font-black">Starting grid</h2>
 				<GridList rows={race.results} />

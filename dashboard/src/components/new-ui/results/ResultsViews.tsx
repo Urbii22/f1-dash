@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import PitStopsPanel from "@/components/results/PitStopsPanel";
 import RouteHeader from "@/components/new-ui/routes/RouteHeader";
 import Panel from "@/components/new-ui/primitives/Panel";
 import Kpi from "@/components/new-ui/primitives/Kpi";
@@ -250,6 +251,8 @@ export function SimpleRoundResultView({
 	season,
 	recording,
 	sprint,
+	pitStops,
+	labels,
 }: {
 	race: RaceResult;
 	qualifying: QualiResult | null;
@@ -299,6 +302,8 @@ export function SimpleRoundResultView({
 					Full classification →
 				</Link>
 			</Panel>
+
+			<PitStopsPanel pitStops={pitStops ?? []} labels={labels ?? {}} />
 		</div>
 	);
 }
@@ -309,6 +314,8 @@ export function DetailedRoundResultView({
 	season,
 	recording,
 	sprint,
+	pitStops,
+	labels,
 }: {
 	race: RaceResult;
 	qualifying: QualiResult | null;
@@ -339,6 +346,8 @@ export function DetailedRoundResultView({
 					<RaceClassificationTable rows={sprint.results} season={season} />
 				</Panel>
 			) : null}
+
+			<PitStopsPanel pitStops={pitStops ?? []} labels={labels ?? {}} />
 
 			<Panel title="Starting grid" eyebrow="Grid order">
 				<StartingGridList rows={race.results} />
