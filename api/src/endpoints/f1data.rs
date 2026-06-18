@@ -238,6 +238,34 @@ fn norm_qualifying(root: &Value) -> Value {
     meta
 }
 
+fn norm_pitstops(root: &Value) -> Value {
+    let races = first_list(root, "RaceTable", "Races");
+    let Some(race) = races.first() else {
+        return json!(null);
+    };
+    let stops: Vec<Value> = race
+        .get("PitStops")
+        .and_then(Value::as_array)
+        .map(|arr| {
+            arr.iter()
+                .map(|p| {
+                    json!({
+                        "driverId": s(p, "driverId"),
+                        "lap": int(p, "lap"),
+                        "stop": int(p, "stop"),
+                        "time": s(p, "time"),
+                        // Ergast gives seconds with millis as a string, e.g. "22.343".
+                        "durationSeconds": num(p, "duration"),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let mut meta = race_meta(race);
+    meta["pitStops"] = Value::Array(stops);
+    meta
+}
+
 fn norm_driver_season(root: &Value) -> Value {
     let rounds: Vec<Value> = first_list(root, "RaceTable", "Races")
         .iter()
@@ -288,6 +316,11 @@ pub async fn results(Query(q): Query<RoundQuery>) -> ApiResult {
 pub async fn qualifying(Query(q): Query<RoundQuery>) -> ApiResult {
     let season = q.season.unwrap_or_else(current_year);
     proxy(format!("/{season}/{}/qualifying", q.round), norm_qualifying).await
+}
+
+pub async fn pit_stops(Query(q): Query<RoundQuery>) -> ApiResult {
+    let season = q.season.unwrap_or_else(current_year);
+    proxy(format!("/{season}/{}/pitstops", q.round), norm_pitstops).await
 }
 
 pub async fn driver_season(
@@ -375,6 +408,32 @@ mod tests {
         let r = &norm_qualifying(&raw)["results"][0];
         assert_eq!(r["q3"], "1:15.1");
         assert_eq!(r["driver"]["code"], "PIA");
+    }
+
+    #[test]
+    fn normalizes_pitstops() {
+        let raw = json!({"MRData":{"RaceTable":{"Races":[{
+            "season":"2026","round":"9","raceName":"Spanish Grand Prix",
+            "Circuit":{"circuitName":"Catalunya","Location":{"country":"Spain","locality":"Barcelona"}},
+            "PitStops":[
+                {"driverId":"norris","lap":"24","stop":"1","time":"14:32:10","duration":"22.343"},
+                {"driverId":"piastri","lap":"26","stop":"1","time":"14:35:01","duration":"21.980"}
+            ]}]}}});
+        let out = norm_pitstops(&raw);
+        assert_eq!(out["raceName"], "Spanish Grand Prix");
+        assert_eq!(out["country"], "Spain");
+        let p = &out["pitStops"][0];
+        assert_eq!(p["driverId"], "norris");
+        assert_eq!(p["lap"], 24);
+        assert_eq!(p["stop"], 1);
+        assert_eq!(p["durationSeconds"], 22.343);
+        assert_eq!(out["pitStops"].as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn pitstops_with_no_race_is_null() {
+        let raw = json!({"MRData":{"RaceTable":{"Races":[]}}});
+        assert!(norm_pitstops(&raw).is_null());
     }
 
     #[test]
