@@ -9,6 +9,7 @@ import ViewState from "@/components/new-ui/primitives/ViewState";
 import type { RaceResult, QualiResult, DriverRef, ResultRow, QualiRow } from "@/lib/f1data";
 import { classifyRound } from "@/lib/seasonResults";
 import type { RoundWithResult } from "@/lib/seasonResults";
+import type { RoundExtras } from "@/lib/view-models/roundExtras";
 import type { ArchiveSession } from "@/types/archive.type";
 
 type RoundResultItem = RoundWithResult;
@@ -248,14 +249,16 @@ export function SimpleRoundResultView({
 	race,
 	season,
 	recording,
+	sprint,
 }: {
 	race: RaceResult;
 	qualifying: QualiResult | null;
 	season: number;
 	recording: ArchiveSession | null;
-}) {
+} & Partial<RoundExtras>) {
 	const podium = race.results.slice(0, 3);
 	const fastest = race.results.find((r) => r.fastestLapRank === "1");
+	const sprintWinner = sprint?.results.find((r) => r.position === 1);
 
 	return (
 		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
@@ -276,7 +279,7 @@ export function SimpleRoundResultView({
 				<Kpi label="Winner" value={podium[0] ? driverName(podium[0].driver) : "—"} />
 				{fastest && <Kpi label="Fastest lap" value={driverName(fastest.driver)} context={fastest.fastestLapTime ?? ""} />}
 				<Kpi label="Finishers" value={race.results.filter((r) => r.status === "Finished" || r.status?.startsWith("+")).length} />
-				<Kpi label="Circuit" value={race.circuitName ?? "—"} />
+				{sprintWinner ? <Kpi label="Sprint winner" value={driverName(sprintWinner.driver)} /> : <Kpi label="Circuit" value={race.circuitName ?? "—"} />}
 			</div>
 
 			<Panel title="Podium" eyebrow="Top three" level="primary">
@@ -305,12 +308,13 @@ export function DetailedRoundResultView({
 	qualifying,
 	season,
 	recording,
+	sprint,
 }: {
 	race: RaceResult;
 	qualifying: QualiResult | null;
 	season: number;
 	recording: ArchiveSession | null;
-}) {
+} & Partial<RoundExtras>) {
 	return (
 		<div className="new-ui-route-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
 			<RouteHeader
@@ -329,6 +333,12 @@ export function DetailedRoundResultView({
 			<Panel title="Race classification" eyebrow="Official result" level="primary">
 				<RaceClassificationTable rows={race.results} season={season} />
 			</Panel>
+
+			{sprint?.results.length ? (
+				<Panel title="Sprint classification" eyebrow="Sprint result">
+					<RaceClassificationTable rows={sprint.results} season={season} />
+				</Panel>
+			) : null}
 
 			<Panel title="Starting grid" eyebrow="Grid order">
 				<StartingGridList rows={race.results} />
