@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import LineChart, { type ChartSeries } from "@/components/analysis/LineChart";
 import { lapChartSeries, type RaceLap } from "@/lib/f1data";
+import { downloadText, seriesToCsv } from "@/lib/exportChart";
 
 // Jolpica gives no team colours, so we colour lines from a fixed palette by the
 // driver's finishing order.
@@ -47,10 +48,29 @@ export default function RaceLapChart({
 	const toggle = (id: string) =>
 		setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
+	const exportCsv = () => {
+		const rows = lapChartSeries(laps).map((line) => ({
+			label: labelOf.get(line.driverId) ?? line.driverId,
+			points: line.points,
+		}));
+		downloadText("lap-chart.csv", seriesToCsv(rows, { series: "driver", x: "lap", y: "position" }));
+	};
+
 	return (
 		<section className="rounded-lg border border-white/10 bg-white/[0.03] p-4" data-testid="race-lap-chart">
-			<p className="text-xs font-semibold tracking-widest text-cyan-300 uppercase">Lap chart</p>
-			<p className="mt-1 text-sm text-zinc-400">Position by lap. Toggle drivers to compare.</p>
+			<div className="flex items-start justify-between gap-2">
+				<div>
+					<p className="text-xs font-semibold tracking-widest text-cyan-300 uppercase">Lap chart</p>
+					<p className="mt-1 text-sm text-zinc-400">Position by lap. Toggle drivers to compare.</p>
+				</div>
+				<button
+					type="button"
+					onClick={exportCsv}
+					className="shrink-0 rounded-md border border-white/10 px-2 py-1 font-mono text-xs text-zinc-400 hover:text-cyan-200"
+				>
+					Export CSV
+				</button>
+			</div>
 
 			<div className="mt-3 flex flex-wrap gap-1">
 				{drivers.map((driver) => {
