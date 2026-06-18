@@ -7,6 +7,7 @@
 //! normalised from the verbose `MRData` envelope into flat camelCase shapes so
 //! the dashboard never has to know about Ergast quirks.
 
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use axum::{Json, extract::Query, http::StatusCode};
@@ -49,6 +50,79 @@ async fn cached_get(path: String) -> Result<Value, anyhow::Error> {
     let url = format!("{BASE}{path}.json?limit=100");
     let body = reqwest::get(&url).await?.error_for_status()?.json().await?;
     Ok(body)
+}
+
+/// Jolpica caps unauthenticated pages at 100 rows. Lap-time queries return one
+/// row per driver per lap (a race is ~1000+ rows), so we page through and merge.
+const LAP_PAGE_SIZE: usize = 100;
+
+async fn fetch_json(url: &str) -> Result<Value, anyhow::Error> {
+    Ok(reqwest::get(url).await?.error_for_status()?.json().await?)
+}
+
+/// Page through `/{season}/{round}/laps` and merge the pages back into a single
+/// Ergast-shaped document (a lap can be split across a page boundary). Cached on
+/// disk by path; `merge_lap_pages` does the pure reassembly so it stays testable.
+#[io_cached(
+    map_error = r##"|e| anyhow::anyhow!(format!("jolpica laps cache error {:?}", e))"##,
+    disk = true,
+    time = 3600
+)]
+async fn cached_get_laps(path: String) -> Result<Value, anyhow::Error> {
+    let mut pages: Vec<Value> = Vec::new();
+    let mut offset = 0usize;
+    loop {
+        let url = format!("{BASE}{path}.json?limit={LAP_PAGE_SIZE}&offset={offset}");
+        let body = fetch_json(&url).await?;
+        let total: usize = body
+            .pointer("/MRData/total")
+            .and_then(Value::as_str)
+            .and_then(|t| t.parse().ok())
+            .unwrap_or(0);
+        pages.push(body);
+        offset += LAP_PAGE_SIZE;
+        if total == 0 || offset >= total {
+            break;
+        }
+    }
+    Ok(merge_lap_pages(&pages))
+}
+
+/// Reassemble paged Ergast lap responses into one `{MRData:{RaceTable:{Races:[..]}}}`
+/// document, concatenating the `Timings` of laps that span a page boundary.
+fn merge_lap_pages(pages: &[Value]) -> Value {
+    let mut meta: Option<Value> = None;
+    let mut by_lap: BTreeMap<i64, Vec<Value>> = BTreeMap::new();
+
+    for page in pages {
+        let races = first_list(page, "RaceTable", "Races");
+        let Some(race) = races.first() else {
+            continue;
+        };
+        if meta.is_none() {
+            meta = Some(race.clone());
+        }
+        for lap in race.get("Laps").and_then(Value::as_array).unwrap_or(&Vec::new()) {
+            let Some(number) = int(lap, "number") else {
+                continue;
+            };
+            if let Some(timings) = lap.get("Timings").and_then(Value::as_array) {
+                by_lap.entry(number).or_default().extend(timings.iter().cloned());
+            }
+        }
+    }
+
+    let Some(mut race) = meta else {
+        return json!({ "MRData": { "RaceTable": { "Races": [] } } });
+    };
+    let laps: Vec<Value> = by_lap
+        .into_iter()
+        .map(|(number, timings)| json!({ "number": number.to_string(), "Timings": timings }))
+        .collect();
+    if let Some(obj) = race.as_object_mut() {
+        obj.insert("Laps".into(), Value::Array(laps));
+    }
+    json!({ "MRData": { "RaceTable": { "Races": [race] } } })
 }
 
 async fn proxy(path: String, normalize: fn(&Value) -> Value) -> ApiResult {
@@ -302,6 +376,47 @@ fn norm_pitstops(root: &Value) -> Value {
     meta
 }
 
+/// Lap-by-lap timings (position + time per driver each lap) for a past race,
+/// for the position/lap chart. Consumes the merged document from `cached_get_laps`.
+fn norm_laps(root: &Value) -> Value {
+    let races = first_list(root, "RaceTable", "Races");
+    let Some(race) = races.first() else {
+        return json!(null);
+    };
+    if race.is_null() {
+        return json!(null);
+    }
+    let laps: Vec<Value> = race
+        .get("Laps")
+        .and_then(Value::as_array)
+        .map(|arr| {
+            arr.iter()
+                .map(|lap| {
+                    let timings: Vec<Value> = lap
+                        .get("Timings")
+                        .and_then(Value::as_array)
+                        .map(|t| {
+                            t.iter()
+                                .map(|x| {
+                                    json!({
+                                        "driverId": s(x, "driverId"),
+                                        "position": int(x, "position"),
+                                        "time": s(x, "time"),
+                                    })
+                                })
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    json!({ "lap": int(lap, "number"), "timings": timings })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let mut meta = race_meta(race);
+    meta["laps"] = Value::Array(laps);
+    meta
+}
+
 fn norm_driver_season(root: &Value) -> Value {
     let rounds: Vec<Value> = first_list(root, "RaceTable", "Races")
         .iter()
@@ -352,6 +467,17 @@ pub async fn results(Query(q): Query<RoundQuery>) -> ApiResult {
 pub async fn qualifying(Query(q): Query<RoundQuery>) -> ApiResult {
     let season = q.season.unwrap_or_else(current_year);
     proxy(format!("/{season}/{}/qualifying", q.round), norm_qualifying).await
+}
+
+pub async fn laps(Query(q): Query<RoundQuery>) -> ApiResult {
+    let season = q.season.unwrap_or_else(current_year);
+    match cached_get_laps(format!("/{season}/{}/laps", q.round)).await {
+        Ok(raw) => Ok(Json(norm_laps(&raw))),
+        Err(error) => {
+            tracing::error!(?error, "jolpica laps fetch failed");
+            Err(StatusCode::BAD_GATEWAY)
+        }
+    }
 }
 
 pub async fn sprint(Query(q): Query<RoundQuery>) -> ApiResult {
@@ -449,6 +575,42 @@ mod tests {
         let r = &norm_qualifying(&raw)["results"][0];
         assert_eq!(r["q3"], "1:15.1");
         assert_eq!(r["driver"]["code"], "PIA");
+    }
+
+    #[test]
+    fn merges_lap_pages_across_split_lap() {
+        // lap 2 is split: page 1 ends mid-lap (norris only), page 2 starts with the rest.
+        let page1 = json!({"MRData":{"total":"4","RaceTable":{"Races":[{
+            "season":"2026","round":"9","raceName":"Spanish Grand Prix",
+            "Circuit":{"circuitName":"Catalunya","Location":{"country":"Spain","locality":"Barcelona"}},
+            "Laps":[
+                {"number":"1","Timings":[{"driverId":"norris","position":"1","time":"1:20.0"},{"driverId":"piastri","position":"2","time":"1:20.5"}]},
+                {"number":"2","Timings":[{"driverId":"norris","position":"1","time":"1:19.8"}]}
+            ]}]}}});
+        let page2 = json!({"MRData":{"total":"4","RaceTable":{"Races":[{
+            "season":"2026","round":"9","raceName":"Spanish Grand Prix",
+            "Circuit":{"circuitName":"Catalunya","Location":{"country":"Spain","locality":"Barcelona"}},
+            "Laps":[
+                {"number":"2","Timings":[{"driverId":"piastri","position":"2","time":"1:20.1"}]},
+                {"number":"3","Timings":[{"driverId":"norris","position":"1","time":"1:19.9"}]}
+            ]}]}}});
+        let merged = merge_lap_pages(&[page1, page2]);
+        let out = norm_laps(&merged);
+        assert_eq!(out["raceName"], "Spanish Grand Prix");
+        let laps = out["laps"].as_array().unwrap();
+        assert_eq!(laps.len(), 3);
+        assert_eq!(laps[0]["lap"], 1);
+        assert_eq!(laps[1]["lap"], 2);
+        // lap 2 reassembled from both pages
+        assert_eq!(laps[1]["timings"].as_array().unwrap().len(), 2);
+        assert_eq!(laps[2]["lap"], 3);
+        assert_eq!(laps[2]["timings"][0]["driverId"], "norris");
+    }
+
+    #[test]
+    fn laps_with_no_race_is_null() {
+        let merged = merge_lap_pages(&[json!({"MRData":{"total":"0","RaceTable":{"Races":[]}}})]);
+        assert!(norm_laps(&merged).is_null());
     }
 
     #[test]
