@@ -36,4 +36,14 @@ describe("merge (parity with shared/src/merge.rs)", () => {
 			{ value: 1 },
 		]);
 	});
+
+	// Guard against absurd indices: a huge numeric key must not drive the
+	// null-padding loop into an OOM. Such keys are ignored, fast and bounded.
+	it("ignores absurdly large array indices without allocating", () => {
+		const huge = "9".repeat(24); // Number(huge) === 1e24, finite but nonsense
+		const start = performance.now();
+		const out = merge([{ value: 1 }], { [huge]: { value: 9 }, "100001": { value: 9 } });
+		expect(out).toEqual([{ value: 1 }]);
+		expect(performance.now() - start).toBeLessThan(100);
+	});
 });
