@@ -1,26 +1,26 @@
 [package]
 name = "api"
 version = "0.4.0"
-edition = "2024"
+edition.workspace = true
 publish = false
 authors = ["slowlydev"]
 
 [dependencies]
 shared = { workspace = true }
 archive = { path = "../archive" }
-axum = { version = "0.8.4", features = ["http2"] }
-tower-http = { version = "0.6.4", features = ["cors"] }
-tokio = { version = "1.45.1", features = ["full"] }
-tracing = "0.1.41"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-reqwest = { version = "0.13.1", features = ["native-tls", "json"] }
-anyhow = "1.0.98"
+axum = { workspace = true, features = ["http2"] }
+tower-http = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+anyhow = { workspace = true }
 ical = "0.11"
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true }
 cached = { version = "0.56.0", features = ["disk_store", "async"] }
 regex = "1.12.2"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { workspace = true }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
