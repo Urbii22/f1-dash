@@ -14,7 +14,7 @@ export const defaultUiPreferences: UiPreferences = {
 export function normalizeUiPreferences(value: unknown): UiPreferences {
 	const candidate = value as Partial<Record<keyof UiPreferences, unknown>> | null | undefined;
 	return {
-		generation: candidate?.generation === "new" ? "new" : "legacy",
+		generation: "legacy",
 		density: candidate?.density === "detailed" ? "detailed" : "simple",
 	};
 }

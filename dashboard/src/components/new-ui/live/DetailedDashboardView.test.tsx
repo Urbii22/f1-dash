@@ -14,13 +14,14 @@ beforeEach(() => {
 	useDriverSelectionStore.setState({ selectedDriver: "4", comparedDrivers: ["1", "4"] });
 });
 
-test("renders preset controls and an overflow-contained workspace", () => {
+test("renders preset controls and a scrollable workspace", () => {
 	render(<DetailedDashboardView />);
 	const dashboard = screen.getByTestId("detailed-dashboard");
-	expect(dashboard).toHaveClass("overflow-hidden");
+	expect(dashboard.className).toContain("h-[calc(100dvh-3.25rem)]");
+	expect(dashboard).toHaveClass("overflow-auto");
 	expect(screen.getByRole("radiogroup", { name: "Workspace preset" })).toBeVisible();
 	expect(screen.getByRole("button", { name: "Reset layout" })).toBeVisible();
-	expect(screen.getAllByRole("separator")).toHaveLength(3);
+	expect(screen.getAllByRole("separator")).toHaveLength(4);
 });
 
 test("changes the dashboard preset without clearing selected drivers", async () => {

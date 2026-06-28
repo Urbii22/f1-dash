@@ -14,18 +14,17 @@ function read(file: string): string {
 	return readFileSync(path.resolve(process.cwd(), file), "utf8");
 }
 
-describe("New UI live route coverage", () => {
-	test.each(routes)("$pathname has reversible Legacy, Simple, and Detailed branches", ({ file, legacy, simple, detailed }) => {
+describe("Legacy-only live route coverage", () => {
+	test.each(routes)("$pathname keeps its Legacy branch available", ({ file, legacy }) => {
 		const source = read(file);
 		expect(source).toContain("UiModeBoundary");
 		expect(source).toContain(legacy);
-		expect(source).toContain(simple);
-		expect(source).toContain(detailed);
 		expect(source).not.toContain("NewUiCompatibilityBoundary");
 	});
 
-	test("dashboard shell marks every migrated route as native New UI", () => {
+	test("dashboard shell no longer keeps a native New UI route registry", () => {
 		const source = read("src/app/dashboard/layout.tsx");
-		for (const route of routes) expect(source).toContain(`"${route.pathname}"`);
+		expect(source).not.toContain("newUiNativeRoutes");
+		expect(source).not.toContain("NewUiDashboardShell");
 	});
 });

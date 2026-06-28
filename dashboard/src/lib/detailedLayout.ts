@@ -4,6 +4,7 @@ export type DashboardLayout = {
 	primary: number;
 	secondaryTop: number;
 	bottomLeft: number;
+	topRow: number;
 };
 
 // Tested clamp ranges. Each splitter field keeps both panes usable; values
@@ -13,12 +14,13 @@ export const dashboardLayoutBounds: Record<keyof DashboardLayout, { min: number;
 	primary: { min: 32, max: 62 },
 	secondaryTop: { min: 30, max: 70 },
 	bottomLeft: { min: 35, max: 70 },
+	topRow: { min: 35, max: 75 },
 };
 
 export const dashboardPresetDefaults: Record<DetailedPreset, DashboardLayout> = {
-	race: { primary: 48, secondaryTop: 58, bottomLeft: 55 },
-	strategy: { primary: 42, secondaryTop: 45, bottomLeft: 62 },
-	driver: { primary: 38, secondaryTop: 52, bottomLeft: 46 },
+	race: { primary: 48, secondaryTop: 58, bottomLeft: 55, topRow: 58 },
+	strategy: { primary: 42, secondaryTop: 45, bottomLeft: 62, topRow: 54 },
+	driver: { primary: 38, secondaryTop: 52, bottomLeft: 46, topRow: 62 },
 };
 
 function clamp(value: number, key: keyof DashboardLayout): number {
@@ -38,7 +40,7 @@ export function normalizeDashboardLayout(value: unknown, preset: DetailedPreset)
 	const defaults = dashboardPresetDefaults[preset];
 	if (!isObject(value)) return { ...defaults };
 
-	const keys: (keyof DashboardLayout)[] = ["primary", "secondaryTop", "bottomLeft"];
+	const keys: (keyof DashboardLayout)[] = ["primary", "secondaryTop", "bottomLeft", "topRow"];
 	const result = { ...defaults };
 	for (const key of keys) {
 		const raw = value[key];

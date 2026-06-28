@@ -13,7 +13,7 @@ export default function RecentLapsPanel() {
 	const laps = useLapHistoryStore((state) => selected ? state.laps[selected] : undefined);
 
 	return (
-		<Panel title="Recent laps" eyebrow="Selected driver" className="flex min-h-0 flex-col">
+		<Panel title="Recent laps" eyebrow="Selected driver" className="flex h-full min-h-0 flex-col" bodyClassName="flex min-h-0 flex-col">
 			{!selected ? <ViewState state="empty" title="Select a driver" description="Choose a driver to inspect recent pace." />
 				: !driver ? <ViewState state="unavailable" title="Driver unavailable" />
 				: !laps?.length ? <ViewState state="empty" title={`${driver.Tla} has no recorded laps`} description="Completed laps appear here during the session." />

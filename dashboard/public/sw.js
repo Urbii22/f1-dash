@@ -1,7 +1,7 @@
 // Minimal service worker. Network-first for navigations/data (never serve stale
 // HTML), cache-first only for immutable hashed assets. Versioned cache so an
 // updated worker drops the old one on activate. Same-origin only.
-const CACHE = "f1dash-v1";
+const CACHE = "f1dash-v2";
 const PRECACHE = ["/", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -33,6 +33,11 @@ self.addEventListener("fetch", (event) => {
 
 	const url = new URL(request.url);
 	if (url.origin !== self.location.origin) return; // leave cross-origin untouched
+
+	if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+		event.respondWith(fetch(request));
+		return;
+	}
 
 	if (isImmutable(url.pathname)) {
 		event.respondWith(

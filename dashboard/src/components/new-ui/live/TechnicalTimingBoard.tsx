@@ -33,8 +33,8 @@ export default function TechnicalTimingBoard() {
 	);
 
 	return (
-		<Panel title="Technical classification" eyebrow="Pit wall timing" level="primary" className="flex min-h-0 flex-col">
-			<div className="tech-scrollbar min-h-0 flex-1 overflow-auto">
+		<Panel title="Technical classification" eyebrow="Pit wall timing" level="primary" className="flex h-full min-h-0 flex-col" bodyClassName="flex min-h-0 flex-col">
+			<div data-testid="technical-timing-scroll" className="tech-scrollbar min-h-0 flex-1 overflow-auto">
 				<div className="min-w-[76rem]">
 					<div
 						data-testid="technical-timing-header"

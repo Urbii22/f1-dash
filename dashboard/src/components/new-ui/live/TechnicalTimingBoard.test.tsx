@@ -85,6 +85,15 @@ test("renders the required technical column headers", () => {
 	expect(within(header).getByText(/speed/i)).toBeVisible();
 });
 
+test("places the timing grid in a height-constrained scroll area", () => {
+	seed();
+	render(<TechnicalTimingBoard />);
+	const scroller = screen.getByTestId("technical-timing-scroll");
+	expect(scroller).toHaveClass("tech-scrollbar", "min-h-0", "flex-1", "overflow-auto");
+	expect(scroller.closest(".new-ui-panel")).toHaveClass("h-full");
+	expect(scroller.closest(".new-ui-panel__body")).toHaveClass("flex", "min-h-0", "flex-col");
+});
+
 test("renders sector and speed-trap values for a driver", () => {
 	seed();
 	render(<TechnicalTimingBoard />);

@@ -68,7 +68,7 @@ test("Detailed preserves active tab and driver filters in the shared store", () 
 	expect(useAnalysisViewStore.getState()).toMatchObject({ activeTab: "strategy", selectedDrivers: ["4", "81"] });
 });
 
-test("switching density keeps analysis tab and driver selection", () => {
+test("density controls no longer switch out of the legacy boundary", () => {
 	useAnalysisViewStore.setState({ activeTab: "positions", selectedDrivers: ["4"] });
 	render(
 		<>
@@ -79,7 +79,6 @@ test("switching density keeps analysis tab and driver selection", () => {
 
 	fireEvent.click(screen.getByRole("radio", { name: "Detailed" }));
 
-	expect(screen.getByRole("heading", { name: "Detailed session analysis" })).toBeVisible();
-	expect(screen.getByRole("tab", { name: "Positions" })).toHaveAttribute("aria-selected", "true");
+	expect(screen.getByText("Legacy")).toBeVisible();
 	expect(useAnalysisViewStore.getState().selectedDrivers).toEqual(["4"]);
 });

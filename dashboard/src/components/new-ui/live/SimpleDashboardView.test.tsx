@@ -42,6 +42,7 @@ test("lays out classification, race story, alerts/strategy, then map in order", 
 test("uses the broadcast column template that keeps classification dominant", () => {
 	render(<SimpleDashboardView />);
 	const root = screen.getByTestId("simple-dashboard");
+	expect(root.className).toContain("h-[calc(100dvh-3.25rem)]");
 	expect(root.className).toContain("grid-cols-[minmax(42rem,1.5fr)_minmax(24rem,.8fr)_minmax(18rem,.55fr)]");
-	expect(root.className).toContain("overflow-hidden");
+	expect(root.className).toContain("overflow-auto");
 });

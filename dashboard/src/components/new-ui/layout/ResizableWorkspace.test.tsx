@@ -125,17 +125,28 @@ describe("ResizableWorkspace composition", () => {
 
 	test("grid templates reflect the stored layout percentages", () => {
 		useDetailedLayoutStore.getState().setLayoutValue("dashboard", "race", "primary", 50);
+		useDetailedLayoutStore.getState().setLayoutValue("dashboard", "race", "topRow", 60);
 		render(<ResizableWorkspace route="dashboard" preset="race" {...slots} />);
-		const topRow = screen.getByTestId("workspace-top-row");
-		expect(topRow).toHaveStyle({ gridTemplateColumns: expect.stringContaining("50") });
+		const workspace = screen.getByTestId("resizable-workspace");
+		const leftColumn = screen.getByTestId("workspace-left-column");
+		expect(workspace).toHaveStyle({ gridTemplateColumns: expect.stringContaining("50") });
+		expect(leftColumn).toHaveStyle({ gridTemplateRows: expect.stringContaining("60") });
 	});
 
 	test("dragging a splitter updates the store for the active route and preset", () => {
 		render(<ResizableWorkspace route="dashboard" preset="race" {...slots} />);
-		const separator = screen.getByRole("separator", { name: /classification/i });
+		const separator = screen.getByRole("separator", { name: /workspace columns/i });
 		fireEvent.keyDown(separator, { key: "ArrowRight" });
 		const expected = dashboardPresetDefaults.race.primary + 1;
 		expect(useDetailedLayoutStore.getState().getLayout("dashboard", "race").primary).toBe(expected);
+	});
+
+	test("dragging the left panel height splitter updates the stored top row height", () => {
+		render(<ResizableWorkspace route="dashboard" preset="race" {...slots} />);
+		const separator = screen.getByRole("separator", { name: /left panels/i });
+		fireEvent.keyDown(separator, { key: "ArrowDown", shiftKey: true });
+		const expected = dashboardPresetDefaults.race.topRow + 5;
+		expect(useDetailedLayoutStore.getState().getLayout("dashboard", "race").topRow).toBe(expected);
 	});
 });
 

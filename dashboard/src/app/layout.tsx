@@ -7,8 +7,6 @@ import { env } from "@/env";
 import EnvScript from "@/env-script";
 import OledModeProvider from "@/components/OledModeProvider";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
-import UiPreferenceSync from "@/components/new-ui/UiPreferenceSync";
-import InterfaceGenerationToggle from "@/components/new-ui/InterfaceGenerationToggle";
 
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
@@ -35,9 +33,7 @@ export default function RootLayout({ children }: Props) {
 
 			<body>
 				<ServiceWorkerRegister />
-				<UiPreferenceSync />
 				<OledModeProvider>{children}</OledModeProvider>
-				<InterfaceGenerationToggle />
 			</body>
 		</html>
 	);

@@ -19,17 +19,8 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { dashboardSplitBounds, dashboardSplitFromPointer } from "@/lib/dashboardSplit";
 
-import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
-import LiveDashboardState from "@/components/new-ui/live/LiveDashboardState";
-
 export default function DashboardPage() {
-	return (
-		<UiModeBoundary
-			legacy={<LegacyDashboardPage />}
-			simple={<LiveDashboardState density="simple" />}
-			detailed={<LiveDashboardState density="detailed" />}
-		/>
-	);
+	return <LegacyDashboardPage />;
 }
 
 export function LegacyDashboardPage() {

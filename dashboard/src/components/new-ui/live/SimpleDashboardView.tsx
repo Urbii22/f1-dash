@@ -13,7 +13,7 @@ export default function SimpleDashboardView() {
 	return (
 		<div
 			data-testid="simple-dashboard"
-			className="relative grid h-full min-h-0 grid-cols-[minmax(42rem,1.5fr)_minmax(24rem,.8fr)_minmax(18rem,.55fr)] gap-3 overflow-hidden p-3"
+			className="relative grid h-[calc(100dvh-3.25rem)] min-h-0 grid-cols-[minmax(42rem,1.5fr)_minmax(24rem,.8fr)_minmax(18rem,.55fr)] gap-3 overflow-auto p-3"
 		>
 			<CompactTimingBoard />
 

@@ -9,15 +9,10 @@ function read(rel: string): string {
 }
 
 const dashboardLayout = "src/app/dashboard/layout.tsx";
-
-const migratedLayouts = [
-	{ file: "src/app/dashboard/layout.tsx", shell: "NewUiDashboardShell", routeName: "Dashboard" },
-	{ file: "src/app/(nav)/layout.tsx", shell: "NewUiPublicShell", routeName: "Pages" },
-	{ file: "src/app/archive/layout.tsx", shell: "NewUiPublicShell", routeName: "Archive" },
-	{ file: "src/app/results/layout.tsx", shell: "NewUiPublicShell", routeName: "Results" },
-	{ file: "src/app/h2h/layout.tsx", shell: "NewUiPublicShell", routeName: "Head to Head" },
-	{ file: "src/app/driver/layout.tsx", shell: "NewUiPublicShell", routeName: "Driver" },
-];
+const globalsCss = "src/styles/globals.css";
+const serviceWorkerRegister = "src/components/ServiceWorkerRegister.tsx";
+const serviceWorker = "public/sw.js";
+const rootLayout = "src/app/layout.tsx";
 
 describe("UI shell compatibility", () => {
 	it("keeps dashboard live runtime hooks outside the Legacy shell", () => {
@@ -40,36 +35,37 @@ describe("UI shell compatibility", () => {
 		expect(sidebarIndex).toBeGreaterThan(legacyShellIndex);
 	});
 
-	it("routes every migrated layout through the reversible mode boundary", () => {
-		for (const { file } of migratedLayouts) {
-			const src = read(file);
-			expect(src, `${file} must use UiModeBoundary`).toContain("UiModeBoundary");
-		}
-	});
-
-	it("imports a New UI shell in every migrated layout", () => {
-		for (const { file, shell } of migratedLayouts) {
-			const src = read(file);
-			expect(src, `${file} must import ${shell}`).toContain(shell);
-		}
-	});
-
-	it("routes inside the dashboard layout still use the compatibility boundary for unmigrated paths", () => {
+	it("dashboard layout does not import New UI shells or compatibility wrappers", () => {
 		const src = read(dashboardLayout);
-		expect(src, "dashboard layout must use NewUiCompatibilityBoundary for unlisted routes").toContain("NewUiCompatibilityBoundary");
-		expect(src, "dashboard layout must check against newUiNativeRoutes").toContain("newUiNativeRoutes.has(pathname)");
+		expect(src).not.toContain("NewUiCompatibilityBoundary");
+		expect(src).not.toContain("NewUiDashboardShell");
+		expect(src).not.toContain("newUiNativeRoutes");
 	});
 
-	it("bypasses the compatibility notice on the migrated live dashboard", () => {
-		const src = read(dashboardLayout);
-		expect(src).toContain("usePathname");
-		expect(src).toContain("newUiNativeRoutes.has(pathname)");
-		expect(src).toContain('"/dashboard"');
-		expect(src).toContain('"/dashboard/qualifying"');
-		expect(src).toContain('"/dashboard/analysis"');
-		expect(src).toContain('"/dashboard/standings"');
-		expect(src).toContain('"/dashboard/weather"');
-		expect(src).toContain('"/dashboard/track-map"');
-		expect(src).toContain('"/dashboard/settings"');
+	it("root layout does not mount New UI preference sync or toggle controls", () => {
+		const src = read(rootLayout);
+		expect(src).not.toContain("UiPreferenceSync");
+		expect(src).not.toContain("InterfaceGenerationToggle");
+	});
+
+	it("allows scrolling in the New UI document shell and panel bodies", () => {
+		const css = read(globalsCss);
+		const shellBlock = css.match(/\.new-ui-app-shell\s*{(?<body>[^}]*)}/s)?.groups?.body ?? "";
+
+		expect(css).toMatch(/body\[data-ui-generation="new"\]\s*{[^}]*overflow-y:\s*auto;/s);
+		expect(shellBlock).toMatch(/^\s*min-height:\s*100dvh;/m);
+		expect(shellBlock).not.toMatch(/^\s*height:\s*100dvh;/m);
+		expect(css).toMatch(/\.new-ui-panel__body\s*{[^}]*overflow:\s*auto;/s);
+	});
+
+	it("does not keep a stale service worker active in local development", () => {
+		const registerSrc = read(serviceWorkerRegister);
+		const swSrc = read(serviceWorker);
+		expect(registerSrc).toContain('process.env.NODE_ENV !== "production"');
+		expect(registerSrc).toContain("registration.unregister()");
+		expect(registerSrc).toContain("caches.delete");
+		expect(swSrc).toContain('const CACHE = "f1dash-v2"');
+		expect(swSrc).toContain('url.hostname === "localhost"');
+		expect(swSrc).toContain("event.respondWith(fetch(request))");
 	});
 });

@@ -2,7 +2,6 @@
 
 import { type ReactNode, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { usePathname } from "next/navigation";
 
 import { useDataEngine } from "@/hooks/useDataEngine";
 import { useWakeLock } from "@/hooks/useWakeLock";
@@ -25,22 +24,11 @@ import ConnectionStatus from "@/components/ConnectionStatus";
 import ReplayControlBar from "@/components/dashboard/ReplayControlBar";
 import AlertToasts from "@/components/dashboard/AlertToasts";
 
-import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
-import NewUiCompatibilityBoundary from "@/components/new-ui/NewUiCompatibilityBoundary";
-import NewUiDashboardShell from "@/components/new-ui/shell/NewUiDashboardShell";
-
 type Props = {
 	children: ReactNode;
 };
 
-const newUiNativeRoutes = new Set(["/dashboard", "/dashboard/qualifying", "/dashboard/analysis", "/dashboard/standings", "/dashboard/weather", "/dashboard/track-map", "/dashboard/settings"]);
-
-function isNewUiNativeRoute(pathname: string): boolean {
-	return newUiNativeRoutes.has(pathname) || pathname.startsWith("/dashboard/driver/");
-}
-
 export default function DashboardLayout({ children }: Props) {
-	const pathname = usePathname();
 	const stores = useStores();
 	const { handleInitial, handleUpdate, maxDelay } = useDataEngine(stores);
 	const { connected } = useSocket({ handleInitial, handleUpdate });
@@ -56,36 +44,18 @@ export default function DashboardLayout({ children }: Props) {
 
 	const hasSession = useDataStore(({ state }) => state?.SessionInfo != null);
 	const ended = useDataStore(({ state }) => state?.SessionStatus?.Status === "Ends");
-	const newUiContent =
-		isNewUiNativeRoute(pathname) ? children : <NewUiCompatibilityBoundary routeName="Dashboard">{children}</NewUiCompatibilityBoundary>;
 
-	// Live runtime (data engine, socket, wake lock, store setup) stays above the
-	// branch so Legacy and New UI share one connection. Only presentation switches.
 	return (
-		<UiModeBoundary
-			legacy={
-				<LegacyDashboardShell
-					connected={connected}
-					syncing={syncing}
-					ended={ended}
-					hasSession={hasSession}
-					delay={delay}
-					maxDelay={maxDelay}
-				>
-					{children}
-				</LegacyDashboardShell>
-			}
-			simple={
-				<NewUiDashboardShell>
-					{newUiContent}
-				</NewUiDashboardShell>
-			}
-			detailed={
-				<NewUiDashboardShell>
-					{newUiContent}
-				</NewUiDashboardShell>
-			}
-		/>
+		<LegacyDashboardShell
+			connected={connected}
+			syncing={syncing}
+			ended={ended}
+			hasSession={hasSession}
+			delay={delay}
+			maxDelay={maxDelay}
+		>
+			{children}
+		</LegacyDashboardShell>
 	);
 }
 

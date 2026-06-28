@@ -8,6 +8,22 @@ export default function ServiceWorkerRegister() {
 	useEffect(() => {
 		if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
 
+		if (process.env.NODE_ENV !== "production") {
+			void navigator.serviceWorker.getRegistrations().then((registrations) => {
+				for (const registration of registrations) {
+					void registration.unregister();
+				}
+			});
+			if ("caches" in window) {
+				void caches.keys().then((keys) => {
+					for (const key of keys) {
+						void caches.delete(key);
+					}
+				});
+			}
+			return;
+		}
+
 		const register = () => {
 			void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
 		};

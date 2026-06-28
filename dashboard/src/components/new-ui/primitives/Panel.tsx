@@ -10,9 +10,10 @@ export type PanelProps = {
 	level?: "primary" | "secondary" | "contextual";
 	children: ReactNode;
 	className?: string;
+	bodyClassName?: string;
 };
 
-export default function Panel({ title, eyebrow, action, level = "secondary", children, className }: PanelProps) {
+export default function Panel({ title, eyebrow, action, level = "secondary", children, className, bodyClassName }: PanelProps) {
 	const titleId = useId();
 
 	return (
@@ -30,7 +31,7 @@ export default function Panel({ title, eyebrow, action, level = "secondary", chi
 				</div>
 				{action ? <div className="new-ui-panel__action">{action}</div> : null}
 			</header>
-			<div className="new-ui-panel__body">{children}</div>
+			<div className={clsx("new-ui-panel__body", bodyClassName)}>{children}</div>
 		</section>
 	);
 }

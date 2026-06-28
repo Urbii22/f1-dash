@@ -161,7 +161,8 @@ body[data-ui-generation="new"] {
 	--ui-focus: #ffffff;
 	background: var(--ui-bg);
 	color: var(--ui-text);
-	overflow: hidden;
+	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 .new-ui-number {
@@ -206,9 +207,9 @@ body[data-ui-generation="new"] {
 
 .new-ui-app-shell {
 	display: flex;
-	height: 100dvh;
+	min-height: 100dvh;
 	width: 100%;
-	overflow: hidden;
+	overflow: visible;
 	background: var(--ui-bg);
 	color: var(--ui-text);
 }
@@ -216,10 +217,10 @@ body[data-ui-generation="new"] {
 .new-ui-workspace {
 	display: flex;
 	min-width: 0;
-	min-height: 0;
+	min-height: 100dvh;
 	flex: 1 1 auto;
 	flex-direction: column;
-	overflow: hidden;
+	overflow: visible;
 }
 
 .new-ui-workspace__bar {
@@ -244,7 +245,7 @@ body[data-ui-generation="new"] {
 	min-width: 0;
 	min-height: 0;
 	flex: 1 1 auto;
-	overflow: hidden;
+	overflow: visible;
 }
 
 .new-ui-workspace__main > * {
@@ -520,6 +521,7 @@ body[data-ui-generation="new"] {
 .new-ui-panel {
 	display: flex;
 	flex-direction: column;
+	min-width: 0;
 	min-height: 0;
 	border: 1px solid var(--ui-border);
 	border-radius: 0.6rem;
@@ -555,8 +557,12 @@ body[data-ui-generation="new"] {
 
 .new-ui-panel__body {
 	flex: 1 1 auto;
+	min-width: 0;
 	min-height: 0;
+	overflow: auto;
 	padding: 0.6rem 0.75rem;
+	scrollbar-color: rgba(154, 163, 173, 0.65) rgba(18, 21, 26, 0.9);
+	scrollbar-width: thin;
 }
 
 /* KPI ------------------------------------------------------------- */

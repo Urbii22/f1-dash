@@ -12,7 +12,7 @@ export default function DetailedDashboardView() {
 	const slots = getDashboardPresetSlots(preset);
 
 	return (
-		<div data-testid="detailed-dashboard" className="flex h-full min-h-0 flex-col gap-2 overflow-hidden p-3">
+		<div data-testid="detailed-dashboard" className="flex h-[calc(100dvh-3.25rem)] min-h-0 flex-col gap-2 overflow-auto p-3">
 			<div className="flex shrink-0 items-center justify-between gap-3">
 				<div>
 					<p className="text-xs font-semibold tracking-wide text-[var(--ui-muted)] uppercase">Pit wall</p>

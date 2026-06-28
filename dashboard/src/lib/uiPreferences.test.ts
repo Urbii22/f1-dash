@@ -6,9 +6,9 @@ describe("UI preferences", () => {
 		expect(normalizeUiPreferences(undefined)).toEqual(defaultUiPreferences);
 	});
 
-	it("keeps valid stored values", () => {
+	it("forces stored New UI preferences back to Legacy", () => {
 		expect(normalizeUiPreferences({ generation: "new", density: "detailed" })).toEqual({
-			generation: "new",
+			generation: "legacy",
 			density: "detailed",
 		});
 	});

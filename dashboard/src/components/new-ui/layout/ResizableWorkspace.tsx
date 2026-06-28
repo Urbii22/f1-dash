@@ -26,15 +26,16 @@ const BOUNDS: Record<keyof DashboardLayout, { min: number; max: number }> = {
 	primary: { min: 32, max: 62 },
 	secondaryTop: { min: 30, max: 70 },
 	bottomLeft: { min: 35, max: 70 },
+	topRow: { min: 35, max: 75 },
 };
 
 function Slot({ children }: { children: ReactNode }) {
 	return <div className="min-h-0 min-w-0 overflow-hidden">{children}</div>;
 }
 
-// Fixed-topology pit-wall workspace: a top row (primary | context column) over a
-// bottom row (two panels). Three persisted proportions drive the grid templates;
-// the top/bottom division itself is fixed. No drag-and-drop, only resizable splitters.
+// Fixed-topology pit-wall workspace. The left column stacks the main timing
+// board over its companion panel so the timing board can keep a real scroll
+// area while the user tunes that split independently from the right column.
 export default function ResizableWorkspace({
 	route,
 	preset,
@@ -52,21 +53,42 @@ export default function ResizableWorkspace({
 	const rows = (top: number) => `minmax(0, ${top}fr) 0.75rem minmax(0, ${100 - top}fr)`;
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+		<div
+			data-testid="resizable-workspace"
+			className="grid h-full min-h-0 overflow-hidden"
+			style={{ gridTemplateColumns: cols(layout.primary) }}
+		>
 			<div
-				data-testid="workspace-top-row"
-				className="grid min-h-0 flex-1"
-				style={{ gridTemplateColumns: cols(layout.primary) }}
+				data-testid="workspace-left-column"
+				className="grid min-h-0 min-w-0"
+				style={{ gridTemplateRows: rows(layout.topRow) }}
 			>
 				<Slot>{primary}</Slot>
 				<WorkspaceSplitter
-					label="Resize classification"
-					orientation="vertical"
-					value={layout.primary}
-					min={BOUNDS.primary.min}
-					max={BOUNDS.primary.max}
-					onChange={(value) => setLayoutValue(route, preset, "primary", value)}
+					label="Resize left panels"
+					orientation="horizontal"
+					value={layout.topRow}
+					min={BOUNDS.topRow.min}
+					max={BOUNDS.topRow.max}
+					onChange={(value) => setLayoutValue(route, preset, "topRow", value)}
 				/>
+				<Slot>{bottomLeft}</Slot>
+			</div>
+
+			<WorkspaceSplitter
+				label="Resize workspace columns"
+				orientation="vertical"
+				value={layout.primary}
+				min={BOUNDS.primary.min}
+				max={BOUNDS.primary.max}
+				onChange={(value) => setLayoutValue(route, preset, "primary", value)}
+			/>
+
+			<div
+				data-testid="workspace-right-column"
+				className="grid min-h-0 min-w-0"
+				style={{ gridTemplateRows: rows(layout.bottomLeft) }}
+			>
 				<div
 					data-testid="workspace-context-col"
 					className="grid min-h-0 min-w-0"
@@ -83,17 +105,9 @@ export default function ResizableWorkspace({
 					/>
 					<Slot>{secondaryBottom}</Slot>
 				</div>
-			</div>
-
-			<div
-				data-testid="workspace-bottom-row"
-				className="grid min-h-0 flex-1"
-				style={{ gridTemplateColumns: cols(layout.bottomLeft) }}
-			>
-				<Slot>{bottomLeft}</Slot>
 				<WorkspaceSplitter
-					label="Resize lower panels"
-					orientation="vertical"
+					label="Resize right panels"
+					orientation="horizontal"
 					value={layout.bottomLeft}
 					min={BOUNDS.bottomLeft.min}
 					max={BOUNDS.bottomLeft.max}
