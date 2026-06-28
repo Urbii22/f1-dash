@@ -51,6 +51,7 @@
 		"vitest": "^4.1.8"
 	},
 	"resolutions": {
+		"undici@^6.25.0": "^6.27.0",
 		"postcss": "8.5.15"
 	},
 	"packageManager": "yarn@4.14.1"
