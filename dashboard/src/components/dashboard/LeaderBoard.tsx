@@ -15,11 +15,11 @@ export default function LeaderBoard() {
 	const showTableHeader = useSettingsStore((state) => state.tableHeaders);
 
 	return (
-		<div className="flex w-fit flex-col gap-0.5">
+		<div className="flex w-fit min-w-full flex-col gap-1">
 			{showTableHeader && <TableHeaders />}
 
 			{(!drivers || !driversTiming) &&
-				new Array(20).fill("").map((_, index) => <SkeletonDriver key={`driver.loading.${index}`} />)}
+				new Array(22).fill("").map((_, index) => <SkeletonDriver key={`driver.loading.${index}`} />)}
 
 			<LayoutGroup key="drivers">
 				{drivers && driversTiming && (
@@ -46,7 +46,7 @@ const TableHeaders = () => {
 
 	return (
 		<div
-			className="grid items-center gap-2 p-1 px-2 text-sm font-medium text-zinc-500"
+			className="grid items-center gap-2 border-b border-cyan-300/10 px-2 pb-2 font-mono text-[0.68rem] font-bold tracking-[0.12em] text-cyan-300/70 uppercase"
 			style={{
 				gridTemplateColumns: carMetrics
 					? "5.5rem 3.5rem 5.5rem 4rem 5rem 5.5rem auto 10.5rem"
@@ -54,7 +54,7 @@ const TableHeaders = () => {
 			}}
 		>
 			<p>Position</p>
-			<p>DRS</p>
+			<p>Status</p>
 			<p>Tire</p>
 			<p>Info</p>
 			<p>Gap</p>
@@ -68,11 +68,11 @@ const TableHeaders = () => {
 const SkeletonDriver = () => {
 	const carMetrics = useSettingsStore((state) => state.carMetrics);
 
-	const animateClass = "h-8 animate-pulse rounded-md bg-zinc-800";
+	const animateClass = "h-8 animate-pulse rounded-md bg-cyan-950/60";
 
 	return (
 		<div
-			className="grid items-center gap-2 p-1.5"
+			className="data-chip grid items-center gap-2 rounded-md p-1.5"
 			style={{
 				gridTemplateColumns: carMetrics
 					? "5.5rem 3.5rem 5.5rem 4rem 5rem 5.5rem auto 10.5rem"

@@ -5,7 +5,7 @@ import pack from "./package.json" with { type: "json" };
 import "@/env";
 
 const output = process.env.NEXT_STANDALONE === "1" ? "standalone" : undefined;
-const compress = process.env.NEXT_NO_COMPRESS === "1";
+const compress = process.env.NEXT_NO_COMPRESS !== "1";
 
 const frameDisableHeaders = [
 	{
@@ -28,6 +28,7 @@ const frameDisableHeaders = [
 const config: NextConfig = {
 	output,
 	compress,
+	allowedDevOrigins: ["127.0.0.1"],
 	env: {
 		version: pack.version,
 	},

@@ -1,0 +1,172 @@
+import Link from "next/link";
+
+import CountryFlag from "@/components/CountryFlag";
+import GridList from "@/components/results/GridList";
+import PitStopsPanel from "@/components/results/PitStopsPanel";
+import QualiResultTable from "@/components/results/QualiResultTable";
+import RaceLapChart from "@/components/results/RaceLapChart";
+import RaceResultTable from "@/components/results/RaceResultTable";
+import { getArchiveSessions } from "@/lib/archive";
+import {
+	driverFullName,
+	getLapTimes,
+	getPitStops,
+	getQualifying,
+	getResults,
+	getSprint,
+	type ResultRow,
+} from "@/lib/f1data";
+import { findArchiveSession } from "@/lib/seasonResults";
+import type { RoundExtras } from "@/lib/view-models/roundExtras";
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import { SimpleRoundResultView, DetailedRoundResultView } from "@/components/new-ui/results/ResultsViews";
+
+/** driverId → short label (code, else family name) from the race classification. */
+function driverLabels(rows: ResultRow[]): Record<string, string> {
+	const labels: Record<string, string> = {};
+	for (const row of rows) {
+		const id = row.driver.driverId;
+		if (id) labels[id] = row.driver.code ?? row.driver.familyName ?? id;
+	}
+	return labels;
+}
+
+/** Finishers in classification order, for the lap-chart driver selector. */
+function chartDrivers(rows: ResultRow[]): { id: string; label: string }[] {
+	return rows
+		.filter((row) => row.driver.driverId != null)
+		.map((row) => ({
+			id: row.driver.driverId as string,
+			label: row.driver.code ?? row.driver.familyName ?? (row.driver.driverId as string),
+		}));
+}
+
+export default async function RoundPage({
+	params,
+	searchParams,
+}: {
+	params: Promise<{ round: string }>;
+	searchParams: Promise<{ season?: string }>;
+}) {
+	const [{ round: roundParam }, query] = await Promise.all([params, searchParams]);
+	const round = Number(roundParam);
+	const season = Number(query.season) || new Date().getFullYear();
+	const [race, qualifying, sessions, sprint, pitStops, lapData] = await Promise.all([
+		getResults(round, season),
+		getQualifying(round, season),
+		getArchiveSessions(season),
+		getSprint(round, season),
+		getPitStops(round, season),
+		getLapTimes(round, season),
+	]);
+
+	if (!race) {
+		return (
+			<div className="telemetry-panel rounded-lg p-8 text-center">
+				<h1 className="text-2xl font-black">Result unavailable</h1>
+				<Link href={`/results?season=${season}`} className="mt-3 inline-block text-cyan-300">
+					Back to season
+				</Link>
+			</div>
+		);
+	}
+
+	const recording = findArchiveSession(race, sessions);
+	const fastest = race.results.find((row) => row.fastestLapRank === "1");
+	const labels = driverLabels(race.results);
+	const lapDrivers = chartDrivers(race.results);
+	const extras = {
+		sprint: sprint ?? null,
+		pitStops: pitStops?.pitStops ?? [],
+		laps: lapData?.laps ?? [],
+		labels,
+		lapDrivers,
+	};
+
+	return (
+		<UiModeBoundary
+			legacy={<LegacyRoundContent race={race} qualifying={qualifying} season={season} recording={recording ?? null} fastest={fastest} {...extras} />}
+			simple={<SimpleRoundResultView race={race} qualifying={qualifying ?? null} season={season} recording={recording ?? null} {...extras} />}
+			detailed={<DetailedRoundResultView race={race} qualifying={qualifying ?? null} season={season} recording={recording ?? null} {...extras} />}
+		/>
+	);
+}
+
+function LegacyRoundContent({
+	race,
+	qualifying,
+	season,
+	recording,
+	fastest,
+	sprint,
+	pitStops,
+	labels,
+	laps,
+	lapDrivers,
+}: {
+	race: NonNullable<Awaited<ReturnType<typeof getResults>>>;
+	qualifying: Awaited<ReturnType<typeof getQualifying>>;
+	season: number;
+	recording: Awaited<ReturnType<typeof getArchiveSessions>>[number] | null;
+	fastest: NonNullable<Awaited<ReturnType<typeof getResults>>>["results"][number] | undefined;
+} & RoundExtras) {
+	return (
+		<div className="flex flex-col gap-4">
+			<section className="telemetry-panel rounded-lg p-5">
+				<p className="panel-title">
+					Round {race.round} · {season}
+				</p>
+				<div className="flex flex-wrap items-start justify-between gap-3">
+					<div>
+						<h1 className="flex items-center gap-3 text-3xl font-black">
+							<CountryFlag country={race.country} className="h-6 w-8 rounded" />
+							{race.raceName}
+						</h1>
+						<p className="text-zinc-400">
+							{race.circuitName} · {race.locality}, {race.country}
+						</p>
+					</div>
+					{recording && (
+						<Link
+							href={`/archive/${recording.id}`}
+							className="rounded-md border border-cyan-300/40 bg-cyan-300/10 px-3 py-2 text-sm font-bold text-cyan-200"
+						>
+							Post-session analysis →
+						</Link>
+					)}
+				</div>
+				{fastest && (
+					<div className="data-chip mt-4 inline-flex rounded-md px-3 py-2 text-sm">
+						<span className="mr-2 text-fuchsia-300">Fastest lap</span>
+						<strong>{driverFullName(fastest.driver)}</strong>
+						<span className="ml-2 font-mono text-zinc-400">{fastest.fastestLapTime ?? "-"}</span>
+					</div>
+				)}
+			</section>
+			<section className="telemetry-panel rounded-lg p-4">
+				<h2 className="mb-3 text-xl font-black">Race result</h2>
+				<RaceResultTable rows={race.results} season={season} />
+			</section>
+			{sprint?.results.length ? (
+				<section className="telemetry-panel rounded-lg p-4">
+					<h2 className="mb-3 text-xl font-black">Sprint result</h2>
+					<RaceResultTable rows={sprint.results} season={season} />
+				</section>
+			) : null}
+			<RaceLapChart laps={laps} drivers={lapDrivers} />
+			<PitStopsPanel pitStops={pitStops} labels={labels} />
+			<section className="telemetry-panel rounded-lg p-4">
+				<h2 className="mb-3 text-xl font-black">Starting grid</h2>
+				<GridList rows={race.results} />
+			</section>
+			<section className="telemetry-panel rounded-lg p-4">
+				<h2 className="mb-3 text-xl font-black">Qualifying</h2>
+				{qualifying?.results.length ? (
+					<QualiResultTable rows={qualifying.results} />
+				) : (
+					<p className="text-zinc-500">Qualifying result unavailable.</p>
+				)}
+			</section>
+		</div>
+	);
+}

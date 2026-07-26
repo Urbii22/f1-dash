@@ -9,7 +9,7 @@ export default function DataWeatherInfo() {
 	const weather = useDataStore((state) => state.state?.WeatherData);
 
 	return (
-		<div className="flex justify-between gap-4">
+		<div className="data-chip flex justify-between gap-4 rounded-md px-3 py-2">
 			{weather ? (
 				<>
 					<TemperatureComplication value={Math.round(parseFloat(weather.TrackTemp))} label="TRC" />
@@ -32,5 +32,5 @@ export default function DataWeatherInfo() {
 }
 
 function Loading() {
-	return <div className="h-[55px] w-[55px] animate-pulse rounded-full bg-zinc-800" />;
+	return <div className="h-[55px] w-[55px] animate-pulse rounded-full bg-cyan-950/60" />;
 }

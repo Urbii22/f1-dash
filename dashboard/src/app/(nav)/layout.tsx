@@ -7,11 +7,24 @@ import coffeeIcon from "public/icons/bmc-logo.svg";
 
 import Footer from "@/components/Footer";
 
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import NewUiPublicShell from "@/components/new-ui/shell/NewUiPublicShell";
+
 type Props = {
 	children: ReactNode;
 };
 
 export default function Layout({ children }: Props) {
+	return (
+		<UiModeBoundary
+			legacy={<LegacyNavShell>{children}</LegacyNavShell>}
+			simple={<NewUiPublicShell>{children}</NewUiPublicShell>}
+			detailed={<NewUiPublicShell>{children}</NewUiPublicShell>}
+		/>
+	);
+}
+
+function LegacyNavShell({ children }: Props) {
 	return (
 		<>
 			<nav className="sticky top-0 left-0 z-10 flex h-12 w-full items-center justify-between gap-4 border-b border-zinc-800 p-2 px-4 backdrop-blur-lg">
@@ -24,6 +37,9 @@ export default function Layout({ children }: Props) {
 					</Link>
 					<Link className="transition duration-100 active:scale-95" href="/schedule">
 						Schedule
+					</Link>
+					<Link className="transition duration-100 active:scale-95" href="/results">
+						Results
 					</Link>
 					<Link className="transition duration-100 active:scale-95" href="/help">
 						Help
@@ -51,7 +67,7 @@ export default function Layout({ children }: Props) {
 				</div>
 			</nav>
 
-			<main className="container mx-auto max-w-(--breakpoint-lg) px-4">
+			<main className="container mx-auto max-w-7xl px-4">
 				{children}
 
 				<Footer />

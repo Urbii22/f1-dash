@@ -5,15 +5,22 @@ import { useEffect, useRef, useState } from "react";
 import type { CarData, CarsData, Position, Positions, State } from "@/types/state.type";
 import type { MessageInitial, MessageUpdate } from "@/types/message.type";
 
+import { advancePlayhead, resolveDelayAnchor } from "@/lib/replayClock";
 import { inflate } from "@/lib/inflate";
 import { utcToLocalMs } from "@/lib/utcToLocalMs";
 
 import { useSettingsStore } from "@/stores/useSettingsStore";
+import { useReplayControlStore } from "@/stores/useReplayControlStore";
 
 import { useBuffer } from "@/hooks/useBuffer";
 import { useStatefulBuffer } from "@/hooks/useStatefulBuffer";
 
 const UPDATE_MS = 200;
+
+// live without delay only needs a short tail; replay/delay mode keeps a long
+// window so the timeline can scrub backwards
+const LIVE_KEEP_SECS = 5 * 60;
+const REPLAY_KEEP_SECS = 15 * 60;
 
 type Props = {
 	updateState: (state: State) => void;
@@ -23,6 +30,7 @@ type Props = {
 
 export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Props) => {
 	const buffers = {
+		Heartbeat: useStatefulBuffer(),
 		ExtrapolatedClock: useStatefulBuffer(),
 		TopThree: useStatefulBuffer(),
 		TimingStats: useStatefulBuffer(),
@@ -46,14 +54,29 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 	const [maxDelay, setMaxDelay] = useState<number>(0);
 
 	const delayRef = useRef<number>(0);
+	const replayPausedRef = useRef(false);
+	const replaySpeedRef = useRef(1);
+	const delay = useSettingsStore((state) => state.delay);
+	const replayPaused = useReplayControlStore((state) => state.isPaused);
+	const replaySpeed = useReplayControlStore((state) => state.speed);
 
-	useSettingsStore.subscribe(
-		(state) => state.delay,
-		(delay) => (delayRef.current = delay),
-		{ fireImmediately: true },
-	);
+	// playback clock: the playhead advances by real-elapsed-time × speed each
+	// tick, decoupled from the absolute wall clock so variable speeds work.
+	const playheadRef = useRef<number>(0);
+	const lastTickRef = useRef<number>(0);
+	const prevDelayRef = useRef<number>(0);
+	const waitingForDelayRef = useRef(false);
 
 	const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+	useEffect(() => {
+		delayRef.current = delay;
+	}, [delay]);
+
+	useEffect(() => {
+		replayPausedRef.current = replayPaused;
+		replaySpeedRef.current = replaySpeed;
+	}, [replayPaused, replaySpeed]);
 
 	const handleInitial = ({ CarDataZ: carZ, PositionZ: posZ, ...initial }: MessageInitial) => {
 		updateState(initial);
@@ -105,16 +128,41 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 		}
 	};
 
+	const publishWindow = (cursorMs: number | null) => {
+		const windowStart = buffers.TimingData.oldestTimestamp() ?? carBuffer.oldestTimestamp();
+		const windowEnd = buffers.TimingData.latestTimestamp() ?? carBuffer.latestTimestamp();
+		useReplayControlStore.getState().setWindow(windowStart, windowEnd, cursorMs ?? windowEnd);
+	};
+
 	const handleCurrentState = () => {
+		const now = Date.now();
+		// real time elapsed since the previous tick; 0 on the first tick
+		const realElapsed = lastTickRef.current === 0 ? 0 : now - lastTickRef.current;
+		lastTickRef.current = now;
+
 		const delay = delayRef.current;
 
+		// Live pause freezes publication entirely. Replay pause still needs to
+		// process explicit scrub/jump requests below.
+		if (replayPausedRef.current && delay === 0) {
+			prevDelayRef.current = 0;
+			return;
+		}
+
 		if (delay === 0) {
+			// live edge: keep the playhead anchored so adding a delay starts cleanly
+			playheadRef.current = now;
+			prevDelayRef.current = 0;
+			waitingForDelayRef.current = false;
+
 			const newStateFrame: Record<string, State[keyof State]> = {};
 
 			Object.keys(buffers).forEach((key) => {
 				const buffer = buffers[key as keyof typeof buffers];
 				const latest = buffer.latest() as State[keyof State];
 				if (latest) newStateFrame[key] = latest;
+
+				setTimeout(() => buffer.cleanup(now, LIVE_KEEP_SECS), 0);
 			});
 
 			updateState(newStateFrame);
@@ -124,8 +172,52 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 
 			const posFrame = posBuffer.latest();
 			if (posFrame) updatePosition(posFrame);
+
+			setTimeout(() => {
+				carBuffer.cleanup(now, LIVE_KEEP_SECS);
+				posBuffer.cleanup(now, LIVE_KEEP_SECS);
+			}, 0);
+
+			publishWindow(null);
 		} else {
-			const delayedTimestamp = Date.now() - delay * 1000;
+			const oldest = buffers.TimingData.oldestTimestamp() ?? carBuffer.oldestTimestamp();
+			const latest = buffers.TimingData.latestTimestamp() ?? carBuffer.latestTimestamp();
+			const pendingSeek = useReplayControlStore.getState().pendingSeekMs;
+
+			// Keep lastTick fresh while paused, but avoid republishing the same frame
+			// unless the user explicitly requested a different position.
+			if (replayPausedRef.current && pendingSeek === null) {
+				prevDelayRef.current = delay;
+				return;
+			}
+
+			// If the requested TV delay is not buffered yet, hold at the oldest
+			// frame. As soon as it becomes available, jump to live minus delay.
+			const anchor = resolveDelayAnchor({
+				current: playheadRef.current,
+				previousDelaySeconds: prevDelayRef.current,
+				nextDelaySeconds: delay,
+				now,
+				oldest,
+				wasWaiting: waitingForDelayRef.current,
+			});
+			playheadRef.current = anchor.playhead;
+			waitingForDelayRef.current = anchor.waiting;
+			prevDelayRef.current = delay;
+
+			// an explicit scrub/jump overrides organic advancement for this tick
+			playheadRef.current = advancePlayhead({
+				current: playheadRef.current,
+				realElapsedMs: realElapsed,
+				speed: replaySpeedRef.current,
+				pendingSeekMs: pendingSeek,
+				oldest,
+				latest,
+				paused: replayPausedRef.current || waitingForDelayRef.current,
+			});
+			if (pendingSeek !== null) useReplayControlStore.getState().clearPendingSeek();
+
+			const delayedTimestamp = playheadRef.current;
 			const newStateFrame: Record<string, State[keyof State]> = {};
 
 			Object.keys(buffers).forEach((key) => {
@@ -134,7 +226,7 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 
 				if (delayed) newStateFrame[key] = delayed;
 
-				setTimeout(() => buffer.cleanup(delayedTimestamp), 0);
+				setTimeout(() => buffer.cleanup(delayedTimestamp, REPLAY_KEEP_SECS), 0);
 			});
 
 			updateState(newStateFrame);
@@ -142,14 +234,16 @@ export const useDataEngine = ({ updateState, updatePosition, updateCarData }: Pr
 			const carFrame = carBuffer.delayed(delayedTimestamp);
 			if (carFrame) {
 				updateCarData(carFrame);
-				setTimeout(() => carBuffer.cleanup(delayedTimestamp), 0);
+				setTimeout(() => carBuffer.cleanup(delayedTimestamp, REPLAY_KEEP_SECS), 0);
 			}
 
 			const posFrame = posBuffer.delayed(delayedTimestamp);
 			if (posFrame) {
 				updatePosition(posFrame);
-				setTimeout(() => posBuffer.cleanup(delayedTimestamp), 0);
+				setTimeout(() => posBuffer.cleanup(delayedTimestamp, REPLAY_KEEP_SECS), 0);
 			}
+
+			publishWindow(delayedTimestamp);
 		}
 
 		const maxDelay = Math.min(

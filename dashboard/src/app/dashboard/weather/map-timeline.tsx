@@ -72,9 +72,10 @@ type Props = {
 	setFrame: (id: number) => void;
 
 	playing: boolean;
+	variant?: "legacy" | "new";
 };
 
-export default function Timeline({ frames, setFrame, playing }: Props) {
+export default function Timeline({ frames, setFrame, playing, variant = "legacy" }: Props) {
 	const constraintsRef = useRef<HTMLDivElement | null>(null);
 	const fullBarRef = useRef<null | HTMLDivElement>(null);
 	const scrubberRef = useRef<null | HTMLButtonElement>(null);
@@ -145,7 +146,7 @@ export default function Timeline({ frames, setFrame, playing }: Props) {
 	const timeInterval = DURATION / (legendCount - 1);
 
 	return (
-		<div className="relative w-full select-none">
+		<div className="relative w-full select-none" data-variant={variant}>
 			<div
 				className="relative mt-2"
 				onPointerDown={(event) => {
@@ -158,7 +159,7 @@ export default function Timeline({ frames, setFrame, playing }: Props) {
 					currentTimePrecise.set(newProgress * DURATION);
 				}}
 			>
-				<div ref={fullBarRef} className="h-1 w-full rounded-full bg-zinc-800" />
+				<div ref={fullBarRef} className={variant === "new" ? "h-1 w-full rounded-full bg-[var(--ui-border)]" : "h-1 w-full rounded-full bg-zinc-800"} />
 
 				{/* <motion.div layout style={{ width: progressPreciseWidth }} className="absolute top-0">
 					<div className="bg- absolute inset-0 h-[3px] rounded-full bg-slate-500"></div>
@@ -166,6 +167,7 @@ export default function Timeline({ frames, setFrame, playing }: Props) {
 
 				<div className="absolute inset-0" ref={constraintsRef}>
 					<motion.button
+						aria-label="Radar timeline scrubber"
 						className="absolute flex cursor-ew-resize items-center justify-center rounded-full active:cursor-grabbing"
 						ref={scrubberRef}
 						drag="x"
@@ -195,14 +197,13 @@ export default function Timeline({ frames, setFrame, playing }: Props) {
 							animate={{ scale: dragging ? 1.2 : 1 }}
 							transition={{ type: "tween", duration: 0.15 }}
 							initial={false}
-							className="-mt-2 h-5 w-2 rounded-full bg-zinc-300"
+							className={variant === "new" ? "-mt-2 h-5 w-2 rounded-full bg-[var(--ui-text)]" : "-mt-2 h-5 w-2 rounded-full bg-zinc-300"}
 						/>
 
 						<AnimatePresence>
 							{dragging && (
-								// TODO add background blur so you can always see the time
 								<motion.p
-									className="absolute text-sm font-medium tracking-wide tabular-nums"
+									className="absolute rounded-md bg-zinc-900/70 px-2 py-0.5 text-sm font-medium tracking-wide tabular-nums shadow-sm backdrop-blur-sm"
 									initial={{ y: 12, opacity: 0 }}
 									animate={{ y: 20, opacity: 1 }}
 									exit={{ y: [20, 12], opacity: 0 }}

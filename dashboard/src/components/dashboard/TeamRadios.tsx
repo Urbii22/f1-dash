@@ -16,16 +16,17 @@ export default function TeamRadios() {
 
 	const basePath = `https://livetiming.formula1.com/static/${sessionPath}`;
 
-	// TODO add notice that we only show 20
+	const RADIO_LIMIT = 20;
+	const captureCount = teamRadios?.Captures?.length ?? 0;
 
 	return (
-		<ul className="flex flex-col gap-2">
+		<ul className="mt-3 flex flex-col gap-2">
 			{!teamRadios && new Array(6).fill("").map((_, index) => <SkeletonMessage key={`radio.loading.${index}`} />)}
 
 			{teamRadios && gmtOffset && drivers && teamRadios.Captures && (
 				<AnimatePresence>
 					{teamRadios.Captures.sort(sortUtc)
-						.slice(0, 20)
+						.slice(0, RADIO_LIMIT)
 						.map((teamRadio, i) => (
 							<RadioMessage
 								key={`radio.${i}`}
@@ -37,15 +38,21 @@ export default function TeamRadios() {
 						))}
 				</AnimatePresence>
 			)}
+
+			{captureCount > RADIO_LIMIT && (
+				<li className="px-2 py-1 text-center text-xs text-zinc-500">
+					Showing the latest {RADIO_LIMIT} of {captureCount} radios
+				</li>
+			)}
 		</ul>
 	);
 }
 
 const SkeletonMessage = () => {
-	const animateClass = "h-6 animate-pulse rounded-md bg-zinc-800";
+	const animateClass = "h-6 animate-pulse rounded-md bg-cyan-950/60";
 
 	return (
-		<li className="flex flex-col gap-1 p-2">
+		<li className="data-chip flex flex-col gap-1 rounded-md p-2">
 			<div className={clsx(animateClass, "h-4! w-16")} />
 
 			<div

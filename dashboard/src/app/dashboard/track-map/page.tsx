@@ -5,18 +5,27 @@ import clsx from "clsx";
 
 import Map from "@/components/dashboard/Map";
 import DriverTag from "@/components/driver/DriverTag";
-import DriverDRS from "@/components/driver/DriverDRS";
+import DriverStatus from "@/components/driver/DriverStatus";
 import DriverInfo from "@/components/driver/DriverInfo";
 import DriverGap from "@/components/driver/DriverGap";
 import DriverLapTime from "@/components/driver/DriverLapTime";
 
 import { sortPos } from "@/lib/sorting";
+import { getDriverStatus, getSessionYear } from "@/lib/driverStatus";
+import { inEliminationZone } from "@/lib/quali";
 
 import { useDataStore } from "@/stores/useDataStore";
 import type { Driver, TimingDataDriver } from "@/types/state.type";
 import { useSettingsStore } from "@/stores/useSettingsStore";
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import SimpleTrackMapView from "@/components/new-ui/map/SimpleTrackMapView";
+import DetailedTrackMapView from "@/components/new-ui/map/DetailedTrackMapView";
 
-export default function TrackMap() {
+export default function TrackMapPage() {
+	return <UiModeBoundary legacy={<LegacyTrackMap />} simple={<SimpleTrackMapView />} detailed={<DetailedTrackMapView />} />;
+}
+
+export function LegacyTrackMap() {
 	const drivers = useDataStore((state) => state.state?.DriverList);
 	const driversTiming = useDataStore((state) => state.state?.TimingData);
 
@@ -24,7 +33,7 @@ export default function TrackMap() {
 		<div className="flex flex-col-reverse md:h-full md:flex-row">
 			<div className="flex w-full flex-col gap-0.5 overflow-y-auto border-zinc-800 md:h-full md:w-fit md:rounded-lg md:border md:p-2">
 				{(!drivers || !driversTiming) &&
-					new Array(20).fill("").map((_, index) => <SkeletonDriver key={`driver.loading.${index}`} />)}
+					new Array(22).fill("").map((_, index) => <SkeletonDriver key={`driver.loading.${index}`} />)}
 
 				{drivers && driversTiming && (
 					<AnimatePresence>
@@ -55,31 +64,22 @@ type TrackMapDriverProps = {
 	timingDriver: TimingDataDriver;
 };
 
-const hasDRS = (drs: number) => drs > 9;
-
-const possibleDRS = (drs: number) => drs === 8;
-
-const inDangerZone = (position: number, sessionPart: number) => {
-	switch (sessionPart) {
-		case 1:
-			return position > 15;
-		case 2:
-			return position > 10;
-		case 3:
-		default:
-			return false;
-	}
-};
-
 const TrackMapDriver = ({ position, driver, timingDriver }: TrackMapDriverProps) => {
 	const sessionPart = useDataStore((state) => state.state?.TimingData?.SessionPart);
+	const sessionInfo = useDataStore((state) => state.state?.SessionInfo);
 	const timingStatsDriver = useDataStore((state) => state.state?.TimingStats?.Lines[driver.RacingNumber]);
 	const appTimingDriver = useDataStore((state) => state.state?.TimingAppData?.Lines[driver.RacingNumber]);
 	const hasFastest = timingStatsDriver?.PersonalBestLapTime.Position == 1;
 
-	const carData = useDataStore((state) => (state?.carsData ? state.carsData[driver.RacingNumber].Channels : undefined));
+	const carData = useDataStore((state) => state.carsData?.[driver.RacingNumber]?.Channels);
 
 	const favoriteDriver = useSettingsStore((state) => state.favoriteDrivers.includes(driver.RacingNumber));
+	const driverStatus = getDriverStatus({
+		year: getSessionYear(sessionInfo),
+		inPit: timingDriver.InPit,
+		pitOut: timingDriver.PitOut,
+		legacyChannel: carData?.[45],
+	});
 
 	return (
 		<motion.div
@@ -88,7 +88,7 @@ const TrackMapDriver = ({ position, driver, timingDriver }: TrackMapDriverProps)
 				"opacity-50": timingDriver.KnockedOut || timingDriver.Retired || timingDriver.Stopped,
 				"bg-sky-800/30": favoriteDriver,
 				"bg-violet-800/30": hasFastest,
-				"bg-red-800/30": sessionPart != undefined && inDangerZone(position, sessionPart),
+				"bg-red-800/30": inEliminationZone(position, sessionPart),
 			})}
 		>
 			<div
@@ -98,12 +98,7 @@ const TrackMapDriver = ({ position, driver, timingDriver }: TrackMapDriverProps)
 				}}
 			>
 				<DriverTag className="min-w-full!" short={driver.Tla} teamColor={driver.TeamColour} position={position} />
-				<DriverDRS
-					on={carData ? hasDRS(carData[45]) : false}
-					possible={carData ? possibleDRS(carData[45]) : false}
-					inPit={timingDriver.InPit}
-					pitOut={timingDriver.PitOut}
-				/>
+				<DriverStatus status={driverStatus} />
 				<DriverInfo timingDriver={timingDriver} gridPos={appTimingDriver ? parseInt(appTimingDriver.GridPos) : 0} />
 				<DriverGap timingDriver={timingDriver} sessionPart={sessionPart} />
 				<DriverLapTime last={timingDriver.LastLapTime} best={timingDriver.BestLapTime} hasFastest={hasFastest} />

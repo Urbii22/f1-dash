@@ -1,0 +1,100 @@
+name: verify
+
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace
+
+  dashboard:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Enable Yarn
+        run: corepack enable
+      - name: Install
+        run: yarn install --immutable
+      - name: Test
+        run: yarn test
+      - name: Lint
+        run: yarn lint
+      - name: Audit dependencies
+        run: yarn npm audit --all --recursive
+      - name: Build
+        env:
+          API_URL: http://api:4001
+          NEXT_PUBLIC_LIVE_URL: http://localhost:4000
+          NEXT_STANDALONE: "1"
+          NEXT_NO_COMPRESS: "0"
+        run: yarn build
+
+  containers:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: api
+            context: .
+            dockerfile: dockerfile
+            target: api
+          - name: realtime
+            context: .
+            dockerfile: dockerfile
+            target: realtime
+          - name: archive
+            context: .
+            dockerfile: dockerfile
+            target: archive
+          - name: web
+            context: dashboard
+            dockerfile: dashboard/dockerfile
+            target: runtime
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build ${{ matrix.name }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: false
+          tags: f1-dash-${{ matrix.name }}:verify
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  deployment-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate static deployment invariants
+        shell: pwsh
+        run: ./scripts/tests/docker-deployment.test.ps1
+      - name: Validate local Compose model
+        run: docker compose config --quiet
+      - name: Validate production Compose model
+        env:
+          F1_DASH_DOMAIN: f1.example.com
+          CADDY_EMAIL: ops@example.com
+        run: docker compose -f compose.yaml -f compose.production.yaml --profile production config --quiet

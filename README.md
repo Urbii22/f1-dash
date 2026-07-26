@@ -11,6 +11,33 @@
 
 A real-time F1 dashboard that shows the leader board, tires, gaps, laps, mini sectors and much more.
 
+## Docker quick start
+
+Build and start the complete local stack, including automatic archive ingestion:
+
+```sh
+docker compose up --build
+```
+
+Open the dashboard at <http://localhost:3000>. The realtime and data APIs are also available locally at <http://localhost:4000> and <http://localhost:4001>.
+
+Recordings, archived sessions, and API cache data live in named Docker volumes, so they survive container recreation. Stop the stack without deleting them:
+
+```sh
+docker compose down
+```
+
+Production HTTPS is an optional overlay once you own a domain. See [SETUP.md](SETUP.md#production-with-caddy) for the Caddy configuration and required environment values.
+
+## Interface
+
+The dashboard supports two interface modes switchable from the global control in the top-right corner:
+
+- **Legacy** — original interface (default).
+- **New UI** — redesigned interface with two density levels: **Simple** (broadcast-oriented) and **Detailed** (pit-wall workstation with resizable panels and presets).
+
+The choice persists across reloads. See [docs/ui-redesign-qa.md](docs/ui-redesign-qa.md) for the full QA guide and keyboard controls.
+
 ## Contributing
 
 I really appreciate your interest in contributing to this project. I recommend checking out the GitHub issues marked as "Good First Issue" to get started. Also, please read [`CONTRIBUTING.md`](CONTRIBUTING.md) to learn how to contribute and set up f1-dash on your local machine for development.

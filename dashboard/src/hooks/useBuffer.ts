@@ -25,6 +25,15 @@ export const useBuffer = <T>() => {
 		return frame ? frame.data : null;
 	};
 
+	const oldestTimestamp = (): number | null => {
+		return bufferRef.current.length > 0 ? bufferRef.current[0].timestamp : null;
+	};
+
+	const latestTimestamp = (): number | null => {
+		const frame = bufferRef.current[bufferRef.current.length - 1];
+		return frame ? frame.timestamp : null;
+	};
+
 	const delayed = (delayedTime: number): T | null => {
 		const buffer = bufferRef.current;
 		const length = buffer.length;
@@ -59,7 +68,7 @@ export const useBuffer = <T>() => {
 		return null;
 	};
 
-	const cleanup = (delayedTime: number) => {
+	const cleanup = (delayedTime: number, keepSecs: number = KEEP_BUFFER_SECS) => {
 		const buffer = bufferRef.current;
 		const length = buffer.length;
 
@@ -68,7 +77,7 @@ export const useBuffer = <T>() => {
 		if (length === 1) return;
 
 		// Calculate the threshold time
-		const thresholdTime = delayedTime - KEEP_BUFFER_SECS * 1000;
+		const thresholdTime = delayedTime - keepSecs * 1000;
 
 		// Find the index of the first frame that is newer than the threshold time
 		let index = 0;
@@ -95,5 +104,7 @@ export const useBuffer = <T>() => {
 		delayed,
 		cleanup,
 		maxDelay,
+		oldestTimestamp,
+		latestTimestamp,
 	};
 };

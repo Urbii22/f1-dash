@@ -10,3 +10,20 @@ compose.env
 
 # data
 *.data.*
+
+# local development artifacts
+*.log
+.playwright-cli/
+.superpowers/
+.understand-anything/
+output/
+sample-replay/*.png
+recordings/
+archive.sqlite*
+artifacts/archive-test.sqlite*
+.runtime/
+.worktrees/
+caddy-data/
+caddy-config/
+*.pem
+*.key

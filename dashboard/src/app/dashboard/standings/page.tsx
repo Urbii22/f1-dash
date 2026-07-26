@@ -1,127 +1,72 @@
-"use client";
+import ChampionshipPicture from "@/components/standings/ChampionshipPicture";
+import LivePredictionBanner from "@/components/standings/LivePredictionBanner";
+import SeasonSelect from "@/components/standings/SeasonSelect";
+import StandingsView from "@/components/standings/StandingsView";
+import { getConstructorStandings, getDriverStandings, getSeason } from "@/lib/f1data";
+import { getSchedule } from "@/lib/schedule";
+import { remainingEvents } from "@/lib/seasonRemaining";
+import { buildChampionshipPicture, type ChampionshipPictureVM } from "@/lib/view-models/championshipPicture";
+import UiModeBoundary from "@/components/new-ui/UiModeBoundary";
+import SimpleStandingsView from "@/components/new-ui/standings/SimpleStandingsView";
+import DetailedStandingsView from "@/components/new-ui/standings/DetailedStandingsView";
 
-import { useDataStore } from "@/stores/useDataStore";
+export default async function StandingsPage({ searchParams }: { searchParams: Promise<{ season?: string }> }) {
+	const { season: seasonParam } = await searchParams;
+	const season = seasonParam ? Number(seasonParam) : undefined;
 
-import NumberDiff from "@/components/NumberDiff";
-import Image from "next/image";
+	const [driverData, constructorData, seasonData, schedule] = await Promise.all([
+		getDriverStandings(season),
+		getConstructorStandings(season),
+		getSeason(season),
+		getSchedule(),
+	]);
 
-export default function Standings() {
-	const driverStandings = useDataStore((state) => state.state?.ChampionshipPrediction?.Drivers);
-	const teamStandings = useDataStore((state) => state.state?.ChampionshipPrediction?.Teams);
+	const resolvedSeason = Number(driverData?.season ?? constructorData?.season ?? season ?? new Date().getFullYear());
+	const drivers = driverData?.standings ?? [];
+	const constructors = constructorData?.standings ?? [];
 
-	const drivers = useDataStore((state) => state.state?.DriverList);
-
-	const isRace = useDataStore((state) => state.state?.SessionInfo?.Type === "Race");
-
-	if (!isRace) {
-		return (
-			<div className="flex h-full w-full flex-col items-center justify-center">
-				<p>championship standings unavailable</p>
-				<p className="text-sm text-zinc-500">currently only available during a race</p>
-			</div>
-		);
-	}
+	// Title picture only makes sense for the current season (remaining events drive it).
+	const currentSeason = resolvedSeason === new Date().getFullYear();
+	const picture = currentSeason
+		? buildChampionshipPicture(drivers, remainingEvents(seasonData?.rounds ?? [], schedule, new Date()))
+		: null;
 
 	return (
-		<div className="grid h-full grid-cols-1 divide-y divide-zinc-800 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-			<div className="h-full p-4">
-				<h2 className="text-xl">Driver Championship Standings</h2>
-
-				<div className="divide flex flex-col divide-y divide-zinc-800">
-					{!driverStandings &&
-						new Array(20).fill("").map((_, index) => <SkeletonItem key={`driver.loading.${index}`} />)}
-
-					{driverStandings &&
-						drivers &&
-						Object.values(driverStandings)
-							.sort((a, b) => a.PredictedPosition - b.PredictedPosition)
-							.map((driver) => {
-								const driverDetails = drivers[driver.RacingNumber];
-
-								if (!driverDetails) {
-									return null;
-								}
-
-								return (
-									<div
-										className="grid p-2"
-										style={{
-											gridTemplateColumns: "2rem 2rem auto 4rem 4rem",
-										}}
-										key={driver.RacingNumber}
-									>
-										<NumberDiff old={driver.CurrentPosition} current={driver.PredictedPosition} />
-										<p>{driver.PredictedPosition}</p>
-
-										<p>
-											{driverDetails.FirstName} {driverDetails.LastName}
-										</p>
-
-										<p>{driver.PredictedPoints}</p>
-
-										<NumberDiff old={driver.PredictedPoints} current={driver.CurrentPoints} />
-									</div>
-								);
-							})}
-				</div>
-			</div>
-
-			<div className="h-full p-4">
-				<h2 className="text-xl">Team Championship Standings</h2>
-
-				<div className="divide flex flex-col divide-y divide-zinc-800">
-					{!teamStandings && new Array(10).fill("").map((_, index) => <SkeletonItem key={`team.loading.${index}`} />)}
-
-					{teamStandings &&
-						Object.values(teamStandings)
-							.sort((a, b) => a.PredictedPosition - b.PredictedPosition)
-							.map((team) => (
-								<div
-									className="grid p-2"
-									style={{
-										gridTemplateColumns: "2rem 2rem 2rem auto 4rem 4rem",
-									}}
-									key={team.TeamName}
-								>
-									<NumberDiff old={team.CurrentPosition} current={team.PredictedPosition} />
-									<p>{team.PredictedPosition}</p>
-
-									<Image
-										src={`/team-logos/${team.TeamName.replaceAll(" ", "-").toLowerCase()}.${"svg"}`}
-										alt={team.TeamName}
-										width={24}
-										height={24}
-										className="overflow-hidden rounded-lg"
-									/>
-
-									<p>{team.TeamName}</p>
-
-									<p>{team.PredictedPoints}</p>
-
-									<NumberDiff old={team.PredictedPoints} current={team.CurrentPoints} />
-								</div>
-							))}
-				</div>
-			</div>
-		</div>
+		<UiModeBoundary
+			legacy={<LegacyStandingsPage drivers={drivers} constructors={constructors} season={resolvedSeason} picture={picture} unavailable={!driverData && !constructorData} />}
+			simple={<SimpleStandingsView drivers={drivers} constructors={constructors} season={resolvedSeason} picture={picture} />}
+			detailed={<DetailedStandingsView drivers={drivers} constructors={constructors} season={resolvedSeason} picture={picture} />}
+		/>
 	);
 }
 
-const SkeletonItem = () => {
+function LegacyStandingsPage({ drivers, constructors, season: resolvedSeason, picture, unavailable }: { drivers: NonNullable<Awaited<ReturnType<typeof getDriverStandings>>>["standings"]; constructors: NonNullable<Awaited<ReturnType<typeof getConstructorStandings>>>["standings"]; season: number; picture: ChampionshipPictureVM | null; unavailable: boolean }) {
 	return (
-		<div
-			className="grid gap-2 p-2"
-			style={{
-				gridTemplateColumns: "2rem 2rem auto 4rem 4rem 4rem",
-			}}
-		>
-			<div className="h-4 w-4 animate-pulse rounded-md bg-zinc-800" />
-			<div className="h-4 w-4 animate-pulse rounded-md bg-zinc-800" />
-			<div className="h-4 w-4 animate-pulse rounded-md bg-zinc-800" />
-			<div className="h-4 w-16 animate-pulse rounded-md bg-zinc-800" />
-			<div className="h-4 w-8 animate-pulse rounded-md bg-zinc-800" />
-			<div className="h-4 w-8 animate-pulse rounded-md bg-zinc-800" />
-			<div className="h-4 w-4 animate-pulse rounded-md bg-zinc-800" />
+		<div className="flex w-full flex-col gap-3 p-3">
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				<div>
+					<p className="panel-title">Championship</p>
+					<h1 className="text-2xl font-black text-white">Standings · {resolvedSeason}</h1>
+				</div>
+				<SeasonSelect selected={resolvedSeason} />
+			</div>
+
+			<LivePredictionBanner />
+
+			<ChampionshipPicture picture={picture} />
+
+			{unavailable ? (
+				<div className="telemetry-panel rounded-lg p-8 text-center">
+					<h2 className="text-xl font-bold">Standings unavailable</h2>
+					<p className="mt-2 text-zinc-400">Could not reach the results service. Try again shortly.</p>
+				</div>
+			) : (
+				<StandingsView
+					drivers={drivers}
+					constructors={constructors}
+					season={resolvedSeason}
+				/>
+			)}
 		</div>
 	);
-};
+}

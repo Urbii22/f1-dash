@@ -3,16 +3,24 @@ import type { CarDataChannels } from "@/types/state.type";
 import SpeedGauge from "@/components/complications/SpeedGauge";
 
 import { useAnimatedNumber } from "@/hooks/useAnimatedNumber";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 
 type Props = {
 	carData: CarDataChannels;
 };
 
+function convertKmhToMph(kmhValue: number) {
+	return kmhValue / 1.609344;
+}
+
 export default function DriverSpeedometer({ carData }: Props) {
+	const speedUnit = useSettingsStore((state) => state.speedUnit);
+
 	const rpm = useAnimatedNumber(carData[0]);
 	const throttle = useAnimatedNumber(carData[4]);
 
 	const speed = useAnimatedNumber(carData[2]);
+	const displaySpeed = speedUnit === "metric" ? speed : convertKmhToMph(speed);
 
 	return (
 		<div className="flex size-32 flex-col items-center justify-center">
@@ -50,13 +58,11 @@ export default function DriverSpeedometer({ carData }: Props) {
 				progressClassName="stroke-red-700"
 			/>
 
-			{/* TODO add mph convertion peneding on preference */}
-
 			<p className="mt-12 text-2xl tabular-nums">{carData["3"]}</p>
 
-			<p className="text-sm text-zinc-500">km/h</p>
+			<p className="text-sm text-zinc-500">{speedUnit === "metric" ? "km/h" : "mp/h"}</p>
 
-			<p className="text-xl tabular-nums">{speed.toFixed(0)}</p>
+			<p className="text-xl tabular-nums">{displaySpeed.toFixed(0)}</p>
 		</div>
 	);
 }

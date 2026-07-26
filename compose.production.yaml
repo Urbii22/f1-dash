@@ -1,0 +1,52 @@
+services:
+  api:
+    ports: !reset []
+    environment:
+      ORIGIN: https://${F1_DASH_DOMAIN:?Set F1_DASH_DOMAIN before starting production}
+
+  realtime:
+    ports: !reset []
+    environment:
+      ORIGIN: https://${F1_DASH_DOMAIN:?Set F1_DASH_DOMAIN before starting production}
+
+  web:
+    ports: !reset []
+    build:
+      args:
+        NEXT_PUBLIC_LIVE_URL: https://${F1_DASH_DOMAIN:?Set F1_DASH_DOMAIN before starting production}
+        NEXT_NO_COMPRESS: "1"
+    environment:
+      API_URL: http://api:4001
+      NEXT_PUBLIC_LIVE_URL: https://${F1_DASH_DOMAIN:?Set F1_DASH_DOMAIN before starting production}
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: [production]
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      if [ -n "$$CADDY_EMAIL" ]; then
+        printf '{\n\temail %s\n}\n\n' "$$CADDY_EMAIL" > /tmp/Caddyfile
+      else
+        : > /tmp/Caddyfile
+      fi
+      cat /etc/caddy/Caddyfile >> /tmp/Caddyfile
+      exec caddy run --config /tmp/Caddyfile --adapter caddyfile
+    depends_on:
+      api:
+        condition: service_healthy
+      realtime:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    environment:
+      F1_DASH_DOMAIN: ${F1_DASH_DOMAIN:?Set F1_DASH_DOMAIN before starting production}
+      CADDY_EMAIL: ${CADDY_EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped

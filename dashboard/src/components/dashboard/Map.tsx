@@ -1,23 +1,33 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 
-import type { PositionCar, TimingDataDriver } from "@/types/state.type";
+import type { CarDataChannels, PositionCar, TimingDataDriver } from "@/types/state.type";
 import type { Map, TrackPosition } from "@/types/map.type";
 
 import { fetchMap } from "@/lib/fetchMap";
 
 import { useDataStore } from "@/stores/useDataStore";
+import { useDriverSelectionStore } from "@/stores/useDriverSelectionStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { getTrackStatusMessage } from "@/lib/getTrackStatusMessage";
 import {
 	createSectors,
 	findYellowSectors,
+	findMinDistance,
 	getSectorColor,
 	type MapSector,
 	prioritizeColoredSectors,
 	rad,
 	rotate,
 } from "@/lib/map";
+import {
+	estimateTrackVelocity,
+	getInitialTelemetryCalibration,
+	getTelemetryTrackVelocity,
+	getTrackPoint,
+	stepTrackMotion,
+	updateTelemetryCalibration,
+} from "@/lib/mapMotion";
 
 // This is basically fearlessly copied from
 // https://github.com/tdjsnelling/monaco
@@ -104,15 +114,37 @@ type Corner = {
 	labelPos: TrackPosition;
 };
 
+type MapVariant = "legacy" | "compact" | "technical";
+
 type Props = {
 	filter?: string[];
+	// New UI adapter props. Defaults preserve the existing Legacy behaviour so
+	// untouched Legacy call sites stay visually identical.
+	variant?: MapVariant;
+	showLabels?: boolean;
+	showTrails?: boolean;
+	showDriverLabels?: boolean;
+	showMarshalSectors?: boolean;
+	showPitStatus?: boolean;
 };
 
-export default function Map({ filter }: Props) {
-	const showCornerNumbers = useSettingsStore((state) => state.showCornerNumbers);
+export default function Map({ filter, variant = "legacy", showLabels, showTrails, showDriverLabels, showMarshalSectors, showPitStatus }: Props) {
+	const compact = variant === "compact";
+	const cornerSetting = useSettingsStore((state) => state.showCornerNumbers);
+	// In the compact orientation map, suppress corner labels and trails unless a
+	// caller explicitly opts in. Legacy keeps its configured behaviour.
+	const showCornerNumbers = showLabels ?? (compact ? false : cornerSetting);
+	const trailsEnabled = showTrails ?? !compact;
+	const driverLabelsEnabled = showDriverLabels ?? true;
+	const marshalSectorsEnabled = showMarshalSectors ?? true;
+	const pitStatusEnabled = showPitStatus ?? true;
 	const favoriteDrivers = useSettingsStore((state) => state.favoriteDrivers);
+	const selectedDriver = useDriverSelectionStore((state) => state.selectedDriver);
+	const setSelectedDriver = useDriverSelectionStore((state) => state.setSelectedDriver);
+	const toggleComparedDriver = useDriverSelectionStore((state) => state.toggleComparedDriver);
 
-	// const positions = useDataStore((state) => state.positions);
+	const positions = useDataStore((state) => state.positions);
+	const carsData = useDataStore((state) => state.carsData);
 	const drivers = useDataStore((state) => state?.state?.DriverList);
 	const trackStatus = useDataStore((state) => state?.state?.TrackStatus);
 	const timingDrivers = useDataStore((state) => state?.state?.TimingData);
@@ -128,6 +160,7 @@ export default function Map({ filter }: Props) {
 	const [rotation, setRotation] = useState<number>(0);
 	const [finishLine, setFinishLine] = useState<null | { x: number; y: number; startAngle: number }>(null);
 	const [originalTrackPoints, setOriginalTrackPoints] = useState<null | { x: number; y: number }[]>(null);
+	const [driverTrails, setDriverTrails] = useState<Record<string, PositionCar[]>>({});
 
 	useEffect(() => {
 		(async () => {
@@ -190,6 +223,20 @@ export default function Map({ filter }: Props) {
 		})();
 	}, [circuitKey]);
 
+	useEffect(() => {
+		if (!positions) return;
+
+		const timeout = window.setTimeout(() => {
+			setDriverTrails((prev) =>
+				Object.fromEntries(
+					Object.entries(positions).map(([driver, pos]) => [driver, [...(prev[driver] ?? []), pos].slice(-8)]),
+				),
+			);
+		}, 0);
+
+		return () => window.clearTimeout(timeout);
+	}, [positions]);
+
 	const yellowSectors = useMemo(() => findYellowSectors(raceControlMessages), [raceControlMessages]);
 
 	const renderedSectors = useMemo(() => {
@@ -199,20 +246,20 @@ export default function Map({ filter }: Props) {
 			.map((sector) => {
 				const color = getSectorColor(sector, status?.bySector, status?.trackColor, yellowSectors);
 				return {
-					color,
-					pulse: status?.pulse,
+					color: marshalSectorsEnabled ? color : "stroke-white",
+					pulse: marshalSectorsEnabled ? status?.pulse : undefined,
 					number: sector.number,
-					strokeWidth: color === "stroke-white" ? 60 : 120,
+					strokeWidth: !marshalSectorsEnabled || color === "stroke-white" ? 60 : 120,
 					d: `M${sector.points[0].x},${sector.points[0].y} ${sector.points.map((point) => `L${point.x},${point.y}`).join(" ")}`,
 				};
 			})
 			.sort(prioritizeColoredSectors);
-	}, [trackStatus, sectors, yellowSectors]);
+	}, [marshalSectorsEnabled, trackStatus, sectors, yellowSectors]);
 
 	if (!points || !minX || !minY || !widthX || !widthY) {
 		return (
 			<div className="h-full w-full p-2" style={{ minHeight: "35rem" }}>
-				<div className="h-full w-full animate-pulse rounded-lg bg-zinc-800" />
+				<div className="h-full w-full animate-pulse rounded-lg border border-cyan-300/10 bg-cyan-950/40" />
 			</div>
 		);
 	}
@@ -223,11 +270,34 @@ export default function Map({ filter }: Props) {
 			className="h-full w-full xl:max-h-screen"
 			xmlns="http://www.w3.org/2000/svg"
 		>
+			<defs>
+				<filter id="trackGlow">
+					<feGaussianBlur stdDeviation="36" result="coloredBlur" />
+					<feMerge>
+						<feMergeNode in="coloredBlur" />
+						<feMergeNode in="SourceGraphic" />
+					</feMerge>
+				</filter>
+				<radialGradient id="radarGlow" cx="50%" cy="50%" r="58%">
+					<stop offset="0%" stopColor="rgba(0,229,255,0.18)" />
+					<stop offset="58%" stopColor="rgba(0,229,255,0.05)" />
+					<stop offset="100%" stopColor="rgba(0,0,0,0)" />
+				</radialGradient>
+			</defs>
+			<rect x={minX} y={minY} width={widthX} height={widthY} fill="url(#radarGlow)" />
 			<path
-				className="stroke-gray-800"
+				className="stroke-cyan-950"
 				strokeWidth={300}
 				strokeLinejoin="round"
 				fill="transparent"
+				d={`M${points[0].x},${points[0].y} ${points.map((point) => `L${point.x},${point.y}`).join(" ")}`}
+			/>
+			<path
+				className="stroke-cyan-300/25"
+				strokeWidth={430}
+				strokeLinejoin="round"
+				fill="transparent"
+				filter="url(#trackGlow)"
 				d={`M${points[0].x},${points[0].y} ${points.map((point) => `L${point.x},${point.y}`).join(" ")}`}
 			/>
 
@@ -245,6 +315,7 @@ export default function Map({ filter }: Props) {
 						strokeLinecap="round"
 						strokeLinejoin="round"
 						fill="transparent"
+						filter="url(#trackGlow)"
 						d={sector.d}
 						style={style}
 					/>
@@ -265,12 +336,31 @@ export default function Map({ filter }: Props) {
 			)}
 
 			{showCornerNumbers &&
-				corners.map((corner) => (
+				corners.map((corner, index) => (
 					<CornerNumber
-						key={`corner.${corner.number}`}
+						key={`corner.${corner.number}.${index}`}
 						number={corner.number}
 						x={corner.labelPos.x}
 						y={corner.labelPos.y}
+					/>
+				))}
+
+			{trailsEnabled &&
+				centerX &&
+				centerY &&
+				Object.entries(driverTrails).map(([driver, trail]) => (
+					<polyline
+						key={`trail.${driver}`}
+						points={trail
+							.map((pos) => {
+								const rotated = rotate(pos.X, pos.Y, rotation, centerX, centerY);
+								return `${rotated.x},${rotated.y}`;
+							})
+							.join(" ")}
+						className="stroke-cyan-300/25"
+						strokeWidth={45}
+						fill="transparent"
+						strokeLinecap="round"
 					/>
 				))}
 
@@ -281,12 +371,12 @@ export default function Map({ filter }: Props) {
 						.filter((driver) => (filter ? filter.includes(driver.RacingNumber) : true))
 						.map((driver) => {
 							const timingDriver = timingDrivers?.Lines[driver.RacingNumber];
-							const hidden = timingDriver
-								? timingDriver.KnockedOut || timingDriver.Stopped || timingDriver.Retired
-								: false;
+							const hidden = timingDriver ? timingDriver.KnockedOut || timingDriver.Retired : false;
 							const pit = timingDriver ? timingDriver.InPit : false;
+							const stopped = timingDriver ? timingDriver.Stopped : false;
 
-							const driverPosition = getDriverPosition(timingDriver, originalTrackPoints);
+							const driverPosition =
+								positions?.[driver.RacingNumber] ?? getDriverPosition(timingDriver, originalTrackPoints);
 
 							// Skip rendering if we can't determine position
 							if (!driverPosition) return null;
@@ -298,11 +388,17 @@ export default function Map({ filter }: Props) {
 									name={driver.Tla}
 									color={driver.TeamColour}
 									pit={pit}
+									stopped={stopped}
 									hidden={hidden}
 									pos={driverPosition}
-									rotation={rotation}
-									centerX={centerX}
-									centerY={centerY}
+									carData={carsData?.[driver.RacingNumber]?.Channels}
+									trackPoints={points}
+									originalTrackPoints={originalTrackPoints ?? []}
+									selected={selectedDriver === driver.RacingNumber}
+									showLabel={driverLabelsEnabled}
+									showPitStatus={pitStatusEnabled}
+									onSelect={() => setSelectedDriver(driver.RacingNumber)}
+									onCompare={() => toggleComparedDriver(driver.RacingNumber)}
 								/>
 							);
 						})}
@@ -320,7 +416,7 @@ type CornerNumberProps = {
 
 const CornerNumber: React.FC<CornerNumberProps> = ({ number, x, y }) => {
 	return (
-		<text x={x} y={y} className="fill-zinc-700" fontSize={300} fontWeight="semibold">
+		<text x={x} y={y} className="fill-cyan-300/30" fontSize={300} fontWeight="semibold">
 			{number}
 		</text>
 	);
@@ -332,30 +428,143 @@ type CarDotProps = {
 	favoriteDriver: boolean;
 
 	pit: boolean;
+	stopped: boolean;
 	hidden: boolean;
 
 	pos: PositionCar;
-	rotation: number;
-
-	centerX: number;
-	centerY: number;
+	carData: CarDataChannels | undefined;
+	trackPoints: TrackPosition[];
+	originalTrackPoints: TrackPosition[];
+	selected: boolean;
+	showLabel: boolean;
+	showPitStatus: boolean;
+	onSelect: () => void;
+	onCompare: () => void;
 };
 
-const CarDot = ({ pos, name, color, favoriteDriver, pit, hidden, rotation, centerX, centerY }: CarDotProps) => {
-	const rotatedPos = rotate(pos.X, pos.Y, rotation, centerX, centerY);
-	const transform = [`translateX(${rotatedPos.x}px)`, `translateY(${rotatedPos.y}px)`].join(" ");
+const CarDot = ({
+	pos,
+	carData,
+	name,
+	color,
+	favoriteDriver,
+	pit,
+	stopped,
+	hidden,
+	trackPoints,
+	originalTrackPoints,
+	selected,
+	showLabel,
+	showPitStatus,
+	onSelect,
+	onCompare,
+}: CarDotProps) => {
+	const targetProgress = findMinDistance({ x: pos.X, y: pos.Y }, originalTrackPoints);
+	const groupRef = useRef<SVGGElement>(null);
+	const motionRef = useRef({ progress: targetProgress, velocity: 0 });
+	const targetRef = useRef(targetProgress);
+	const targetVelocityRef = useRef(0);
+	const targetTimeRef = useRef(0);
+	const stoppedRef = useRef(stopped);
+	const carDataRef = useRef(carData);
+	const calibrationRef = useRef(getInitialTelemetryCalibration(trackPoints.length));
+
+	useEffect(() => {
+		carDataRef.current = carData;
+	}, [carData]);
+
+	useEffect(() => {
+		const now = performance.now();
+		const sampledVelocity = targetTimeRef.current
+			? estimateTrackVelocity(
+					targetRef.current,
+					targetProgress,
+					trackPoints.length,
+					now - targetTimeRef.current,
+				)
+			: 0;
+		targetVelocityRef.current = targetVelocityRef.current * 0.65 + sampledVelocity * 0.35;
+		const speedKph = carDataRef.current?.["2"] ?? 0;
+		calibrationRef.current = updateTelemetryCalibration(
+			calibrationRef.current,
+			sampledVelocity,
+			speedKph,
+		);
+		targetRef.current = targetProgress;
+		targetTimeRef.current = now;
+		stoppedRef.current = stopped;
+		if (stopped) targetVelocityRef.current = 0;
+	}, [stopped, targetProgress, trackPoints.length]);
+
+	useEffect(() => {
+		let animationFrame = 0;
+		let previousTime = performance.now();
+
+		const animate = (time: number) => {
+			const deltaMs = Math.min(time - previousTime, 100);
+			previousTime = time;
+			const telemetry = carDataRef.current;
+			const telemetryVelocity = telemetry
+				? getTelemetryTrackVelocity(
+						{
+							speedKph: telemetry["2"],
+							throttle: telemetry["4"],
+							braking: Boolean(telemetry["5"]),
+						},
+						calibrationRef.current,
+					)
+				: targetVelocityRef.current;
+			motionRef.current = stepTrackMotion(
+				motionRef.current,
+				targetRef.current,
+				telemetryVelocity,
+				trackPoints.length,
+				deltaMs,
+				stoppedRef.current,
+				pit ? 1500 : 950,
+			);
+
+			const point = getTrackPoint(motionRef.current.progress, trackPoints);
+			groupRef.current?.setAttribute("transform", `translate(${point.x} ${point.y})`);
+			animationFrame = requestAnimationFrame(animate);
+		};
+
+		animationFrame = requestAnimationFrame(animate);
+		return () => cancelAnimationFrame(animationFrame);
+	}, [pit, trackPoints]);
+
+	const initialPoint = getTrackPoint(targetProgress, trackPoints);
 
 	return (
 		<g
-			className={clsx("fill-zinc-700", { "opacity-30": pit }, { "opacity-0!": hidden })}
+			ref={groupRef}
+			role="button"
+			tabIndex={0}
+			onClick={onSelect}
+			onDoubleClick={onCompare}
+			onKeyDown={(event) => {
+				if (event.key === "Enter") onSelect();
+				if (event.key === " ") {
+					event.preventDefault();
+					onCompare();
+				}
+			}}
+			className={clsx(
+				"cursor-pointer fill-cyan-300 drop-shadow-[0_0_12px_rgba(0,229,255,0.85)] outline-none",
+				{ "opacity-30": pit && showPitStatus },
+				{ "opacity-0!": hidden },
+			)}
+			transform={`translate(${initialPoint.x} ${initialPoint.y})`}
 			style={{
-				transition: "all 1s linear",
-				transform,
 				...(color && { fill: `#${color}` }),
 			}}
 		>
+			{stopped && (
+				<circle className="animate-ping stroke-red-400" r={260} fill="transparent" strokeWidth={55} />
+			)}
 			<circle id={`map.driver.circle`} r={120} />
-			<text
+			{selected && <circle className="stroke-white" r={260} fill="transparent" strokeWidth={60} />}
+			{showLabel && <text
 				id={`map.driver.text`}
 				fontWeight="bold"
 				fontSize={120 * 3}
@@ -364,7 +573,12 @@ const CarDot = ({ pos, name, color, favoriteDriver, pit, hidden, rotation, cente
 				}}
 			>
 				{name}
-			</text>
+			</text>}
+			{stopped && (
+				<text x={150} y={230} className="fill-red-400" fontSize={145} fontWeight="bold">
+					STOPPED
+				</text>
+			)}
 
 			{favoriteDriver && (
 				<circle
@@ -373,7 +587,6 @@ const CarDot = ({ pos, name, color, favoriteDriver, pit, hidden, rotation, cente
 					r={180}
 					fill="transparent"
 					strokeWidth={40}
-					style={{ transition: "all 1s linear" }}
 				/>
 			)}
 		</g>

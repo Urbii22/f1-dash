@@ -80,17 +80,19 @@ export default function RadioMessage({ driver, capture, basePath, gmtOffset }: P
 		<motion.li
 			animate={{ opacity: 1, scale: 1 }}
 			initial={{ opacity: 0, scale: 0.9 }}
-			className={clsx("flex flex-col gap-1 rounded-lg p-2", { "bg-sky-800/30": favoriteDriver })}
+			className={clsx("data-chip flex flex-col gap-2 rounded-md p-2", {
+				"border-cyan-300/60! bg-cyan-300/15!": favoriteDriver,
+			})}
 		>
-			<div className="flex items-center gap-1 text-sm leading-none text-zinc-500">
+			<div className="flex items-center gap-1 font-mono text-xs leading-none text-cyan-300/60">
 				<time dateTime={localTime}>{localTime}</time>
-				{"·"}
-				<time className="text-zinc-700" dateTime={trackTime}>
+				{"//"}
+				<time className="text-zinc-500" dateTime={trackTime}>
 					{trackTime}
 				</time>
 			</div>
 
-			<div className="flex items-center gap-1">
+			<div className="flex items-center gap-2">
 				<DriverTag className="!w-fit" teamColor={driver.TeamColour} short={driver.Tla} />
 
 				<PlayControls playing={playing} onClick={togglePlayback} />

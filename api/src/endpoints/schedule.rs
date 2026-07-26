@@ -81,7 +81,7 @@ fn get_property(event: &IcalEvent, name: &str) -> Option<String> {
     None
 }
 
-fn find_round_mut<'a>(rounds: &'a mut Vec<Round>, name: &str) -> Option<&'a mut Round> {
+fn find_round_mut<'a>(rounds: &'a mut [Round], name: &str) -> Option<&'a mut Round> {
     rounds.iter_mut().find(|r| r.name == name)
 }
 
@@ -203,16 +203,14 @@ async fn get_schedule(year: i32) -> Result<Vec<Round>, anyhow::Error> {
         }
     }
 
-    rounds.sort_unstable_by(|a, b| a.start.cmp(&b.start));
+    rounds.sort_unstable_by_key(|round| round.start);
 
     let utc_now = Utc::now();
 
     for round in &mut rounds {
         round.over = round.end < utc_now;
 
-        round
-            .sessions
-            .sort_unstable_by(|a, b| a.start.cmp(&b.start));
+        round.sessions.sort_unstable_by_key(|session| session.start);
     }
 
     Ok(rounds)

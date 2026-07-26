@@ -1,6 +1,8 @@
 import { persist, createJSONStorage, subscribeWithSelector } from "zustand/middleware";
 import { create } from "zustand";
 
+import { clampDashboardSplit } from "@/lib/dashboardSplit";
+
 type SpeedUnit = "metric" | "imperial";
 
 type SettingsStore = {
@@ -16,6 +18,9 @@ type SettingsStore = {
 	carMetrics: boolean;
 	setCarMetrics: (carMetrics: boolean) => void;
 
+	dashboardPanelSplit: number;
+	setDashboardPanelSplit: (dashboardPanelSplit: number) => void;
+
 	tableHeaders: boolean;
 	setTableHeaders: (tableHeaders: boolean) => void;
 
@@ -24,6 +29,12 @@ type SettingsStore = {
 
 	showMiniSectors: boolean;
 	setShowMiniSectors: (showMiniSectors: boolean) => void;
+
+	qualiShowTheoreticalBest: boolean;
+	setQualiShowTheoreticalBest: (qualiShowTheoreticalBest: boolean) => void;
+
+	qualiShowSpeedTrap: boolean;
+	setQualiShowSpeedTrap: (qualiShowSpeedTrap: boolean) => void;
 
 	oledMode: boolean;
 	setOledMode: (oledMode: boolean) => void;
@@ -61,6 +72,10 @@ export const useSettingsStore = create<SettingsStore>()(
 				carMetrics: false,
 				setCarMetrics: (carMetrics: boolean) => set({ carMetrics }),
 
+				dashboardPanelSplit: 50,
+				setDashboardPanelSplit: (dashboardPanelSplit: number) =>
+					set({ dashboardPanelSplit: clampDashboardSplit(dashboardPanelSplit) }),
+
 				tableHeaders: false,
 				setTableHeaders: (tableHeaders: boolean) => set({ tableHeaders }),
 
@@ -69,6 +84,12 @@ export const useSettingsStore = create<SettingsStore>()(
 
 				showMiniSectors: true,
 				setShowMiniSectors: (showMiniSectors: boolean) => set({ showMiniSectors }),
+
+				qualiShowTheoreticalBest: false,
+				setQualiShowTheoreticalBest: (qualiShowTheoreticalBest: boolean) => set({ qualiShowTheoreticalBest }),
+
+				qualiShowSpeedTrap: true,
+				setQualiShowSpeedTrap: (qualiShowSpeedTrap: boolean) => set({ qualiShowSpeedTrap }),
 
 				oledMode: false,
 				setOledMode: (oledMode: boolean) => set({ oledMode }),

@@ -1,29 +1,108 @@
 services:
   api:
-    image: ghcr.io/slowlydev/f1-dash-api:latest
-    ports:
-      - 4010:80
+    image: ${F1_DASH_IMAGE_REGISTRY:-local}/f1-dash-api:${F1_DASH_IMAGE_TAG:-dev}
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: api
     environment:
-      - RUST_LOG=api=debug
-      - ADDRESS=0.0.0.0:80
-      - ORIGIN=http://localhost:3000
+      RUST_LOG: ${API_LOG_LEVEL:-api=info}
+      ADDRESS: 0.0.0.0:4001
+      ORIGIN: http://localhost:3000;http://127.0.0.1:3000
+      ARCHIVE_DB: /data/archive/archive.sqlite
+      XDG_CACHE_HOME: /data/cache
+    ports:
+      - "4001:4001"
+    volumes:
+      - archive-data:/data/archive
+      - api-cache:/data/cache
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4001/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
 
   realtime:
-    image: ghcr.io/slowlydev/f1-dash-realtime:latest
-    ports:
-      - 4000:80
+    image: ${F1_DASH_IMAGE_REGISTRY:-local}/f1-dash-realtime:${F1_DASH_IMAGE_TAG:-dev}
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: realtime
     environment:
-      - RUST_LOG=realtime=debug
-      - ADDRESS=0.0.0.0:80
-      - ORIGIN=http://localhost:3000
+      RUST_LOG: ${REALTIME_LOG_LEVEL:-realtime=info}
+      ADDRESS: 0.0.0.0:4000
+      ORIGIN: http://localhost:3000;http://127.0.0.1:3000
+      RECORDING_ENABLED: ${RECORDING_ENABLED:-true}
+      RECORDING_GZIP: ${RECORDING_GZIP:-true}
+      RECORDINGS_DIR: /data/recordings
+    ports:
+      - "4000:4000"
+    volumes:
+      - recordings:/data/recordings
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+  archive:
+    image: ${F1_DASH_IMAGE_REGISTRY:-local}/f1-dash-archive:${F1_DASH_IMAGE_TAG:-dev}
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: archive
+    depends_on:
+      realtime:
+        condition: service_healthy
+    environment:
+      RUST_LOG: ${ARCHIVE_LOG_LEVEL:-archive=info}
+      ARCHIVE_DB: /data/archive/archive.sqlite
+      RECORDINGS_DIR: /data/recordings
+      RECORDING_RETENTION_DAYS: ${RECORDING_RETENTION_DAYS:-}
+    volumes:
+      - recordings:/data/recordings
+      - archive-data:/data/archive
+    healthcheck:
+      test: ["CMD-SHELL", "grep -qa archive /proc/1/cmdline"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
 
   web:
-    image: ghcr.io/slowlydev/f1-dash:latest
+    image: ${F1_DASH_IMAGE_REGISTRY:-local}/f1-dash:${F1_DASH_IMAGE_TAG:-dev}
+    build:
+      context: ./dashboard
+      dockerfile: dockerfile
+      args:
+        NEXT_PUBLIC_LIVE_URL: http://localhost:4000
+        NEXT_NO_COMPRESS: "0"
     depends_on:
-      - realtime
-      - api
-    ports:
-      - 3000:3000
+      api:
+        condition: service_healthy
+      realtime:
+        condition: service_healthy
     environment:
-      - NEXT_PUBLIC_LIVE_URL=http://localhost:4000
-      - API_URL=http://localhost:4010
+      API_URL: http://api:4001
+      NEXT_PUBLIC_LIVE_URL: http://localhost:4000
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  recordings:
+  archive-data:
+  api-cache:
+  caddy-data:
+  caddy-config:

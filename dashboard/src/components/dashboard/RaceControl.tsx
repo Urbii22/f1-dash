@@ -53,7 +53,7 @@ export default function RaceControl() {
 	}, [messages]);
 
 	return (
-		<ul className="flex flex-col gap-2">
+		<ul className="mt-3 flex flex-col gap-2">
 			{!messages &&
 				new Array(7).fill("").map((_, index) => <SkeletonMessage key={`msg.loading.${index}`} index={index} />)}
 
@@ -72,14 +72,14 @@ export default function RaceControl() {
 }
 
 const SkeletonMessage = ({ index }: { index: number }) => {
-	const animateClass = "h-6 animate-pulse rounded-md bg-zinc-800";
+	const animateClass = "h-6 animate-pulse rounded-md bg-cyan-950/60";
 
 	const flag = index % 4 === 0;
 	const long = index % 5 === 0;
 	const mid = index % 3 === 0;
 
 	return (
-		<li className="flex flex-col gap-1 p-2">
+		<li className="data-chip flex flex-col gap-1 rounded-md p-2">
 			<div className={clsx(animateClass, "h-4! w-16")} />
 
 			<div className="flex gap-1">

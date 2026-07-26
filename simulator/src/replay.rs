@@ -1,10 +1,11 @@
 use std::{
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Read},
     path::Path,
 };
 
 use anyhow::Error;
+use flate2::read::GzDecoder;
 
 mod server;
 
@@ -18,11 +19,16 @@ pub async fn replay(path: &Path) -> Result<(), Error> {
 
     let file = File::open(path)?;
 
-    let buffer = BufReader::new(file);
+    let input: Box<dyn Read> = if path.extension().and_then(|value| value.to_str()) == Some("gz") {
+        Box::new(GzDecoder::new(file))
+    } else {
+        Box::new(file)
+    };
+    let buffer = BufReader::new(input);
 
     let lines = buffer
         .lines()
-        .filter_map(|line| line.ok())
+        .map_while(Result::ok)
         .collect::<Vec<String>>();
 
     server::run(lines).await

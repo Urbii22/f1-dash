@@ -21,5 +21,7 @@ export const useStatefulBuffer = <T>() => {
 		delayed: buffer.delayed,
 		cleanup: buffer.cleanup,
 		maxDelay: buffer.maxDelay,
+		oldestTimestamp: buffer.oldestTimestamp,
+		latestTimestamp: buffer.latestTimestamp,
 	};
 };
