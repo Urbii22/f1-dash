@@ -336,9 +336,9 @@ export default function Map({ filter, variant = "legacy", showLabels, showTrails
 			)}
 
 			{showCornerNumbers &&
-				corners.map((corner) => (
+				corners.map((corner, index) => (
 					<CornerNumber
-						key={`corner.${corner.number}`}
+						key={`corner.${corner.number}.${index}`}
 						number={corner.number}
 						x={corner.labelPos.x}
 						y={corner.labelPos.y}

@@ -28,10 +28,12 @@ export function WeatherMap({ variant = "legacy", onRadarAvailabilityChange }: { 
 	const [radarUnavailable, setRadarUnavailable] = useState(false);
 	const currentFrameRef = useRef<number>(0);
 
-	const handleMapLoad = useCallback(async () => {
-		if (!mapRef.current) return;
+	const handleMapLoad = useCallback(async (map: Map) => {
+		if (mapRef.current !== map) return;
 
 		const rainviewer = await getRainviewer();
+		if (mapRef.current !== map) return;
+
 		if (!rainviewer) {
 			setRadarUnavailable(true);
 			onRadarAvailabilityChange?.(false);
@@ -47,9 +49,12 @@ export function WeatherMap({ variant = "legacy", onRadarAvailabilityChange }: { 
 
 		for (let i = 0; i < pathFrames.length; i++) {
 			const frame = pathFrames[i];
+			const layerId = `rainviewer-frame-${i}`;
 
-			mapRef.current.addLayer({
-				id: `rainviewer-frame-${i}`,
+			if (map.getLayer(layerId)) continue;
+
+			map.addLayer({
+				id: layerId,
 				type: "raster",
 				source: {
 					type: "raster",
@@ -67,12 +72,17 @@ export function WeatherMap({ variant = "legacy", onRadarAvailabilityChange }: { 
 			});
 		}
 
+		if (mapRef.current !== map) return;
+
 		setFrames(pathFrames.map((frame, i) => ({ time: frame.time, id: i })));
 		setRadarUnavailable(false);
 		onRadarAvailabilityChange?.(true);
 	}, [onRadarAvailabilityChange]);
 
 	useEffect(() => {
+		let cancelled = false;
+		let libMap: Map | null = null;
+
 		(async () => {
 			if (!mapContainerRef.current) return;
 
@@ -83,9 +93,11 @@ export function WeatherMap({ variant = "legacy", onRadarAvailabilityChange }: { 
 				fetchCoords(`${meeting.Country.Name}, ${meeting.Location} autodrome`),
 			]);
 
+			if (cancelled || !mapContainerRef.current) return;
+
 			const coords = coordsC || coordsA;
 
-			const libMap = new maplibregl.Map({
+			const map = new maplibregl.Map({
 				container: mapContainerRef.current,
 				style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
 				center: coords ? [coords.lon, coords.lat] : undefined,
@@ -94,24 +106,40 @@ export function WeatherMap({ variant = "legacy", onRadarAvailabilityChange }: { 
 					antialias: true,
 				},
 			});
+			libMap = map;
+			mapRef.current = map;
 
-			libMap.on("load", async () => {
+			map.once("load", () => {
+				if (cancelled || mapRef.current !== map) return;
+
 				setLoading(false);
 
 				if (coords) {
-					new Marker().setLngLat([coords.lon, coords.lat]).addTo(libMap);
+					new Marker().setLngLat([coords.lon, coords.lat]).addTo(map);
 				}
 
-				await handleMapLoad();
+				void handleMapLoad(map);
 			});
-
-			mapRef.current = libMap;
 		})();
+
+		return () => {
+			cancelled = true;
+			if (mapRef.current === libMap) mapRef.current = null;
+			libMap?.remove();
+			setFrames([]);
+			currentFrameRef.current = 0;
+		};
 	}, [handleMapLoad, meeting]);
 
 	const setFrame = (idx: number) => {
-		mapRef.current?.setPaintProperty(`rainviewer-frame-${currentFrameRef.current}`, "raster-opacity", 0);
-		mapRef.current?.setPaintProperty(`rainviewer-frame-${idx}`, "raster-opacity", 0.8);
+		const map = mapRef.current;
+		if (!map || !map.getLayer(`rainviewer-frame-${idx}`)) return;
+
+		const currentLayerId = `rainviewer-frame-${currentFrameRef.current}`;
+		if (map.getLayer(currentLayerId)) {
+			map.setPaintProperty(currentLayerId, "raster-opacity", 0);
+		}
+		map.setPaintProperty(`rainviewer-frame-${idx}`, "raster-opacity", 0.8);
 		currentFrameRef.current = idx;
 	};
 
